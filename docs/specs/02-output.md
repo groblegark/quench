@@ -185,6 +185,34 @@ escapes: FAIL (not auto-fixable)
 1 check fixed, 1 failed
 ```
 
+## Violation Limits (Agent-First)
+
+To avoid overwhelming agent context with violations, quench limits output by default:
+
+- **Default limit**: ~15 violations max overall shown (ideally in easiness to fix order, where possible)
+- **Behavior**: Once limit reached, show count of remaining violations
+- **Not configurable**: This is a hardcoded agent-first design decision
+
+```
+escapes: FAIL
+  src/parser.rs:47: unsafe block without // SAFETY: comment
+    Add a // SAFETY: comment explaining the invariants.
+  src/parser.rs:112: .unwrap() in production code
+    Handle the error case.
+  ... (8 more violations)
+```
+
+### Show All (`--all`)
+
+To see all violations (e.g., for human review):
+
+```bash
+quench --all          # Show all violations
+quench -f json --all  # JSON with all violations
+```
+
+Full counts are always available in `--ci` mode for metrics storage.
+
 ## Streaming vs Buffered
 
 - **Default**: Stream output as checks complete (better for slow checks)

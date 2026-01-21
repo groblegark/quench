@@ -72,12 +72,15 @@ When subprojects are configured, counts are tracked per-package:
 - Each package has its own source/test counts
 - Thresholds apply to **total source count** by default
 - Per-package thresholds can be configured via overrides
+- `by_package` field is **omitted from JSON** if no subprojects configured
 
 ## Comment Detection
 
-For `require_comment` mode, quench looks for the required comment:
+For `require_comment` mode, quench searches **upward** for the required comment:
 1. On the same line as the pattern
-2. On the line immediately preceding the pattern
+2. On preceding lines, searching upward until a non-blank, non-comment line is found
+
+This allows comments to be separated from the pattern by other comments or blank lines:
 
 ```rust
 // SAFETY: The lock is held for the duration of this block
@@ -87,7 +90,15 @@ unsafe {                    // ✓ Comment found on preceding line
 
 unsafe { quick_op(); }      // SAFETY: Single atomic op  ✓ Comment on same line
 
-unsafe {                    // ✗ No comment found
+// SAFETY: Pointer guaranteed valid by constructor invariant
+//
+// Additional context about why this is safe...
+unsafe {                    // ✓ Comment found (searching upward through blanks/comments)
+    indirect_call();
+}
+
+fn other_code() {}
+unsafe {                    // ✗ No comment (search stopped at `fn other_code`)
     risky_call();
 }
 ```
@@ -218,4 +229,7 @@ Pattern matching must be fast:
 1. Compile regex patterns once at startup
 2. Use ripgrep's regex engine (`grep-regex`) for speed
 3. Parallel file scanning
-4. Early termination: stop scanning file if forbid pattern found (for that pattern)
+4. Early termination for fast checks (non-CI):
+   - Stop scanning a file when threshold is exceeded AND max output violations reached
+   - Prevents overwhelming agent context with violations
+   - Full counts only computed in `--ci` mode for metrics storage

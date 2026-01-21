@@ -5,8 +5,11 @@ The `loc` check counts lines of code, separating source from test code.
 ## Purpose
 
 - Track codebase size and growth
-- Ensure healthy source-to-test ratio
+- Report source-to-test ratio for CI metrics
 - Per-subproject breakdown for focused metrics
+
+**Note**: This check is reporting-only. It does not fail based on ratio thresholds.
+Ratio enforcement is left to CI configuration or future ratcheting features.
 
 ## Counting Rules
 
@@ -78,25 +81,24 @@ blocks are counted as test LOC even in source files.
 
 ## Output
 
-### Pass (silent by default)
+### Default (silent)
 
-With `--summary` or `-v`:
-```
-loc: PASS
-  source: 12,453 lines (47 files)
-  test: 8,921 lines (32 files)
-  ratio: 0.72x
-```
+LOC check always passes (reporting only). No output by default.
 
-### Fail
+### With `--summary` or `-v`
 
 ```
-loc: FAIL
-  source: 12,453 lines (47 files)
-  test: 1,245 lines (8 files)
-  ratio: 0.10x (min: 0.50x)
-    Test coverage appears low. Add tests for uncovered functionality.
+loc: 12,453 source / 8,921 test (0.72x)
 ```
+
+### Ratio Direction
+
+Ratio is **test LOC / source LOC**:
+- `0.72x` = test code is 72% the size of source code
+- `1.0x` = equal amounts of test and source
+- `2.0x` = twice as much test code as source
+
+Typical healthy ranges: `0.5x` to `2.0x` (project-dependent).
 
 ### JSON Output
 
@@ -111,7 +113,7 @@ loc: FAIL
     "test_files": 32,
     "ratio": 0.72
   },
-  "subprojects": {
+  "by_package": {
     "cli": {
       "source_lines": 3421,
       "source_files": 15,
@@ -130,20 +132,53 @@ loc: FAIL
 }
 ```
 
+**Note**: `by_package` is omitted if no subprojects are configured. `passed` is always `true` (reporting only).
+
+## File Size Limits
+
+Per-file line limits (enabled by default):
+
+```toml
+[checks.loc]
+# Max lines per source file (default: 750)
+max_lines = 750
+
+# Max lines per test file (default: 1100)
+max_lines_test = 1100
+```
+
+When limits are set, violations are reported:
+
+```
+loc: FAIL
+  src/parser.rs: 923 lines (max: 900)
+    Split into smaller modules.
+```
+
+Average lines per file is **reported** in metrics but not enforced.
+
 ## Configuration
 
 ```toml
 [checks.loc]
 enabled = true
 
-# Test ratio thresholds (test LOC / source LOC)
-test_ratio_min = 0.5   # Warn if tests are < 50% of source
-test_ratio_max = 4.0   # Warn if tests are > 400% of source (over-testing?)
-
 # Override default patterns
 source_patterns = ["src/**/*.rs", "lib/**/*.rs"]
 test_patterns = ["tests/**/*.rs", "**/*_tests.rs"]
+
+# File size limits (defaults shown)
+max_lines = 750
+max_lines_test = 1100
+
+# Exclude from size limits
+exclude = ["**/generated/**", "**/migrations/**"]
+
+# Rust-specific: parse #[cfg(test)] blocks
+# adapters.rust.parse_cfg_test = true  # default
 ```
+
+**Note**: Ratio is reporting-only. File size limits are enforced if configured.
 
 ## Performance
 

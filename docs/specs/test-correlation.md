@@ -9,21 +9,52 @@ Verify that modifications to source code have corresponding test coverage:
 - Changes to source files should include test updates
 - Prevents shipping untested code
 
+## Scope
+
+Correlation can be checked at different scopes:
+
+### Branch Scope (Default)
+
+Checks all changes on the branch together:
+- All source and test changes across all commits count
+- Order doesn't matter (tests first or code first both work)
+- Ideal for PR checks
+
+```bash
+quench --compare-branch main
+```
+
+### Commit Scope
+
+Checks individual commits with **asymmetric rules**:
+- Tests without code = **OK** (TDD recognized)
+- Code without tests = **FAIL**
+- Supports "tests first" workflows naturally
+
+```bash
+quench --staged          # Pre-commit
+quench --since HEAD~5    # Recent commits
+```
+
+```toml
+[checks.test-correlation]
+scope = "branch"  # or "commit"
+```
+
 ## Modes
 
-### Smart Mode (Default)
+### Require Mode (Default)
 
-Heuristic-based detection:
+Source changes require corresponding test changes:
 - New source files → require new test file (or test additions)
-- Significant source changes (>20 lines) → require test changes
-- Small refactors (<20 lines) → advisory only
+- Modified source files → require test changes
 - Deletions → no test requirement
 
 ### Strict Mode
 
 Explicit requirements:
 - Every source file must have a corresponding test file
-- Any source file change requires test file change in same commit/PR
+- Any source file change requires test file change
 - No exceptions
 
 ### Advisory Mode
@@ -36,8 +67,6 @@ Warn but don't fail:
 ## Change Detection
 
 ### Git Integration
-
-Quench uses git to detect changes:
 
 ```bash
 # Staged changes (pre-commit)
@@ -55,6 +84,13 @@ quench --since HEAD~5
 - Added files: new file in diff
 - Modified files: existing file with changes
 - Deleted files: not checked (no test required)
+
+### Inline Test Changes (Rust)
+
+For Rust, changes to `#[cfg(test)]` blocks in the same file **satisfy the test requirement**:
+- Adding `#[test]` functions counts as test changes
+- Modifying existing test code counts
+- No separate test file required if inline tests updated
 
 ## Test File Matching
 
@@ -76,27 +112,30 @@ When `require_mirror = true`:
 src/foo/bar.rs  →  tests/foo/bar_test.rs (required)
 ```
 
-### Language-Specific (Rust)
+## Placeholder Tests (Future)
 
-For Rust, also check:
-- `#[cfg(test)]` block in same file
-- `#[test]` functions added
+Support for placeholder tests that indicate planned implementation:
 
-## Inference vs Detection
+**Rust:**
+```rust
+#[test]
+#[ignore = "TODO: implement parser"]
+fn test_parser() { todo!() }
+```
 
-### Inferred Test Coverage
+**JavaScript/TypeScript:**
+```javascript
+test.todo('parser should handle edge case');
+test.fixme('parser broken on empty input');
+```
 
-"Smart" mode infers that tests exist somewhere:
-- Source: `src/parser.rs`
-- Test pattern match: `tests/parser_tests.rs` contains "parser"
-- Inference: tests likely cover this module
+When placeholder tests exist for a source file, correlation is satisfied even without implementation—the test intent is recorded.
 
-### Detected Test Changes
-
-Explicit detection of test changes in the diff:
-- Source changed: `src/parser.rs` (+50 lines)
-- Test changed: `tests/parser_tests.rs` (+30 lines)
-- Detection: tests were updated alongside source
+```toml
+[checks.test-correlation]
+# Recognize placeholder patterns as valid correlation
+allow_placeholders = true  # default: true
+```
 
 ## Output
 
@@ -104,12 +143,12 @@ Explicit detection of test changes in the diff:
 
 No output when correlation is satisfied.
 
-### Fail (smart mode)
+### Fail (require mode)
 
 ```
 test-correlation: FAIL
-  src/parser.rs: 67 lines added, no corresponding test changes
-    Add tests for the new parser functionality in tests/parser_tests.rs
+  src/parser.rs: modified, no corresponding test changes
+    Add tests in tests/parser_tests.rs or update inline #[cfg(test)] block
   src/lexer.rs: new file, no test file found
     Create tests/lexer_tests.rs with tests for the lexer module
 ```
@@ -126,7 +165,7 @@ test-correlation: FAIL
 
 ```
 test-correlation: WARN
-  src/parser.rs: significant changes without test updates
+  src/parser.rs: changes without test updates
     Consider adding tests for the modified functionality.
 ```
 
@@ -136,7 +175,8 @@ test-correlation: WARN
 {
   "name": "test-correlation",
   "passed": false,
-  "mode": "smart",
+  "mode": "require",
+  "scope": "branch",
   "violations": [
     {
       "source_file": "src/parser.rs",
@@ -144,8 +184,9 @@ test-correlation: WARN
       "lines_added": 67,
       "lines_removed": 12,
       "test_file": null,
+      "inline_tests": false,
       "test_changes": false,
-      "advice": "Add tests for the new parser functionality."
+      "advice": "Add tests in tests/parser_tests.rs or update inline #[cfg(test)] block"
     },
     {
       "source_file": "src/lexer.rs",
@@ -153,6 +194,7 @@ test-correlation: WARN
       "lines_added": 234,
       "lines_removed": 0,
       "test_file": null,
+      "inline_tests": false,
       "test_changes": false,
       "advice": "Create tests/lexer_tests.rs with tests for the lexer module."
     }
@@ -171,14 +213,19 @@ test-correlation: WARN
 [checks.test-correlation]
 enabled = true
 
-# Mode: smart | strict | advisory
-mode = "smart"
+# Mode: require | strict | advisory
+mode = "require"
 
-# Smart mode thresholds
-significant_change_lines = 20  # Lines added to trigger test requirement
+# Scope: branch | commit
+# branch = all changes on branch count together (order doesn't matter)
+# commit = per-commit checking with asymmetric rules (tests-first OK)
+scope = "branch"
 
 # Strict mode settings
 require_mirror = false         # Require 1:1 source→test mapping
+
+# Placeholder tests
+allow_placeholders = true      # #[ignore], test.todo(), test.fixme() count
 
 # Test file patterns (extend defaults)
 test_patterns = [
@@ -187,6 +234,7 @@ test_patterns = [
   "**/*_test.rs",        # Suffix pattern (outside test dirs)
   "**/*_tests.rs",
   "**/*.spec.rs",
+  "**/*.spec.ts",
 ]
 
 # Source patterns to check
@@ -200,23 +248,3 @@ exclude = [
   "**/generated/**",     # Generated code
 ]
 ```
-
-## Future: Comment Annotations
-
-Future support for explicit annotations:
-
-```rust
-// quench:source
-pub fn important_function() { ... }
-
-// quench:test-for:important_function
-#[test]
-fn test_important_function() { ... }
-```
-
-Or file-level:
-```rust
-//! quench:test-file
-```
-
-This allows explicit marking when automatic detection is insufficient.

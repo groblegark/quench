@@ -45,13 +45,13 @@ sync = true
 
 # Which file is the source of truth for --fix
 # Default: first file in the `files` list
-# If not configured: --fix is NOT available (must reconcile manually)
 sync_source = "CLAUDE.md"
 ```
 
-**Auto-fix requires explicit `sync_source`**:
-- If `sync_source` is set → `--fix` syncs other files from it
-- If `sync_source` is not set → out-of-sync is reported but `--fix` won't modify files
+**Auto-fix behavior**:
+- `sync_source` defaults to first file in the `files` list
+- `--fix` syncs other files from the source
+- `--fix` is only unavailable if `files` list is empty
 
 ## Existence Requirements
 
@@ -62,7 +62,7 @@ Configure which files must exist at each scope:
 # At project root
 required = ["CLAUDE.md"]              # Must exist
 optional = [".cursorrules"]           # Checked if present, not required
-forbidden = []                        # Must not exist
+forbid = []                        # Must not exist
 
 [checks.agent.package]
 # At each package/subproject
@@ -112,39 +112,41 @@ Agent files in a subdirectory (e.g., `src/parser/CLAUDE.md`). Typically:
 
 Sections that must be present. Matching is **case-insensitive**.
 
-Simple form:
+Simple form (no advice):
 ```toml
-require_sections = ["Project Structure", "Development"]
+[checks.agent]
+sections.required = ["Project Structure", "Development"]
 ```
 
-Extended form (with descriptions for advice):
+Extended form (with advice for agents):
 ```toml
-[[checks.agent.require_sections]]
+[[checks.agent.sections.required]]
 name = "Project Structure"
-description = "Overview of directory layout and key files"
+advice = "Overview of directory layout and key files"
 
-[[checks.agent.require_sections]]
+[[checks.agent.sections.required]]
 name = "Development"
-description = "How to build, test, and run the project"
+advice = "How to build, test, and run the project"
 
-[[checks.agent.require_sections]]
+[[checks.agent.sections.required]]
 name = "Landing the Plane"
-description = "Checklist for AI agents before finishing work"
+advice = "Checklist for AI agents before finishing work"
 ```
 
-When a section is missing, the description becomes actionable advice:
+When a section is missing, the advice becomes actionable output:
 ```
 agent: FAIL
   CLAUDE.md missing required section: "Landing the Plane"
     Add a "## Landing the Plane" section: Checklist for AI agents before finishing work
 ```
 
-### Forbidden Sections
+### Forbid Sections
 
 Sections that should not be present (case-insensitive, supports globs):
 
 ```toml
-forbid_sections = [
+[checks.agent]
+sections.forbid = [
   "API Keys",           # Exact match (case-insensitive)
   "Secrets",
   "Test*",              # Glob: matches "Testing", "Test Plan", etc.
@@ -155,10 +157,10 @@ forbid_sections = [
 
 ### Markdown Tables
 
-Tables are verbose and not token-efficient. Default: forbidden.
+Tables are verbose and not token-efficient. Default: forbid.
 
 ```toml
-forbid_tables = true  # default
+allow_tables = false  # default (tables forbid)
 ```
 
 Advice: Use lists or prose instead.
@@ -207,13 +209,13 @@ agent: FAIL
     Use --fix to sync from CLAUDE.md.
 ```
 
-### Fail (files out of sync, no sync_source)
+### Fail (files out of sync)
 
 ```
 agent: FAIL
   CLAUDE.md and .cursorrules are out of sync
     Section "Code Style" differs between files.
-    Set sync_source in quench.toml to enable --fix, or reconcile manually.
+    Run --fix to sync from CLAUDE.md, or reconcile manually.
 ```
 
 ### Fail (missing section)
@@ -224,7 +226,7 @@ agent: FAIL
     Add a "## Landing the Plane" section: Checklist for AI agents before finishing work
 ```
 
-### Fail (forbidden content)
+### Fail (forbid content)
 
 ```
 agent: FAIL
@@ -251,12 +253,12 @@ agent: FIXED
       "type": "out_of_sync",
       "other_file": ".cursorrules",
       "section": "Code Style",
-      "advice": "Set sync_source to enable --fix, or reconcile manually."
+      "advice": "Run --fix to sync from CLAUDE.md, or reconcile manually."
     },
     {
       "file": "CLAUDE.md",
       "line": 45,
-      "type": "forbidden_table",
+      "type": "forbid_table",
       "advice": "Tables are not token-efficient. Convert to a list."
     }
   ],
@@ -278,31 +280,30 @@ files = ["CLAUDE.md", ".cursorrules"]
 # Sync behavior (default: true if multiple files exist)
 sync = true
 
-# Source of truth for --fix (default: not set, --fix disabled)
-# Set this to enable auto-fix when files are out of sync
+# Source of truth for --fix (default: first file in `files` list)
 sync_source = "CLAUDE.md"
 
 # Existence requirements (root scope)
 required = ["CLAUDE.md"]
 optional = [".cursorrules"]
 
-# Section validation
-require_sections = ["Project Structure", "Development"]
-forbid_sections = ["Secrets", "API Keys"]
+# Section validation (simple form)
+sections.required = ["Project Structure", "Development"]
+sections.forbid = ["Secrets", "API Keys"]
 
-# Extended sections with descriptions
-# [[checks.agent.require_sections]]
+# Section validation (extended form with advice)
+# [[checks.agent.sections.required]]
 # name = "Landing the Plane"
-# description = "Checklist for AI agents before finishing work"
+# advice = "Checklist for AI agents before finishing work"
 
 # Content rules
-forbid_tables = true
+allow_tables = false
 allow_box_diagrams = true
 allow_mermaid = true
 
 # Size limits
-max_lines = 500
-max_tokens = 2000
+max_lines = 500 # default: 500
+max_tokens = 5000 # default: unlimited
 
 # Per-scope overrides
 [checks.agent.root]
@@ -313,8 +314,10 @@ max_tokens = 2000
 required = []
 optional = ["CLAUDE.md"]
 max_tokens = 800
+# max_lines: # default 250
 
 [checks.agent.module]
 required = []
 max_tokens = 400
+# max_lines: # default 150
 ```

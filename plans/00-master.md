@@ -16,100 +16,12 @@ Quench consolidates quality checking patterns from otters, v0, wok, and claudele
 ## Project Structure
 
 ```
-quench/
-├── Cargo.toml                    # Workspace
-├── quench.toml                   # Example config
-├── crates/
-│   ├── cli/                      # CLI binary
-│   │   └── src/
-│   │       ├── main.rs
-│   │       ├── commands/         # check, compare, report, init, lint
-│   │       ├── config.rs
-│   │       ├── output.rs
-│   │       └── progress.rs
-│   ├── core/                     # Core library
-│   │   └── src/
-│   │       ├── config/           # schema.rs, loader.rs, defaults.rs
-│   │       ├── metrics/          # types.rs, collector.rs, storage.rs
-│   │       ├── checks/           # loc, file_size, escapes, forbidden, justified, git
-│   │       ├── compare/          # baseline.rs, branch.rs, ratchet.rs
-│   │       ├── report/           # json.rs, markdown.rs, terminal.rs, weekly.rs
-│   │       ├── scanner/          # walker.rs, filter.rs, cache.rs
-│   │       └── project.rs
-│   └── adapters/                 # Language adapters
-│       └── src/
-│           ├── traits.rs         # LanguageAdapter trait
-│           ├── rust/             # clippy, coverage, cargo deny/audit, timing
-│           ├── shell/            # shellcheck
-│           └── generic/          # patterns
-├── benches/                      # Performance benchmarks
-└── tests/                        # Integration tests
+... TODO ...
 ```
 
 ## Configuration (quench.toml)
 
-```toml
-[project]
-name = "my-project"
-subprojects = [
-    { name = "cli", path = "crates/cli/src", tests = "crates/cli/tests" },
-    { name = "core", path = "crates/core/src", tests = "" },
-]
-
-[general]
-output_dir = "reports/quality"
-baseline = "reports/quality/baseline.json"
-default_format = "terminal"
-
-[scanner]
-respect_gitignore = true
-ignore = ["target/", "node_modules/"]
-threads = 0  # auto-detect
-
-[checks]
-enabled = ["loc", "file_size", "escapes", "forbidden", "justified"]
-slow_checks = ["coverage", "compile_time", "test_time", "memory"]
-
-[checks.loc]
-test_ratio_min = 1.0
-test_ratio_max = 4.0
-source_patterns = ["**/*.rs"]
-test_patterns = ["**/*_tests.rs", "**/tests/**/*.rs"]
-
-[checks.file_size]
-source_avg_limit = 500
-source_max_limit = 900
-test_avg_limit = 700
-test_max_limit = 1100
-
-[checks.escapes]
-patterns.unsafe = { pattern = "unsafe\\s*\\{", severity = "high", require_comment = "// SAFETY:" }
-patterns.unwrap = { pattern = "\\.unwrap\\(\\)", severity = "medium", require_comment = "// OK:" }
-thresholds.high_risk_max = 0
-
-[checks.forbidden]
-patterns = [
-    { pattern = "#\\[allow\\(clippy::unwrap_used\\)\\]", allow_with = "// JUSTIFIED:" },
-]
-
-[adapters.rust]
-enabled = true
-fmt_check = true
-clippy = true
-deny_check = true
-coverage = true
-coverage_threshold = 85.0
-
-[adapters.shell]
-enabled = true
-severity = "warning"
-no_inline_disables = true
-
-[compare]
-ratchet_escapes = true
-ratchet_coverage = true
-coverage_variance = 1.0
-```
+See [docs/specs](docs/specs/00-overview.md)
 
 ## CLI Interface
 

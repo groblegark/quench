@@ -44,44 +44,60 @@ When configuration is needed, it's hierarchical (monorepo-friendly) and minimal.
 
 ## Core Capabilities
 
-### Built-in Checks (Language Agnostic)
+### Built-in Checks (Fast)
 
 | Check | Description |
 |-------|-------------|
-| `loc` | Lines of code (source vs test separation) |
-| `file-size` | File size limits (avg/max thresholds) |
+| `loc` | Lines of code, file size limits (750 source, 1100 test) |
 | `escapes` | Pattern detection with count/require-comment/forbid modes |
 | `agent` | Agent file validation (CLAUDE.md, .cursorrules, sync) |
-| `test-correlation` | Changes to source require corresponding test changes |
+| `test-correlation` | Source changes require corresponding test changes |
+| `docs-correlation` | Feature commits require doc changes (disabled by default) |
+
+### CI Mode Metrics (Per Adapter)
+
+| Metric | Description |
+|--------|-------------|
+| `coverage` | Code coverage via test suites (llvm-cov for Rust) |
+| `binary_size` | Release binary sizes |
+| `compile_time` | Cold (release) and hot (debug) compile times |
+| `test_time` | Total, average, and max individual test times |
 
 ### Language Adapters
 
 | Adapter | Capabilities |
 |---------|--------------|
-| `rust` | Parse `#[cfg(test)]` blocks, separate `*_tests.rs`, cargo integration |
-| `shell` | Shellcheck integration, inline disable detection |
+| `rust` | `#[cfg(test)]` parsing, cargo integration, llvm-cov coverage |
+| `shell` | Shellcheck integration, bats test runner |
 | `generic` | Glob-based source/test detection, pattern matching |
 
-### Future Capabilities (Later Phases)
+### Test Runners
 
-- Coverage integration (per-language)
-- Binary size tracking
-- License header management (auto-fix)
-- Metrics storage and trending
-- GitHub Pages dashboard publishing
-- Commit format validation
+Shared across adapters for test time and coverage:
+- `cargo`, `bats`, `pytest`, `vitest`, `bun`, `jest`, `go`
+
+See `04-test-runners.md` for details.
+
+### Ratcheting
+
+Prevent quality regressions (enabled by default for coverage and escapes):
+- Coverage can't drop
+- Escape counts can't increase
+- Optional: binary size, compile time, test time
+
+See `ratcheting.md` for details.
 
 ## Output Design
 
 ### Default: Minimal Failures
 
 ```
-file-size: FAIL
-  crates/core/src/parser.rs: 912 lines (max: 900)
-    Split into smaller modules. Consider extracting the `TokenStream` logic.
+loc: FAIL
+  src/parser.rs: 812 lines (max: 750)
+    Split into smaller modules.
 
 escapes: FAIL
-  crates/cli/src/main.rs:47: unsafe block without // SAFETY: comment
+  src/main.rs:47: unsafe block without // SAFETY: comment
     Add a // SAFETY: comment explaining the invariants.
 ```
 
@@ -91,14 +107,13 @@ escapes: FAIL
 {
   "checks": [
     {
-      "name": "file-size",
+      "name": "loc",
       "passed": false,
       "violations": [
         {
-          "file": "crates/core/src/parser.rs",
-          "line": null,
-          "value": 912,
-          "threshold": 900,
+          "file": "src/parser.rs",
+          "lines": 812,
+          "threshold": 750,
           "advice": "Split into smaller modules."
         }
       ]
@@ -132,24 +147,37 @@ Per-package and per-module behavior defined in root config via `[checks.*.overri
 ### Fast Mode (default)
 
 Quick checks suitable for frequent runs:
-- LOC counting
-- File size limits
+- LOC counting with file size limits
 - Escape hatch detection
 - Agent file validation (CLAUDE.md, .cursorrules)
 - Test correlation (staged changes only)
 
 ### CI Mode (`--ci`)
 
-Full checks including slower operations:
-- All fast checks
+Full checks with multiple behavior changes:
+
+**Enables slow metrics:**
 - Coverage collection
 - Binary size measurement
-- Full branch comparison (not just staged)
+- Compile times (cold/hot)
+- Test times (total/avg/max)
+
+**Changes behavior:**
+- Full file scanning (no early termination)
+- Complete violation counts (not limited)
+- Metrics storage to baseline file or git notes
+
+**Metrics storage:**
+```bash
+quench --ci --save .quench/baseline.json    # Save to committed file
+quench --ci --save-notes                     # Save to git notes
+```
 
 ### Fix Mode (`--fix`)
 
 Auto-fix what can be fixed:
-- CLAUDE.md / .cursorrules alignment
+- CLAUDE.md / .cursorrules sync
+- Ratchet baseline updates (when metrics improve)
 - License headers (if enabled)
 - Report what was fixed, what remains
 

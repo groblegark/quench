@@ -160,7 +160,7 @@ required = true
 require_sections = ["Project Structure", "Development", "Landing the Plane"]
 max_lines = 500
 max_tokens = 2000
-forbid_tables = true
+allow_tables = true
 allow_box_diagrams = true
 sync_cursorrules = true
 

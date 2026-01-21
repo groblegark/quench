@@ -58,12 +58,88 @@ mod tests {
 | `mem::transmute` | require_comment | `// SAFETY:` |
 | `#[allow(` | require_comment | `// JUSTIFIED:` |
 
+### CI Mode Metrics (Reported)
+
+In `--ci` mode, the Rust adapter reports additional metrics. These are **reporting only** - no thresholds enforced. Use baseline comparison for regression detection.
+
+#### Binary Size
+
+Track release binary sizes. Binaries auto-detected from `[[bin]]` in Cargo.toml. Uses project's release profile (lto, strip, etc.).
+
+```
+rust: binary size
+  quench: 4.2 MB
+  server: 12.1 MB
+```
+
+With threshold (fails if exceeded):
+```
+rust: FAIL
+  quench: 5.1 MB (max: 5 MB)
+```
+
+#### Compile Time
+
+Track compile times:
+
+- **Cold**: `cargo clean && cargo build --release`
+- **Hot**: Incremental debug rebuild
+
+```
+rust: compile time
+  cold (release): 45.2s
+  hot (debug): 1.8s
+```
+
+#### Test Time
+
+Track test execution times across multiple test suites. See `04-test-runners.md` for runner details.
+
+Metrics:
+- **Total**: Sum of all test suite times
+- **Average**: Average per-test time (requires supported runner)
+- **Max**: Slowest individual test (requires supported runner)
+
+```
+rust: test time
+  total: 12.4s
+  avg: 45ms
+  max: 2.1s (tests::integration::large_file_parse)
+  suites:
+    cargo test: 8.2s
+    bats: 4.2s
+```
+
+With threshold (fails if exceeded):
+```
+rust: FAIL
+  test time max: 2.1s (max: 1s)
+    tests::integration::large_file_parse
+```
+
 ### Configuration
 
 ```toml
 [adapters.rust]
 enabled = true
-parse_cfg_test = true       # Count #[cfg(test)] as test LOC
+parse_cfg_test = true    # Count #[cfg(test)] as test LOC
+
+# CI mode (reporting)
+binary_size = true
+compile_time = true
+test_time = true
+
+# With thresholds (runs outside CI, fails if exceeded)
+binary_size_max = "5 MB"
+compile_time_cold_max = "60s"
+compile_time_hot_max = "2s"
+test_time_total_max = "30s"
+test_time_max = "1s"     # Slowest individual test
+
+# Additional test suites (see 04-test-runners.md)
+[[adapters.rust.test_suites]]
+runner = "bats"
+path = "tests/"
 ```
 
 ## Shell Adapter
