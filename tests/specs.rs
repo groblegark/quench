@@ -14,6 +14,9 @@ mod file_walking;
 #[path = "specs/output.rs"]
 mod output;
 
+#[path = "specs/checks.rs"]
+mod checks;
+
 use prelude::*;
 
 // =============================================================================

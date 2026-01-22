@@ -1,0 +1,4 @@
+version = 1
+
+[check.cloc]
+max_lines = 10  # Low limit to trigger failure easily
