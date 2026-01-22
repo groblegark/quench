@@ -1,0 +1,5 @@
+# Minimal valid configuration for testing
+version = 1
+
+[project]
+name = "minimal"
