@@ -17,3 +17,5 @@ Thumbs.db
 *.profdata
 lcov.info
 coverage/
+.wok/
+.v0/
