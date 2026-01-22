@@ -269,9 +269,9 @@ escapes: FAIL (not auto-fixable)
 
 To avoid overwhelming agent context with violations, quench limits output by default:
 
-- **Default limit**: ~15 violations max overall shown (ideally in easiness to fix order, where possible)
+- **Default limit**: 15 violations shown (ordered by ease of fix where possible)
 - **Behavior**: Once limit reached, show count of remaining violations
-- **Not configurable**: This is a hardcoded agent-first design decision
+- **Override**: Use `--limit N` for custom limit, `--no-limit` for all
 
 ```
 escapes: FAIL
@@ -298,3 +298,46 @@ Full counts are always available in `--ci` mode for metrics storage.
 - **Default**: Stream output as checks complete (better for slow checks)
 - **JSON format**: Buffer and output complete JSON at end
 - **`--no-stream`**: Buffer all output, show in consistent order
+
+## Error Recovery
+
+Quench runs all checks regardless of individual failures:
+
+| Scenario | Behavior |
+|----------|----------|
+| Check fails (violations found) | Continue to next check, exit 1 at end |
+| Check errors (config invalid) | Skip check, report error, continue, exit 2 at end |
+| Check crashes (internal error) | Log error, continue to next check, exit 3 at end |
+| File unreadable | Skip file with warning, continue check |
+| Pattern timeout (5s per file) | Skip file with warning, continue check |
+
+**Rationale**: Agents benefit from seeing all violations at once rather than fixing one check, re-running, and discovering more failures. A single run should surface everything actionable.
+
+### Exit Code Priority
+
+When multiple error types occur, the most severe exit code wins:
+
+```
+3 (internal error) > 2 (config error) > 1 (check failed) > 0 (passed)
+```
+
+### Partial Results
+
+JSON output always includes all checks that ran, even if some errored:
+
+```json
+{
+  "passed": false,
+  "checks": [
+    { "name": "cloc", "passed": true },
+    { "name": "escapes", "passed": false, "violations": [...] },
+    { "name": "build", "error": "cargo not found", "skipped": true }
+  ]
+}
+```
+
+Checks with `"skipped": true` encountered an error and did not complete.
+
+## JSON Schema
+
+The JSON output format is formally documented in [output.schema.json](output.schema.json) for tooling integration.

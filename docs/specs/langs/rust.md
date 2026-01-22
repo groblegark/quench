@@ -102,6 +102,8 @@ rust: FAIL
 
 ## Build Metrics
 
+Rust build metrics are part of the `build` check. See [checks/build.md](../checks/build.md) for full details.
+
 ### Targets
 
 Build targets for coverage and binary size tracking. Auto-detected from `[[bin]]` entries in Cargo.toml.
@@ -116,26 +118,26 @@ targets = ["myapp", "myserver"]    # Override auto-detection
 Track release binary sizes (CI mode).
 
 ```
-compile: binary size
+build: size
   quench: 4.2 MB
   server: 12.1 MB
 ```
 
 With threshold:
 ```
-compile: FAIL
+build: FAIL
   quench: 5.1 MB (max: 5 MB)
 ```
 
-### Compile Time
+### Build Time
 
-Track compile times (CI mode):
+Track build times (CI mode):
 
 - **Cold**: `cargo clean && cargo build --release`
 - **Hot**: Incremental debug rebuild
 
 ```
-compile: time
+build: time
   cold (release): 45.2s
   hot (debug): 1.8s
 ```
@@ -172,14 +174,9 @@ split_cfg_test = true            # Count #[cfg(test)] as test LOC
 # Build targets (default: all [[bin]] entries)
 # targets = ["myapp", "myserver"]
 
-# Build metrics (CI mode)
+# Build metrics (CI mode) - see [check.build] for thresholds
 binary_size = true
-compile_time = true
-
-# Thresholds
-binary_size_max = "5 MB"
-compile_time_cold_max = "60s"
-compile_time_hot_max = "2s"
+build_time = true
 
 [rust.suppress]
 check = "comment"

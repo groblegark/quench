@@ -50,7 +50,7 @@ A fast, configurable quality linting CLI for software projects.
 - Passing checks: silent
 - Failing checks: location + violation + advice
 - Advice is specific, concise, technical, not prescriptive
-- Default ~15 violation limit (agent context protection)
+- Default 15 violation limit (agent context protection)
 - Full counts only in `--ci` mode
 
 Good advice: `Add a // SAFETY: comment explaining the invariants.`
@@ -124,8 +124,10 @@ docs/specs/
 ├── 11-test-runners.md
 ├── 20-performance.md   # Performance strategy
 ├── 99-todo.md          # Future work
+├── output.schema.json  # JSON output schema for tooling
 ├── checks/             # Per-check specifications
 │   ├── agents.md
+│   ├── build.md        # Binary/bundle size, build time
 │   ├── cloc.md
 │   ├── docs.md
 │   ├── escape-hatches.md
@@ -133,6 +135,6 @@ docs/specs/
 │   ├── license-headers.md
 │   └── tests.md        # Includes coverage, test time
 └── langs/              # Language-specific details
-    ├── rust.md         # Rust: binary size, compile time, coverage
+    ├── rust.md         # Rust: build metrics, coverage
     └── shell.md        # Shell: bats, kcov coverage
 ```

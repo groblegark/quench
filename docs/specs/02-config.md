@@ -125,12 +125,12 @@ split_cfg_test = true                  # Count #[cfg(test)] as test LOC
 
 # Build metrics (CI mode)
 binary_size = true
-compile_time = true
+build_time = true
 
-# Thresholds (optional)
+# Thresholds (optional) - see [check.build] for details
 binary_size_max = "5 MB"
-compile_time_cold_max = "60s"
-compile_time_hot_max = "2s"
+build_time_cold_max = "60s"
+build_time_hot_max = "2s"
 
 # Lint suppression (#[allow(...)])
 [rust.suppress]
@@ -289,7 +289,7 @@ index = "auto"                             # auto | toc | linked | exists
 # Commit checking (CI mode only)
 [check.docs.commit]
 check = "off"                              # error | warn | off (default: off)
-# types = ["feat", "feature", "story"]     # default
+# types = ["feat", "feature", "story", "breaking"]   # default
 
 # Area mappings (reusable across features)
 [check.docs.area.api]
@@ -308,7 +308,7 @@ check = "error"                        # error | warn | off
 # Commit checking (source changes need test changes)
 [check.tests.commit]
 check = "error"                        # error | warn | off
-# types = ["feat", "feature", "story"] # default; only these commits require tests
+# types = ["feat", "feature", "story", "breaking"] # default; only these commits require tests
 scope = "branch"                       # branch | commit
 placeholders = "allow"
 exclude = ["**/mod.rs", "**/main.rs"]
@@ -382,8 +382,8 @@ check = "error"                        # error | warn | off
 coverage = true                        # Coverage can't drop
 escapes = true                         # Escape counts can't increase
 binary_size = false                    # Binary size can't grow
-compile_time_cold = false
-compile_time_hot = false
+build_time_cold = false
+build_time_hot = false
 test_time_total = false
 test_time_avg = false
 test_time_max = false

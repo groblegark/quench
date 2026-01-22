@@ -211,12 +211,12 @@ Full list: https://spdx.org/licenses/
 
 ```yaml
 - name: Check license headers
-  run: quench --ci --check license-headers
+  run: quench check --ci --license
 
 - name: Fix license headers (main only)
   if: github.ref == 'refs/heads/main'
   run: |
-    quench --ci --fix --check license-headers
+    quench check --ci --fix --license
     git add -A
     git commit -m "chore: update license headers" || true
     git push

@@ -201,8 +201,10 @@ Which commit types trigger the documentation requirement:
 ```toml
 [check.docs.commit]
 check = "error"
-# types = ["feat", "feature", "story"]   # default
+# types = ["feat", "feature", "story", "breaking"]   # default
 ```
+
+**Note**: `breaking` commits require documentation because breaking changes should always be clearly documented for users.
 
 ### Area Mapping
 
@@ -292,7 +294,7 @@ max_lines = 1000
 # Commit checking (CI mode)
 [check.docs.commit]
 check = "off"                    # error | warn | off
-# types = ["feat", "feature", "story"]   # default
+# types = ["feat", "feature", "story", "breaking"]   # default
 
 # Area mappings (reusable, default: any change in docs/)
 [check.docs.area.api]

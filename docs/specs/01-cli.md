@@ -49,7 +49,7 @@ Enable or disable specific checks:
 | `--[no-]docs` | docs | File refs, specs, doc correlation (CI) |
 | `--[no-]tests` | tests | Test correlation + coverage/time (CI) |
 | `--[no-]git` | git | Commit message format validation |
-| `--[no-]compile` | compile | Binary size + compile time (CI only) |
+| `--[no-]build` | build | Binary/bundle size + build time (CI only) |
 | `--[no-]license` | license | License headers (CI only) |
 
 ```bash
@@ -68,6 +68,8 @@ quench check --no-cloc --no-escapes  # Skip multiple
 | `--fix` | Auto-fix what can be fixed |
 | `--save <FILE>` | Save metrics to file (CI mode) |
 | `--save-notes` | Save metrics to git notes (CI mode) |
+
+**Violation Limit**: By default, quench shows at most **15 violations** to avoid overwhelming AI agent context windows. Use `--no-limit` to show all violations (e.g., for human review or CI logs). Use `--limit N` to set a custom limit.
 
 ```bash
 quench check -o json          # JSON output
@@ -173,11 +175,11 @@ Available on all commands:
 | `docs` | ✓ | ✓ | | File refs, specs, correlation (CI) |
 | `tests` | ✓ | ✓ | | Test correlation + coverage/time (CI) |
 | `git` | ✓ | ✓ | ✓ | Commit message format (disabled by default) |
-| `compile` | | ✓ | | Binary size + compile time |
+| `build` | | ✓ | | Binary/bundle size + build time |
 | `license` | | ✓ | ✓ | License header validation |
 
 **Fast mode**: Runs by default, quick checks only.
-**CI mode**: `--ci` flag, enables slow checks (compile, license, test execution).
+**CI mode**: `--ci` flag, enables slow checks (build, license, test execution).
 
 ## CI Integration
 

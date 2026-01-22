@@ -43,13 +43,12 @@ This happens regardless of whether files are `required` or optional:
 # Sync check is ON by default when multiple files exist
 sync = true
 
-# Which file is the source of truth for --fix
-# Default: first file in the `files` list
-sync_source = "CLAUDE.md"
+# Which file is the source of truth for --fix (default: first in `files` list)
+# sync_source = "CLAUDE.md"
 ```
 
 **Auto-fix behavior**:
-- `sync_source` defaults to first file in the `files` list
+- `sync_source` defaults to first file in the `files` list (e.g., if `files = ["CLAUDE.md", ".cursorrules"]`, then CLAUDE.md is the source)
 - `--fix` syncs other files from the source
 - `--fix` is only unavailable if `files` list is empty
 
@@ -192,7 +191,7 @@ max_lines = 100
 max_tokens = 400
 ```
 
-Token estimation: `tokens ≈ chars / 4`
+Token estimation uses `chars / 4` for speed (no external tokenizer dependency).
 
 ## Output
 

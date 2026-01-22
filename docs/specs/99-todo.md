@@ -65,6 +65,18 @@ Auto-publish metrics to GitHub Pages. Based on pattern from wok project.
 | `python` | `pyproject.toml` | `# type: ignore`, `# noqa` escapes |
 | `go` | `go.mod` | `unsafe.Pointer`, `//nolint` escapes |
 
+### TypeScript/JavaScript Build Support
+
+The `typescript` adapter will include build/bundle metrics:
+
+- **Bundler detection**: Auto-detect from `vite.config.ts`, `webpack.config.js`, `esbuild.config.js`, `rollup.config.js`
+- **Bundle size tracking**: Raw and gzipped sizes, chunk breakdown
+- **Build time**: Cold and cached builds
+- **Bundle analysis**: Large dependency warnings, forbidden imports (e.g., `moment` → suggest `date-fns`)
+- **Source map handling**: Exclude from size calculations
+
+See [checks/build.md](checks/build.md) for the build check specification.
+
 ## Notes from Interview
 
 - Primary users are AI agents ("landing the plane")

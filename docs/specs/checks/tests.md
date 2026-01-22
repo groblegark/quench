@@ -198,7 +198,7 @@ check = "error"
 # Commit checking (source changes need test changes)
 [check.tests.commit]
 check = "error"                # error | warn | off
-# types = ["feat", "feature", "story"]   # default; only these commits require tests
+# types = ["feat", "feature", "story", "breaking"]   # default; only these commits require tests
 
 # Scope: branch | commit
 # branch = all changes on branch count together (order doesn't matter)

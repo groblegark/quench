@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/alfredjeanlab/quench/docs/specs/output.schema.json",
+  "title": "Quench Output",
+  "description": "JSON output format for quench check command",
+  "type": "object",
+  "required": ["passed", "checks"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of when the check was run"
+    },
+    "passed": {
+      "type": "boolean",
+      "description": "Whether all checks passed"
+    },
+    "checks": {
+      "type": "array",
+      "description": "Results for each check that was run",
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    }
+  },
+  "$defs": {
+    "check": {
+      "type": "object",
+      "required": ["name", "passed"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["cloc", "escapes", "agents", "docs", "tests", "git", "build", "license"],
+          "description": "Check identifier"
+        },
+        "passed": {
+          "type": "boolean",
+          "description": "Whether this check passed"
+        },
+        "skipped": {
+          "type": "boolean",
+          "description": "True if check was skipped due to an error"
+        },
+        "error": {
+          "type": "string",
+          "description": "Error message if check was skipped"
+        },
+        "violations": {
+          "type": "array",
+          "description": "List of violations (omitted if empty)",
+          "items": {
+            "$ref": "#/$defs/violation"
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "description": "Aggregated counts and measurements (check-specific)",
+          "additionalProperties": true
+        },
+        "by_package": {
+          "type": "object",
+          "description": "Per-package metrics breakdown (omitted if no packages)",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "violation": {
+      "type": "object",
+      "required": ["type", "advice"],
+      "properties": {
+        "file": {
+          "type": ["string", "null"],
+          "description": "File path (null for non-file violations like commit messages)"
+        },
+        "line": {
+          "type": ["integer", "null"],
+          "minimum": 1,
+          "description": "Line number (null if not applicable)"
+        },
+        "type": {
+          "type": "string",
+          "description": "Violation category (check-specific)",
+          "examples": [
+            "file_too_large",
+            "missing_comment",
+            "forbidden",
+            "threshold_exceeded",
+            "missing_file",
+            "out_of_sync",
+            "missing_section",
+            "missing_tests",
+            "missing_header",
+            "invalid_format",
+            "broken_link",
+            "size_exceeded"
+          ]
+        },
+        "advice": {
+          "type": "string",
+          "description": "Actionable guidance on how to fix"
+        },
+        "commit": {
+          "type": "string",
+          "description": "Commit SHA (for commit-related violations)"
+        },
+        "message": {
+          "type": "string",
+          "description": "Commit message (for commit-related violations)"
+        },
+        "pattern": {
+          "type": "string",
+          "description": "Pattern name that matched (for escape violations)"
+        },
+        "value": {
+          "type": "number",
+          "description": "Current value (for threshold violations)"
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Threshold that was exceeded"
+        },
+        "target": {
+          "type": "string",
+          "description": "Build target name (for build violations)"
+        },
+        "section": {
+          "type": "string",
+          "description": "Section name (for docs/agents violations)"
+        },
+        "other_file": {
+          "type": "string",
+          "description": "Other file involved (for sync violations)"
+        },
+        "change_type": {
+          "type": "string",
+          "enum": ["added", "modified", "deleted"],
+          "description": "Type of change (for test correlation violations)"
+        },
+        "lines_changed": {
+          "type": "integer",
+          "description": "Number of lines changed (for test correlation violations)"
+        }
+      }
+    },
+    "ratchet": {
+      "type": "object",
+      "description": "Ratchet comparison results (included when ratcheting is enabled)",
+      "properties": {
+        "coverage": {
+          "$ref": "#/$defs/ratchetMetric"
+        },
+        "escapes": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ratchetMetric"
+          }
+        },
+        "binary_size": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/ratchetMetric"
+          }
+        },
+        "build_time": {
+          "type": "object",
+          "properties": {
+            "cold": {
+              "$ref": "#/$defs/ratchetMetric"
+            },
+            "hot": {
+              "$ref": "#/$defs/ratchetMetric"
+            }
+          }
+        }
+      }
+    },
+    "ratchetMetric": {
+      "type": "object",
+      "required": ["current", "baseline", "passed"],
+      "properties": {
+        "current": {
+          "type": "number",
+          "description": "Current measured value"
+        },
+        "baseline": {
+          "type": "number",
+          "description": "Baseline value from storage"
+        },
+        "tolerance": {
+          "type": "number",
+          "description": "Allowed tolerance for regression"
+        },
+        "min_allowed": {
+          "type": "number",
+          "description": "Minimum allowed value (for floor metrics like coverage)"
+        },
+        "max_allowed": {
+          "type": "number",
+          "description": "Maximum allowed value (for ceiling metrics like size)"
+        },
+        "passed": {
+          "type": "boolean",
+          "description": "Whether metric is within acceptable range"
+        },
+        "improved": {
+          "type": "boolean",
+          "description": "Whether metric improved from baseline"
+        }
+      }
+    }
+  }
+}

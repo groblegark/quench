@@ -54,7 +54,7 @@ When configuration is needed, it's hierarchical (monorepo-friendly) and minimal.
 | `docs` | ✓ | ✓ | File refs, specs validation + doc correlation (CI) |
 | `tests` | ✓ | ✓ | Test correlation (fast) + execution, coverage, time (CI) |
 | `git` | ✓ | ✓ | Commit message format validation (disabled by default) |
-| `compile` | | ✓ | Binary size + compile time (cold/hot) |
+| `build` | | ✓ | Binary/bundle size + build time (cold/hot) |
 | `license` | | ✓ | License header validation and auto-fix (disabled by default) |
 
 ### Language Adapters
@@ -153,9 +153,8 @@ Full checks with multiple behavior changes:
 **Enables slow checks:**
 - `docs` correlation (feature commits need docs, if enabled)
 - `license` headers (if enabled)
+- `build` metrics (binary/bundle size, build times)
 - Coverage collection
-- Binary size measurement
-- Compile times (cold/hot)
 - Test times (total/avg/max)
 
 **Changes behavior:**

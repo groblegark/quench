@@ -30,13 +30,13 @@ See [langs/rust.md](langs/rust.md) for full Rust configuration.
 - **Test detection**: `#[cfg(test)]` blocks, `tests/` directory, `*_test.rs` files
 - **Escape patterns**: `unsafe`, `.unwrap()`, `.expect()`, `mem::transmute`
 - **Lint suppression**: `#[allow(...)]`, `#[expect(...)]`
-- **Build metrics**: Binary size, compile time
+- **Build metrics**: Binary size, build time
 
 ```toml
 [rust]
 split_cfg_test = true            # Count #[cfg(test)] as test LOC
 binary_size = true
-compile_time = true
+build_time = true
 
 [rust.suppress]
 check = "comment"                # forbid | comment | allow
@@ -95,3 +95,5 @@ tests = ["test/**/*", "tests/**/*", "**/*_test.*", "**/*.spec.*"]
 | `typescript` | `tsconfig.json` | `*.test.ts`, `*.spec.ts` | `as unknown`, `@ts-ignore`, `any` |
 | `python` | `pyproject.toml` | `test_*.py`, `*_test.py` | `# type: ignore`, `# noqa` |
 | `go` | `go.mod` | `*_test.go` | `unsafe.Pointer`, `//nolint` |
+
+Future adapters will also provide build metrics. See [checks/build.md](checks/build.md) for how adapters integrate with the build check (bundle size, build time, etc.).

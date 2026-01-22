@@ -18,8 +18,8 @@ This enables incremental quality improvement without manual threshold maintenanc
 | Coverage | Higher | Floor rises with improvements | On |
 | Escape hatch counts | Lower | Ceiling drops as you clean up | On |
 | Binary size | Smaller | Ceiling drops on optimization | Off |
-| Compile time (cold) | Faster | Ceiling drops on improvement | Off |
-| Compile time (hot) | Faster | Ceiling drops on improvement | Off |
+| Build time (cold) | Faster | Ceiling drops on improvement | Off |
+| Build time (hot) | Faster | Ceiling drops on improvement | Off |
 | Test time (total) | Faster | Ceiling drops on improvement | Off |
 | Test time (avg) | Faster | Ceiling drops on improvement | Off |
 | Test time (max) | Faster | Ceiling drops on improvement | Off |
@@ -46,9 +46,9 @@ coverage = true          # Coverage can't drop
 escapes = true           # Escape counts can't increase
 binary_size = false      # Opt-in: binaries can't grow
 
-# Compile time (granular)
-compile_time_cold = false
-compile_time_hot = false
+# Build time (granular)
+build_time_cold = false
+build_time_hot = false
 
 # Test time (granular)
 test_time_total = false
@@ -64,7 +64,7 @@ Allow small regressions to handle noise:
 [ratchet]
 coverage_tolerance = 0.5       # Allow 0.5% coverage drop
 binary_size_tolerance = "100KB" # Allow 100KB size increase
-compile_time_tolerance = "5s"   # Allow 5s compile time increase
+build_time_tolerance = "5s"     # Allow 5s build time increase
 ```
 
 ### Per-Package
@@ -197,7 +197,7 @@ coverage: FAIL
     "binary_size": {
       "quench": 4404019
     },
-    "compile_time": {
+    "build_time": {
       "cold": 45.2,
       "hot": 1.8
     },
@@ -213,7 +213,7 @@ coverage: FAIL
 ## Notes
 
 - Coverage and escapes ratcheting are **on by default**; other metrics are opt-in
-- Tolerance prevents failing on noise (especially compile time)
+- Tolerance prevents failing on noise (especially build time)
 - Per-package ratcheting allows different policies for different maturity levels
 - `--fix` updates baseline only when metrics improve (never on regression)
 - Baseline should be committed to repo for team visibility
