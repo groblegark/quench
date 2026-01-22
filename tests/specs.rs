@@ -18,7 +18,6 @@ use prelude::*;
 ///
 /// > quench (bare invocation) shows help
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn bare_invocation_shows_help() {
     quench_cmd()
         .assert()
@@ -42,7 +41,6 @@ fn help_exits_successfully() {
 ///
 /// > quench help shows help
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn help_command_shows_help() {
     quench_cmd()
         .arg("help")
@@ -63,7 +61,6 @@ fn version_exits_successfully() {
 ///
 /// > quench check runs quality checks
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn check_command_exists() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
@@ -79,7 +76,6 @@ fn check_command_exists() {
 ///
 /// > quench report generates reports
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn report_command_exists() {
     quench_cmd().arg("report").assert().success();
 }
@@ -88,7 +84,6 @@ fn report_command_exists() {
 ///
 /// > quench init initializes configuration
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn init_command_exists() {
     let dir = tempfile::tempdir().unwrap();
     quench_cmd()
@@ -102,7 +97,6 @@ fn init_command_exists() {
 ///
 /// > Exit code 2 for unknown commands
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn unknown_command_fails() {
     quench_cmd()
         .arg("unknown")
@@ -143,7 +137,6 @@ fn short_version_flag_works() {
 ///
 /// > -C <FILE> specifies config file (short for --config)
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn short_config_flag_works() {
     let dir = tempfile::tempdir().unwrap();
     let config_path = dir.path().join("custom.toml");
@@ -188,7 +181,6 @@ fn unknown_long_flag_fails() {
 ///
 /// > -o <FMT> sets output format (short for --output)
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn check_short_output_flag_works() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
@@ -205,7 +197,6 @@ fn check_short_output_flag_works() {
 ///
 /// > -o json produces JSON output
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn check_output_json_format() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
@@ -228,7 +219,6 @@ fn check_output_json_format() {
 ///
 /// > Unknown flags to check command produce error
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn check_unknown_flag_fails() {
     quench_cmd()
         .args(["check", "-x"])
@@ -241,7 +231,6 @@ fn check_unknown_flag_fails() {
 ///
 /// > Unknown long flags to check command produce error
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn check_unknown_long_flag_fails() {
     quench_cmd()
         .args(["check", "--unknown-option"])
@@ -258,7 +247,6 @@ fn check_unknown_long_flag_fails() {
 ///
 /// > Unknown keys are warnings (forward compatibility)
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn unknown_config_key_warns() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(
@@ -279,7 +267,6 @@ fn unknown_config_key_warns() {
 ///
 /// > Unknown nested keys are warnings
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn unknown_nested_config_key_warns() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(
@@ -303,7 +290,6 @@ field = "value"
 ///
 /// > Valid config produces no warnings
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn valid_config_no_warnings() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
@@ -324,7 +310,6 @@ fn valid_config_no_warnings() {
 ///
 /// > QUENCH_NO_COLOR=1 disables color output
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn env_no_color_disables_color() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
@@ -351,7 +336,6 @@ fn env_no_color_disables_color() {
 ///
 /// > QUENCH_CONFIG sets config file location
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn env_config_sets_path() {
     let dir = tempfile::tempdir().unwrap();
     let config_path = dir.path().join("custom-config.toml");
@@ -369,7 +353,6 @@ fn env_config_sets_path() {
 ///
 /// > QUENCH_LOG enables debug logging to stderr
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn env_log_enables_debug() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
@@ -387,7 +370,6 @@ fn env_log_enables_debug() {
 ///
 /// > QUENCH_LOG=trace enables trace logging
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn env_log_trace_level() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
@@ -405,7 +387,6 @@ fn env_log_trace_level() {
 ///
 /// > Unknown QUENCH_* environment variables are silently ignored
 #[test]
-#[ignore = "TODO: Phase 005 - CLI skeleton"]
 fn env_unknown_vars_ignored() {
     quench_cmd()
         .arg("--help")
