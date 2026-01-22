@@ -1,12 +1,12 @@
-# Lines of Code Specification
+# CLOC (Code Lines of Code) Specification
 
-The `loc` check counts lines of code, separating source from test code.
+The `cloc` check counts lines of code, separating source from test code.
 
 ## Purpose
 
 - Track codebase size and growth
 - Report source-to-test ratio for CI metrics
-- Per-subproject breakdown for focused metrics
+- Per-package breakdown for focused metrics
 
 **Note**: This check is reporting-only. It does not fail based on ratio thresholds.
 Ratio enforcement is left to CI configuration or future ratcheting features.
@@ -76,7 +76,7 @@ mod tests {
 }
 ```
 
-When `adapters.rust.parse_cfg_test = true` (default), lines inside `#[cfg(test)]`
+When `checks.rust.parse_cfg_test = true` (default), lines inside `#[cfg(test)]`
 blocks are counted as test LOC even in source files.
 
 ## Output
@@ -88,7 +88,7 @@ LOC check always passes (reporting only). No output by default.
 ### With `--summary` or `-v`
 
 ```
-loc: 12,453 source / 8,921 test (0.72x)
+cloc: 12,453 source / 8,921 test (0.72x)
 ```
 
 ### Ratio Direction
@@ -132,14 +132,14 @@ Typical healthy ranges: `0.5x` to `2.0x` (project-dependent).
 }
 ```
 
-**Note**: `by_package` is omitted if no subprojects are configured. `passed` is always `true` (reporting only).
+**Note**: `by_package` is omitted if no packages are configured. `passed` is always `true` (reporting only).
 
 ## File Size Limits
 
 Per-file line limits (enabled by default):
 
 ```toml
-[checks.loc]
+[checks.cloc]
 # Max lines per source file (default: 750)
 max_lines = 750
 
@@ -150,7 +150,7 @@ max_lines_test = 1100
 When limits are set, violations are reported:
 
 ```
-loc: FAIL
+cloc: FAIL
   src/parser.rs: 923 lines (max: 900)
     Split into smaller modules.
 ```
@@ -160,7 +160,7 @@ Average lines per file is **reported** in metrics but not enforced.
 ## Configuration
 
 ```toml
-[checks.loc]
+[checks.cloc]
 enabled = true
 
 # Override default patterns
@@ -175,7 +175,7 @@ max_lines_test = 1100
 exclude = ["**/generated/**", "**/migrations/**"]
 
 # Rust-specific: parse #[cfg(test)] blocks
-# adapters.rust.parse_cfg_test = true  # default
+# checks.rust.parse_cfg_test = true  # default
 ```
 
 **Note**: Ratio is reporting-only. File size limits are enforced if configured.

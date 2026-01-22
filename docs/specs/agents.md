@@ -1,6 +1,6 @@
-# Agent Docs Specification
+# Agents Check Specification
 
-The `agent` check validates AI agent context files (CLAUDE.md, .cursorrules, etc.).
+The `agents` check validates AI agent context files (CLAUDE.md, .cursorrules, etc.).
 
 ## Purpose
 
@@ -24,7 +24,7 @@ Quench recognizes these agent context files:
 Configure which files are recognized:
 
 ```toml
-[checks.agent]
+[checks.agents]
 # Files to check (default: all recognized)
 files = ["CLAUDE.md", ".cursorrules"]
 ```
@@ -39,7 +39,7 @@ This happens regardless of whether files are `required` or optional:
 - If neither exists but one is required → fail on missing file
 
 ```toml
-[checks.agent]
+[checks.agents]
 # Sync check is ON by default when multiple files exist
 sync = true
 
@@ -58,18 +58,18 @@ sync_source = "CLAUDE.md"
 Configure which files must exist at each scope:
 
 ```toml
-[checks.agent.root]
+[checks.agents.root]
 # At project root
 required = ["CLAUDE.md"]              # Must exist
 optional = [".cursorrules"]           # Checked if present, not required
 forbid = []                        # Must not exist
 
-[checks.agent.package]
-# At each package/subproject
+[checks.agents.package]
+# At each package
 required = []                         # None required by default
 optional = ["CLAUDE.md"]
 
-[checks.agent.module]
+[checks.agents.module]
 # At subdirectories
 required = []
 optional = ["CLAUDE.md"]
@@ -78,7 +78,7 @@ optional = ["CLAUDE.md"]
 Simpler flat config (root only):
 
 ```toml
-[checks.agent]
+[checks.agents]
 required = ["CLAUDE.md"]
 optional = [".cursorrules"]
 ```
@@ -114,28 +114,28 @@ Sections that must be present. Matching is **case-insensitive**.
 
 Simple form (no advice):
 ```toml
-[checks.agent]
+[checks.agents]
 sections.required = ["Project Structure", "Development"]
 ```
 
 Extended form (with advice for agents):
 ```toml
-[[checks.agent.sections.required]]
+[[checks.agents.sections.required]]
 name = "Project Structure"
 advice = "Overview of directory layout and key files"
 
-[[checks.agent.sections.required]]
+[[checks.agents.sections.required]]
 name = "Development"
 advice = "How to build, test, and run the project"
 
-[[checks.agent.sections.required]]
+[[checks.agents.sections.required]]
 name = "Landing the Plane"
 advice = "Checklist for AI agents before finishing work"
 ```
 
 When a section is missing, the advice becomes actionable output:
 ```
-agent: FAIL
+agents: FAIL
   CLAUDE.md missing required section: "Landing the Plane"
     Add a "## Landing the Plane" section: Checklist for AI agents before finishing work
 ```
@@ -145,7 +145,7 @@ agent: FAIL
 Sections that should not be present (case-insensitive, supports globs):
 
 ```toml
-[checks.agent]
+[checks.agents]
 sections.forbid = [
   "API Keys",           # Exact match (case-insensitive)
   "Secrets",
@@ -179,7 +179,7 @@ allow_mermaid = true        # ```mermaid blocks
 Keep agent files concise:
 
 ```toml
-[checks.agent.limits]
+[checks.agents.limits]
 root_max_lines = 500
 root_max_tokens = 2000
 package_max_lines = 200
@@ -195,7 +195,7 @@ Token estimation: `tokens ≈ characters / 4`
 ### Fail (missing required file)
 
 ```
-agent: FAIL
+agents: FAIL
   CLAUDE.md not found at project root
     Create a CLAUDE.md with project context for AI agents.
 ```
@@ -203,7 +203,7 @@ agent: FAIL
 ### Fail (files out of sync, sync_source configured)
 
 ```
-agent: FAIL
+agents: FAIL
   CLAUDE.md and .cursorrules are out of sync
     Section "Code Style" differs between files.
     Use --fix to sync from CLAUDE.md.
@@ -212,7 +212,7 @@ agent: FAIL
 ### Fail (files out of sync)
 
 ```
-agent: FAIL
+agents: FAIL
   CLAUDE.md and .cursorrules are out of sync
     Section "Code Style" differs between files.
     Run --fix to sync from CLAUDE.md, or reconcile manually.
@@ -221,7 +221,7 @@ agent: FAIL
 ### Fail (missing section)
 
 ```
-agent: FAIL
+agents: FAIL
   CLAUDE.md missing required section: "Landing the Plane"
     Add a "## Landing the Plane" section: Checklist for AI agents before finishing work
 ```
@@ -229,7 +229,7 @@ agent: FAIL
 ### Fail (forbid content)
 
 ```
-agent: FAIL
+agents: FAIL
   CLAUDE.md:45: Markdown table detected
     Tables are not token-efficient. Convert to a list or prose.
 ```
@@ -237,7 +237,7 @@ agent: FAIL
 ### Fixed (with --fix)
 
 ```
-agent: FIXED
+agents: FIXED
   Synced .cursorrules from CLAUDE.md (3 sections updated)
 ```
 
@@ -271,7 +271,7 @@ agent: FIXED
 ## Configuration
 
 ```toml
-[checks.agent]
+[checks.agents]
 enabled = true
 
 # Which agent files to check
@@ -292,7 +292,7 @@ sections.required = ["Project Structure", "Development"]
 sections.forbid = ["Secrets", "API Keys"]
 
 # Section validation (extended form with advice)
-# [[checks.agent.sections.required]]
+# [[checks.agents.sections.required]]
 # name = "Landing the Plane"
 # advice = "Checklist for AI agents before finishing work"
 
@@ -306,17 +306,17 @@ max_lines = 500 # default: 500
 max_tokens = 5000 # default: unlimited
 
 # Per-scope overrides
-[checks.agent.root]
+[checks.agents.root]
 required = ["CLAUDE.md"]
 max_tokens = 2000
 
-[checks.agent.package]
+[checks.agents.package]
 required = []
 optional = ["CLAUDE.md"]
 max_tokens = 800
 # max_lines: # default 250
 
-[checks.agent.module]
+[checks.agents.module]
 required = []
 max_tokens = 400
 # max_lines: # default 150

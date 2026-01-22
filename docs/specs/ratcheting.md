@@ -47,7 +47,6 @@ Enable ratcheting per-metric:
 ```toml
 [ratchet]
 enabled = true
-baseline = ".quench/baseline.json"
 
 # Which metrics to ratchet (defaults shown)
 coverage = true          # Coverage can't drop
@@ -80,10 +79,10 @@ compile_time_tolerance = "5s"   # Allow 5s compile time increase
 Ratcheting respects per-package breakdown:
 
 ```toml
-[ratchet.packages.core]
+[ratchet.package.core]
 coverage = true          # Ratchet core coverage
 
-[ratchet.packages.cli]
+[ratchet.package.cli]
 coverage = false         # Don't ratchet CLI coverage (still developing)
 ```
 

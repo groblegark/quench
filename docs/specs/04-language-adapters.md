@@ -120,7 +120,7 @@ rust: FAIL
 ### Configuration
 
 ```toml
-[adapters.rust]
+[checks.rust]
 enabled = true
 parse_cfg_test = true    # Count #[cfg(test)] as test LOC
 
@@ -137,7 +137,7 @@ test_time_total_max = "30s"
 test_time_max = "1s"     # Slowest individual test
 
 # Additional test suites (see 04-test-runners.md)
-[[adapters.rust.test_suites]]
+[[checks.rust.test_suites]]
 runner = "bats"
 path = "tests/"
 ```
@@ -164,7 +164,7 @@ No inline test code convention for shell.
 ### Configuration
 
 ```toml
-[adapters.shell]
+[checks.shell]
 enabled = true
 forbid_inline_disables = true   # Forbid # shellcheck disable=
 ```
@@ -185,7 +185,7 @@ No defaults. Only user-configured patterns apply.
 ### Configuration
 
 ```toml
-[adapters.generic]
+[checks.generic]
 enabled = true
 source_patterns = ["src/**/*", "lib/**/*"]
 test_patterns = ["test/**/*", "tests/**/*"]

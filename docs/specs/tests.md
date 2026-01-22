@@ -1,6 +1,6 @@
-# Test Correlation Specification
+# Tests Check Specification
 
-The `test-correlation` check ensures code changes are accompanied by test changes.
+The `tests` check ensures code changes are accompanied by test changes.
 
 ## Purpose
 
@@ -37,7 +37,7 @@ quench --since HEAD~5    # Recent commits
 ```
 
 ```toml
-[checks.test-correlation]
+[checks.tests]
 scope = "branch"  # or "commit"
 ```
 
@@ -49,13 +49,6 @@ Source changes require corresponding test changes:
 - New source files → require new test file (or test additions)
 - Modified source files → require test changes
 - Deletions → no test requirement
-
-### Strict Mode
-
-Explicit requirements:
-- Every source file must have a corresponding test file
-- Any source file change requires test file change
-- No exceptions
 
 ### Advisory Mode
 
@@ -105,13 +98,6 @@ For source file `src/parser.rs`, look for tests in:
 6. `test/parser.rs`
 7. Any file matching test patterns containing "parser"
 
-### Directory Mirroring (Optional)
-
-When `require_mirror = true`:
-```
-src/foo/bar.rs  →  tests/foo/bar_test.rs (required)
-```
-
 ## Placeholder Tests (Future)
 
 Support for placeholder tests that indicate planned implementation:
@@ -132,7 +118,7 @@ test.fixme('parser broken on empty input');
 When placeholder tests exist for a source file, correlation is satisfied even without implementation—the test intent is recorded.
 
 ```toml
-[checks.test-correlation]
+[checks.tests]
 # Recognize placeholder patterns as valid correlation
 allow_placeholders = true  # default: true
 ```
@@ -146,25 +132,17 @@ No output when correlation is satisfied.
 ### Fail (require mode)
 
 ```
-test-correlation: FAIL
+tests: FAIL
   src/parser.rs: modified, no corresponding test changes
     Add tests in tests/parser_tests.rs or update inline #[cfg(test)] block
   src/lexer.rs: new file, no test file found
     Create tests/lexer_tests.rs with tests for the lexer module
 ```
 
-### Fail (strict mode)
-
-```
-test-correlation: FAIL
-  src/utils/helpers.rs: no corresponding test file
-    Create src/utils/helpers_tests.rs or tests/utils/helpers_test.rs
-```
-
 ### Advisory (warn mode)
 
 ```
-test-correlation: WARN
+tests: WARN
   src/parser.rs: changes without test updates
     Consider adding tests for the modified functionality.
 ```
@@ -210,19 +188,16 @@ test-correlation: WARN
 ## Configuration
 
 ```toml
-[checks.test-correlation]
+[checks.tests]
 enabled = true
 
-# Mode: require | strict | advisory
+# Mode: require | advisory
 mode = "require"
 
 # Scope: branch | commit
 # branch = all changes on branch count together (order doesn't matter)
 # commit = per-commit checking with asymmetric rules (tests-first OK)
 scope = "branch"
-
-# Strict mode settings
-require_mirror = false         # Require 1:1 source→test mapping
 
 # Placeholder tests
 allow_placeholders = true      # #[ignore], test.todo(), test.fixme() count

@@ -2,35 +2,60 @@
 
 Features discussed but not yet fully specified. To be designed in later phases.
 
-## Reporting
+## Report Command
 
-### Weekly Reports
+The `quench report` command generates human-readable reports from stored metrics.
 
-Generate trending reports over configurable period.
+### Formats
 
-- Summary table with deltas
+- **Markdown** (default): Summary tables, metric values, trend indicators
+- **JSON**: Machine-readable for external tools
+- **HTML**: Static dashboard page
+
+### Data Sources
+
+Reports read from:
+- `.quench/baseline.json` (committed file)
+- Git notes (`git notes --ref=quench`)
+
+History is derived from git blame (for committed baseline) or git notes history.
+
+### Weekly Summary (Future)
+
+Generate trending reports over configurable period:
+- Summary table with deltas from previous period
 - Pass/fail status per metric
-- Commit/work tracking summary
-- Markdown output
+- Trend direction indicators (↑ ↓ →)
 
-### GitHub Pages Dashboard
+## GitHub Pages Dashboard
 
-Auto-publish metrics to GitHub Pages.
+Auto-publish metrics to GitHub Pages. Based on pattern from wok project.
 
-- Latest metrics JSON
-- Historical trend data
-- Human-readable summary
-- CI workflow integration
+### Components
 
-## License Headers
+- `docs/reports/index.html` - Static dashboard with JavaScript
+- `docs/reports/quality/latest.json` - Current metrics
+- `docs/reports/quality/latest.md` - Human-readable summary
 
-Auto-manage license headers in source files.
+### CI Integration
 
-- Add missing headers
-- Update copyright year
-- Configurable header template
-- `--fix` support
-- Default: disabled
+```yaml
+- name: Generate reports
+  run: |
+    quench --ci --save .quench/baseline.json
+    quench report -f json -o docs/reports/quality/latest.json
+    quench report -f html -o docs/reports/index.html
+
+- name: Deploy to GitHub Pages
+  uses: actions/deploy-pages@v2
+```
+
+### Dashboard Features
+
+- Metric cards with current values
+- Color coding (green/yellow/red based on thresholds)
+- Links to CI runs
+- Responsive design
 
 ## Git Checks
 
@@ -41,6 +66,16 @@ Validate conventional commit format.
 - `feat:`, `fix:`, `chore:` prefixes (or `feat(...):`)
 - Configurable patterns
 - Default: disabled
+- Could integrate with `docs-correlation` triggers
+
+## Memory Profiling
+
+Track peak RSS during operations.
+
+- Memory during `quench` command itself
+- Memory during `quench help`
+- Useful for ensuring quench stays lightweight
+- Reporting only, no thresholds
 
 ## Future Adapters
 

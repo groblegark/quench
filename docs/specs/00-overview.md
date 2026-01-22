@@ -44,15 +44,16 @@ When configuration is needed, it's hierarchical (monorepo-friendly) and minimal.
 
 ## Core Capabilities
 
-### Built-in Checks (Fast)
+### Built-in Checks
 
-| Check | Description |
-|-------|-------------|
-| `loc` | Lines of code, file size limits (750 source, 1100 test) |
-| `escapes` | Pattern detection with count/require-comment/forbid modes |
-| `agent` | Agent file validation (CLAUDE.md, .cursorrules, sync) |
-| `test-correlation` | Source changes require corresponding test changes |
-| `docs-correlation` | Feature commits require doc changes (disabled by default) |
+| Check | Fast | CI | Description |
+|-------|------|-----|-------------|
+| `cloc` | ✓ | ✓ | Lines of code, file size limits (750 source, 1100 test) |
+| `escapes` | ✓ | ✓ | Pattern detection with count/require-comment/forbid modes |
+| `agents` | ✓ | ✓ | Agent file validation (CLAUDE.md, .cursorrules, sync) |
+| `docs` | ✓ | ✓ | Specs validation (fast) + doc correlation (CI, opt-in) |
+| `tests` | ✓ | ✓ | Source changes require corresponding test changes |
+| `license` | | ✓ | License header validation and auto-fix (disabled by default) |
 
 ### CI Mode Metrics (Per Adapter)
 
@@ -76,7 +77,7 @@ When configuration is needed, it's hierarchical (monorepo-friendly) and minimal.
 Shared across adapters for test time and coverage:
 - `cargo`, `bats`, `pytest`, `vitest`, `bun`, `jest`, `go`
 
-See `04-test-runners.md` for details.
+See `05-test-runners.md` for details.
 
 ### Ratcheting
 
@@ -92,7 +93,7 @@ See `ratcheting.md` for details.
 ### Default: Minimal Failures
 
 ```
-loc: FAIL
+cloc: FAIL
   src/parser.rs: 812 lines (max: 750)
     Split into smaller modules.
 
@@ -101,13 +102,13 @@ escapes: FAIL
     Add a // SAFETY: comment explaining the invariants.
 ```
 
-### JSON Mode (`-f json`)
+### JSON Mode (`-o json`)
 
 ```json
 {
   "checks": [
     {
-      "name": "loc",
+      "name": "cloc",
       "passed": false,
       "violations": [
         {
@@ -126,7 +127,6 @@ escapes: FAIL
 
 - TTY detection: colorize if stdout is a terminal
 - Agent detection: check `CLAUDE_CODE` or `CODEX` env vars, disable color if set
-- Override: `--color=always|never|auto`
 
 ## Configuration
 
@@ -140,23 +140,26 @@ project-root/
 │   └── core/
 ```
 
-Per-package and per-module behavior defined in root config via `[checks.*.overrides.package_name]`.
+Per-package and per-module behavior defined in root config via `[checks.*.package.package_name]`.
 
 ## Modes
 
 ### Fast Mode (default)
 
 Quick checks suitable for frequent runs:
-- LOC counting with file size limits
-- Escape hatch detection
-- Agent file validation (CLAUDE.md, .cursorrules)
-- Test correlation (staged changes only)
+- `cloc`: LOC counting with file size limits
+- `escapes`: Escape hatch detection
+- `agents`: Agent file validation (CLAUDE.md, .cursorrules)
+- `docs`: Specs validation (structure, index, sections)
+- `tests`: Test correlation (with `--staged` or `--branch`)
 
 ### CI Mode (`--ci`)
 
 Full checks with multiple behavior changes:
 
-**Enables slow metrics:**
+**Enables slow checks:**
+- `docs` correlation (feature commits need docs, if enabled)
+- `license` headers (if enabled)
 - Coverage collection
 - Binary size measurement
 - Compile times (cold/hot)
@@ -166,12 +169,6 @@ Full checks with multiple behavior changes:
 - Full file scanning (no early termination)
 - Complete violation counts (not limited)
 - Metrics storage to baseline file or git notes
-
-**Metrics storage:**
-```bash
-quench --ci --save .quench/baseline.json    # Save to committed file
-quench --ci --save-notes                     # Save to git notes
-```
 
 ### Fix Mode (`--fix`)
 
@@ -184,7 +181,7 @@ Auto-fix what can be fixed:
 ## Success Criteria
 
 Quench succeeds if:
-1. A new project can run `quench` with zero config and get useful feedback
+1. A new project can run `quench check` with zero config and get useful feedback
 2. Fast checks complete in under 1 second on a 50k LOC codebase
 3. AI agents can parse output and take action without additional prompting
 4. Configuration is only needed for project-specific conventions

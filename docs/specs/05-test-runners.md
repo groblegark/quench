@@ -2,7 +2,7 @@
 
 Test runners execute tests and report timing and coverage information.
 
-Test suites configured via `[[adapters.<lang>.test_suites]]` are used for both:
+Test suites configured via `[[checks.<lang>.test_suites]]` are used for both:
 - **Test time**: Timing metrics (total, avg, max)
 - **Coverage**: Code coverage collection (if enabled)
 
@@ -56,11 +56,11 @@ Add test suites beyond the default:
 
 ```toml
 # Rust project with additional test suites
-[[adapters.rust.test_suites]]
+[[checks.rust.test_suites]]
 runner = "bats"
 path = "tests/cli/"
 
-[[adapters.rust.test_suites]]
+[[checks.rust.test_suites]]
 runner = "pytest"
 path = "tests/integration/"
 setup = "cargo build"        # Build binary before running
@@ -71,7 +71,7 @@ setup = "cargo build"        # Build binary before running
 For unsupported runners, use custom command:
 
 ```toml
-[[adapters.rust.test_suites]]
+[[checks.rust.test_suites]]
 name = "custom"
 command = "./scripts/run-tests.sh"
 # No per-test timing available for custom commands
@@ -159,7 +159,7 @@ rust: test time
 Enforce test time limits:
 
 ```toml
-[adapters.rust]
+[checks.rust]
 test_time_total_max = "30s"   # Total suite time
 test_time_avg_max = "100ms"   # Average per test
 test_time_max = "1s"          # Slowest individual test
@@ -168,7 +168,7 @@ test_time_max = "1s"          # Slowest individual test
 Per-suite thresholds:
 
 ```toml
-[[adapters.rust.test_suites]]
+[[checks.rust.test_suites]]
 runner = "bats"
 path = "tests/cli/"
 total_max = "10s"

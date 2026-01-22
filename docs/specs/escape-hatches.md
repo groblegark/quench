@@ -68,11 +68,11 @@ Test code identification uses the same patterns as the `loc` check:
 
 ## Per-Package Breakdown
 
-When subprojects are configured, counts are tracked per-package:
+When packages are configured, counts are tracked per-package:
 - Each package has its own source/test counts
 - Thresholds apply to **total source count** by default
 - Per-package thresholds can be configured via overrides
-- `by_package` field is **omitted from JSON** if no subprojects configured
+- `by_package` field is **omitted from JSON** if no packages configured
 
 ## Comment Detection
 
@@ -216,9 +216,9 @@ threshold = 10          # Allow up to 10 (default: 0)
 advice = "Reduce TODO/FIXME comments before shipping."
 
 # Per-package overrides
-[checks.escapes.overrides.cli]
+[checks.escapes.package.cli]
 # Stricter for CLI package
-[[checks.escapes.overrides.cli.patterns]]
+[[checks.escapes.package.cli.patterns]]
 name = "todo"
 threshold = 5
 ```

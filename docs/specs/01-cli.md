@@ -1,0 +1,209 @@
+# CLI Specification
+
+Quench provides a minimal command-line interface optimized for AI agents.
+
+## Commands
+
+```
+quench                    # Show help
+quench help               # Show help
+quench init               # Initialize quench.toml
+quench check [FLAGS]      # Run quality checks
+quench report [FLAGS]     # Generate reports
+```
+
+## quench check
+
+Run quality checks on the codebase.
+
+```bash
+quench check              # All files, fast checks
+```
+
+### Scope Flags
+
+| Flag | Description |
+|------|-------------|
+| `--staged` | Check staged files only (pre-commit hook) |
+| `--branch [NAME]` | Compare against branch (default: main > master > develop) |
+| `--ci` | CI mode: slow checks + auto-detect base branch |
+| `--package <NAME>` | Target specific package |
+
+```bash
+quench check --staged         # Pre-commit: staged files only
+quench check --branch         # Compare against default branch
+quench check --branch dev     # Compare against specific branch
+quench check --ci             # Full CI mode
+```
+
+### Check Toggles
+
+Enable or disable specific checks:
+
+| Flag | Check | Description |
+|------|-------|-------------|
+| `--[no-]cloc` | cloc | Lines of code, file size limits |
+| `--[no-]escapes` | escapes | Escape hatch detection |
+| `--[no-]agents` | agents | CLAUDE.md, .cursorrules validation |
+| `--[no-]docs` | docs | Spec files + doc correlation (CI) |
+| `--[no-]tests` | tests | Test correlation |
+| `--[no-]license` | license | License headers (CI only) |
+
+```bash
+quench check --no-docs        # Skip docs check
+quench check --tests          # Only tests (implies --no-* for others)
+quench check --no-cloc --no-escapes  # Skip multiple
+```
+
+### Output Flags
+
+| Flag | Description |
+|------|-------------|
+| `-o, --output <FMT>` | Output format: `text` (default), `json` |
+| `--[no-]color` | Color output (default: auto based on TTY) |
+| `--[no-]limit [N]` | Violation limit (default: 15, --no-limit for all) |
+| `--fix` | Auto-fix what can be fixed |
+| `--save <FILE>` | Save metrics to file (CI mode) |
+| `--save-notes` | Save metrics to git notes (CI mode) |
+
+```bash
+quench check -o json          # JSON output
+quench check --no-limit       # Show all violations
+quench check --limit 50       # Show up to 50
+quench check --fix            # Auto-fix
+quench check --ci --save .quench/baseline.json  # Save metrics
+quench check --ci --save-notes                  # Save to git notes
+```
+
+### Examples
+
+```bash
+# Fast check (default)
+quench check
+
+# Pre-commit hook
+quench check --staged
+
+# CI pipeline
+quench check --ci
+
+# CI with auto-fix on main
+quench check --ci --fix
+
+# JSON for tooling
+quench check -o json
+
+# Only escapes check
+quench check --escapes
+
+# Everything except docs
+quench check --no-docs
+```
+
+## quench report
+
+Generate reports from stored metrics.
+
+```bash
+quench report                 # Markdown to stdout
+quench report -o json         # JSON output
+quench report -o html         # HTML dashboard
+quench report -o report.html  # Write to file
+```
+
+### Output Formats
+
+| Format | Description |
+|--------|-------------|
+| `text` | Agent and context friendly text output (default) |
+| `json` | Machine-readable metrics |
+| `html` | Static dashboard page |
+
+Reports read from `.quench/baseline.json` or git notes.
+
+### Check Toggles
+
+Same as `quench check`:
+
+```bash
+quench report --docs          # Only docs metrics
+quench report --no-license    # Exclude license metrics
+```
+
+## quench init
+
+Initialize quench configuration.
+
+```bash
+quench init                   # Create quench.toml
+quench init --force           # Overwrite existing
+```
+
+Detects project type (Rust, Shell, etc.) and generates appropriate defaults.
+
+## Global Flags
+
+Available on all commands:
+
+| Flag | Description |
+|------|-------------|
+| `-h, --help` | Show help |
+| `-V, --version` | Show version |
+| `-C, --config <FILE>` | Use specific config file |
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | All checks passed |
+| 1 | One or more checks failed |
+| 2 | Configuration or argument error |
+| 3 | Internal error |
+
+## Checks Summary
+
+| Check | Fast | CI | Fixable | Description |
+|-------|------|-----|---------|-------------|
+| `cloc` | ✓ | ✓ | | Lines of code, file size limits |
+| `escapes` | ✓ | ✓ | | Escape hatch detection |
+| `agents` | ✓ | ✓ | ✓ | Agent file validation and sync |
+| `docs` | ✓ | ✓ | | Specs validation + correlation (CI) |
+| `tests` | ✓ | ✓ | | Test correlation |
+| `license` | | ✓ | ✓ | License header validation |
+
+**Fast mode**: Runs by default, quick checks only.
+**CI mode**: `--ci` flag, enables slow checks (license, docs correlation, coverage metrics).
+
+## CI Integration
+
+### GitHub Actions
+
+```yaml
+- name: Quality checks
+  run: quench check --ci
+
+- name: Auto-fix on main
+  if: github.ref == 'refs/heads/main'
+  run: |
+    quench check --ci --fix
+    git add -A
+    git commit -m "chore: quality fixes" || true
+    git push
+```
+
+### Pre-commit Hook
+
+```bash
+#!/bin/bash
+quench check --staged
+```
+
+## Color Detection
+
+Color is enabled when:
+- `--color` flag is set, OR
+- stdout is a TTY AND no agent environment detected
+
+Agent detection checks `CLAUDE_CODE`, `CODEX`, `CURSOR` environment variables.
+
+Override with `--color` or `--no-color`.

@@ -33,20 +33,20 @@ rust: coverage
 Coverage aggregates from all configured test suites. Uses same `test_suites` config as test time measurement (see `04-test-runners.md`).
 
 ```toml
-[adapters.rust]
+[checks.rust]
 coverage = true
 test_time = true
 
 # Test suites (shared by coverage and test time)
-[[adapters.rust.test_suites]]
+[[checks.rust.test_suites]]
 runner = "cargo"             # Default, can omit
 
-[[adapters.rust.test_suites]]
+[[checks.rust.test_suites]]
 runner = "bats"
 path = "tests/cli/"
 setup = "cargo build"        # Build binary before running
 
-[[adapters.rust.test_suites]]
+[[checks.rust.test_suites]]
 runner = "pytest"
 path = "tests/integration/"
 setup = "cargo build"
@@ -57,24 +57,24 @@ All suites contribute to both coverage (if instrumented) and test time metrics.
 ### Configuration
 
 ```toml
-[adapters.rust]
+[checks.rust]
 coverage = true              # CI mode: report coverage
 
 # Root threshold (aggregate across all packages)
 coverage_min = 75            # Fail if total < 75%
 
 # Per-package thresholds (override root)
-[adapters.rust.coverage_packages.core]
+[checks.rust.coverage.package.core]
 min = 90                     # Core library needs higher coverage
 
-[adapters.rust.coverage_packages.cli]
+[checks.rust.coverage.package.cli]
 min = 60                     # CLI can have lower coverage
 exclude_files = ["src/main.rs"]  # Exclude entry point
 
-[adapters.rust.coverage_packages.experimental]
+[checks.rust.coverage.package.experimental]
 enforce = false              # Reported but not enforced (under development)
 
-[adapters.rust.coverage_packages.generated]
+[checks.rust.coverage.package.generated]
 enabled = false              # Not reported, not enforced (ignore entirely)
 ```
 
@@ -117,7 +117,7 @@ rust: FAIL
 Shell coverage via `kcov` or similar (optional, not default).
 
 ```toml
-[adapters.shell]
+[checks.shell]
 coverage = true
 coverage_tool = "kcov"       # kcov, bashcov, or shcov
 coverage_min = 70
