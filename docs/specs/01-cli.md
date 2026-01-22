@@ -48,6 +48,7 @@ Enable or disable specific checks:
 | `--[no-]agents` | agents | CLAUDE.md, .cursorrules validation |
 | `--[no-]docs` | docs | File refs, specs, doc correlation (CI) |
 | `--[no-]tests` | tests | Test correlation + coverage/time (CI) |
+| `--[no-]git` | git | Commit message format validation |
 | `--[no-]compile` | compile | Binary size + compile time (CI only) |
 | `--[no-]license` | license | License headers (CI only) |
 
@@ -171,6 +172,7 @@ Available on all commands:
 | `agents` | ✓ | ✓ | ✓ | Agent file validation and sync |
 | `docs` | ✓ | ✓ | | File refs, specs, correlation (CI) |
 | `tests` | ✓ | ✓ | | Test correlation + coverage/time (CI) |
+| `git` | ✓ | ✓ | ✓ | Commit message format (disabled by default) |
 | `compile` | | ✓ | | Binary size + compile time |
 | `license` | | ✓ | ✓ | License header validation |
 

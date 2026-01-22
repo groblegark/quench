@@ -65,7 +65,7 @@ lint_config = [".shellcheckrc"]
 Shell coverage uses `kcov`. To enable coverage for shell scripts, specify them as targets in test suites:
 
 ```toml
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/"
 targets = ["scripts/*.sh", "bin/*"]    # Shell scripts via kcov
@@ -92,4 +92,4 @@ lint_changes = "standalone"
 lint_config = [".shellcheckrc"]
 ```
 
-Test suites and coverage thresholds are configured in `[checks.tests]`.
+Test suites and coverage thresholds are configured in `[check.tests]`.

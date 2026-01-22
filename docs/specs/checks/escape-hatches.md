@@ -108,7 +108,7 @@ unsafe {                    // ✗ No comment (search stopped at `fn other_code`
 Each pattern can have custom advice:
 
 ```toml
-[[checks.escapes.patterns]]
+[[check.escapes.patterns]]
 name = "as_uuid"
 pattern = " as UUID"
 action = "forbid"
@@ -191,24 +191,24 @@ escapes: FAIL
 ## Configuration
 
 ```toml
-[checks.escapes]
+[check.escapes]
 check = "error"
 
 # Custom or override patterns
-[[checks.escapes.patterns]]
+[[check.escapes.patterns]]
 name = "unsafe"
 pattern = "unsafe\\s*\\{"
 action = "comment"
 comment = "// SAFETY:"
 
-[[checks.escapes.patterns]]
+[[check.escapes.patterns]]
 name = "unwrap"
 pattern = "\\.unwrap\\(\\)"
 action = "forbid"
 # Custom advice for this project
 advice = "Use .context() from anyhow or handle the error explicitly."
 
-[[checks.escapes.patterns]]
+[[check.escapes.patterns]]
 name = "todo"
 pattern = "TODO|FIXME|XXX"
 action = "count"
@@ -216,9 +216,9 @@ threshold = 10          # Allow up to 10 (default: 0)
 advice = "Reduce TODO/FIXME comments before shipping."
 
 # Per-package overrides
-[checks.escapes.package.cli]
+[check.escapes.package.cli]
 # Stricter for CLI package
-[[checks.escapes.package.cli.patterns]]
+[[check.escapes.package.cli.patterns]]
 name = "todo"
 threshold = 5
 ```

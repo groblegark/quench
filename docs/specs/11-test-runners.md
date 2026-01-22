@@ -2,7 +2,7 @@
 
 Test runners execute tests and report timing and coverage information.
 
-Test suites are configured via `[[checks.tests.suites]]` and provide:
+Test suites are configured via `[[check.tests.suite]]` and provide:
 - **Test time**: Timing metrics (total, avg, max)
 - **Coverage**: Code coverage collection (via `targets` field)
 
@@ -31,12 +31,12 @@ The runner determines how tests are executed and how output is parsed. Coverage 
 ## Suite Configuration
 
 ```toml
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "cargo"
 # Implicit: targets Rust code via llvm-cov
 # Runs in fast mode and CI mode
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/cli/"
 setup = "cargo build"
@@ -44,14 +44,14 @@ targets = ["myapp"]                     # Instrument Rust binary
 max_total = "10s"
 max_test = "500ms"
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "pytest"
 path = "tests/integration/"
 ci = true                              # Only run in CI mode (slow)
 targets = ["myserver"]                  # Also instrument Rust binary
 max_total = "60s"
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/scripts/"
 targets = ["scripts/*.sh"]              # Shell scripts via kcov
@@ -75,7 +75,7 @@ targets = ["scripts/*.sh"]              # Shell scripts via kcov
 For unsupported runners, use custom command:
 
 ```toml
-[[checks.tests.suites]]
+[[check.tests.suite]]
 name = "custom"
 command = "./scripts/run-tests.sh"
 # No per-test timing available for custom commands
@@ -103,12 +103,12 @@ These don't need a `targets` field—coverage just works.
 For integration tests exercising compiled binaries or shell scripts:
 
 ```toml
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/cli/"
 targets = ["myapp"]                     # Build target name → Rust binary
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "pytest"
 path = "tests/e2e/"
 targets = ["myserver", "scripts/*.sh"]  # Rust binary + shell scripts
@@ -123,7 +123,7 @@ Coverage targets are resolved:
 For suites that only contribute timing:
 
 ```toml
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/smoke/"
 targets = []                            # Explicit: timing only
@@ -238,19 +238,19 @@ tests: coverage 78.4%
 Time limits are configured per-suite:
 
 ```toml
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "cargo"
 max_total = "30s"
 max_avg = "50ms"
 max_test = "1s"
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/cli/"
 max_total = "10s"
 max_test = "500ms"
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "pytest"
 path = "tests/integration/"
 ci = true                              # Slow suite, CI only
@@ -258,9 +258,9 @@ max_total = "120s"
 max_test = "5s"
 ```
 
-Configure check level via `[checks.tests.time]`:
+Configure check level via `[check.tests.time]`:
 
 ```toml
-[checks.tests.time]
+[check.tests.time]
 check = "warn"                         # error | warn | off
 ```

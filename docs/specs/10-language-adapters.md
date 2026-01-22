@@ -78,7 +78,7 @@ Pattern-based only (no inline detection):
 
 ### Escape Patterns
 
-No defaults. Only user-configured patterns in `[checks.escapes]` apply.
+No defaults. Only user-configured patterns in `[check.escapes]` apply.
 
 ### Configuration
 

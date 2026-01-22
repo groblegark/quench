@@ -76,7 +76,7 @@ mod tests {
 }
 ```
 
-When `checks.rust.split_cfg_test = true` (default), lines inside `#[cfg(test)]`
+When `check.rust.split_cfg_test = true` (default), lines inside `#[cfg(test)]`
 blocks are counted as test LOC even in source files.
 
 ## Output
@@ -104,7 +104,7 @@ Typical healthy ranges: `0.5x` to `2.0x` (project-dependent).
 
 ```json
 {
-  "name": "loc",
+  "name": "cloc",
   "passed": true,
   "metrics": {
     "source_lines": 12453,
@@ -139,7 +139,7 @@ Typical healthy ranges: `0.5x` to `2.0x` (project-dependent).
 Per-file limits (enabled by default):
 
 ```toml
-[checks.cloc]
+[check.cloc]
 # Max lines per file (default: 750 source, 1100 test)
 max_lines = 750
 max_lines_test = 1100
@@ -161,7 +161,7 @@ Average lines per file is **reported** in metrics but not enforced.
 ## Configuration
 
 ```toml
-[checks.cloc]
+[check.cloc]
 check = "error"
 
 # Override default patterns
@@ -177,7 +177,7 @@ max_tokens = 20000               # use false to disable
 exclude = ["**/generated/**", "**/migrations/**"]
 
 # Rust-specific: parse #[cfg(test)] blocks
-# checks.rust.split_cfg_test = true  # default
+# check.rust.split_cfg_test = true  # default
 ```
 
 **Note**: Ratio is reporting-only. File size limits are enforced if configured.

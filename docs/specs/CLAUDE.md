@@ -68,7 +68,7 @@ Bad advice: `You should consider adding a safety comment to explain why this uns
 - `escape-hatches.md`, `license-headers.md`, `language-adapters.md`
 
 **CLI flags and config keys** use short, single-word names for brevity:
-- `--escapes`, `--license`, `[checks.escapes]`, `[checks.license]`
+- `--escapes`, `--license`, `[check.escapes]`, `[check.license]`
 
 This allows documentation to be self-descriptive while keeping commands terse.
 
@@ -96,14 +96,14 @@ This allows documentation to be self-descriptive while keeping commands terse.
 - `"comment"` - require justification comment
 - `"forbid"` - never allowed in source
 
-**Lint suppression** (`[checks.<lang>.suppress]`):
+**Lint suppression** (`[check.<lang>.suppress]`):
 - `check = "forbid" | "comment" | "allow"`
 - `comment = "// PATTERN:"` - optional specific pattern (default: any comment)
 - `allow = [...]` - codes that don't need comment
 - `forbid = [...]` - codes never allowed
 - `.source` / `.test` subscopes for different policies
 
-**Policy** (`[checks.<lang>.policy]`):
+**Policy** (`[check.<lang>.policy]`):
 - `lint_changes = "standalone"` - lint config must be separate PR
 - `lint_config = [...]` - files that trigger standalone requirement
 
@@ -128,6 +128,7 @@ docs/specs/
 │   ├── cloc.md
 │   ├── docs.md
 │   ├── escape-hatches.md
+│   ├── git.md          # Commit message format
 │   ├── license-headers.md
 │   └── tests.md        # Includes coverage, test time
 └── langs/              # Language-specific details

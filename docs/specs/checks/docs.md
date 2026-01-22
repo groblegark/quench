@@ -47,7 +47,7 @@ docs: FAIL
 ### Configuration
 
 ```toml
-[checks.docs.toc]
+[check.docs.toc]
 check = "error"
 include = ["**/*.md", "**/*.mdc"]
 exclude = ["plans/**", "plan.md", "*_plan.md", "plan_*"]
@@ -79,7 +79,7 @@ docs: FAIL
 ### Configuration
 
 ```toml
-[checks.docs.links]
+[check.docs.links]
 check = "error"
 include = ["**/*.md", "**/*.mdc"]
 exclude = ["plans/**", "plan.md", "*_plan.md", "plan_*"]
@@ -94,7 +94,7 @@ Validates specification documents in `docs/specs/` or similar directories.
 Default location: `docs/specs/`
 
 ```toml
-[checks.docs]
+[check.docs]
 path = "docs/specs"
 extension = ".md"
 ```
@@ -111,7 +111,7 @@ An index file provides an overview and links to individual specs.
 5. `docs/SPECS.md`
 
 ```toml
-[checks.docs]
+[check.docs]
 index_file = "docs/specs/CLAUDE.md"       # Or auto-detect
 index = "auto"                             # auto | toc | linked | exists
 ```
@@ -147,7 +147,7 @@ Files listed in the tree must exist. Comments after `#` are ignored.
 Required sections (case-insensitive matching):
 
 ```toml
-[checks.docs]
+[check.docs]
 sections.required = ["Purpose", "Configuration"]
 sections.forbid = ["TODO", "Draft*"]
 ```
@@ -155,7 +155,7 @@ sections.forbid = ["TODO", "Draft*"]
 With advice:
 
 ```toml
-[[checks.docs.sections.required]]
+[[check.docs.sections.required]]
 name = "Purpose"
 advice = "What problem this spec addresses"
 ```
@@ -163,7 +163,7 @@ advice = "What problem this spec addresses"
 ### Content Rules
 
 ```toml
-[checks.docs]
+[check.docs]
 tables = "allow"         # Tables allowed (default)
 box_diagrams = "allow"   # ASCII diagrams (default)
 mermaid = "allow"        # Mermaid blocks (default)
@@ -185,7 +185,7 @@ docs: FAIL
 
 In `--ci` mode, also checks that feature commits have corresponding documentation updates.
 
-**Disabled by default.** Enable via `[checks.docs.commit]`.
+**Disabled by default.** Enable via `[check.docs.commit]`.
 
 ### How It Works
 
@@ -194,12 +194,14 @@ In `--ci` mode, also checks that feature commits have corresponding documentatio
 3. Check if the branch includes changes to documentation
 4. Report when feature commits lack corresponding doc changes
 
-### Commit Prefixes
+### Commit Types
+
+Which commit types trigger the documentation requirement:
 
 ```toml
-[checks.docs.commit]
+[check.docs.commit]
 check = "error"
-on_commit = ["feat:", "feat(", "feature:", "feature(", "story:", "story("]
+# types = ["feat", "feature", "story"]   # default
 ```
 
 ### Area Mapping
@@ -211,21 +213,21 @@ Use area mappings to require specific documentation for:
 - Source file changes - matched by `source` glob
 
 ```toml
-[checks.docs.areas.api]
+[check.docs.area.api]
 docs = "docs/api/**"
 source = "src/api/**"            # changes here also require docs here
 
-[checks.docs.areas.cli]
+[check.docs.area.cli]
 docs = "docs/usage/**"
 
-[checks.docs.areas.parser]
+[check.docs.area.parser]
 docs = "docs/specs/parser.md"
 source = "crates/parser/**"
 ```
 
 Area name doubles as commit scope: `feat(api):` triggers the `api` area.
 
-Areas are defined at `[checks.docs.areas.*]`, separate from commit checking, so they can be reused by other features.
+Areas are defined at `[check.docs.area.*]`, separate from commit checking, so they can be reused by other features.
 
 ### Check Levels
 
@@ -236,7 +238,7 @@ Areas are defined at `[checks.docs.areas.*]`, separate from commit checking, so 
 | `off` | Disable commit checking (default) |
 
 ```toml
-[checks.docs.commit]
+[check.docs.commit]
 check = "warn"  # error | warn | off
 ```
 
@@ -262,23 +264,23 @@ docs: FAIL
 ## Configuration
 
 ```toml
-[checks.docs]
+[check.docs]
 check = "error"
 
 # TOC validation (directory trees in markdown)
-[checks.docs.toc]
+[check.docs.toc]
 check = "error"
 include = ["**/*.md", "**/*.mdc"]
 exclude = ["plans/**", "plan.md", "*_plan.md", "plan_*"]
 
 # Link validation (markdown links)
-[checks.docs.links]
+[check.docs.links]
 check = "error"
 include = ["**/*.md", "**/*.mdc"]
 exclude = ["plans/**", "plan.md", "*_plan.md", "plan_*"]
 
 # Specs validation
-[checks.docs.specs]
+[check.docs.specs]
 path = "docs/specs"
 extension = ".md"
 index = "auto"                   # auto | toc | linked | exists
@@ -288,12 +290,12 @@ tables = "allow"
 max_lines = 1000
 
 # Commit checking (CI mode)
-[checks.docs.commit]
+[check.docs.commit]
 check = "off"                    # error | warn | off
-on_commit = ["feat:", "feat(", "feature:", "feature(", "story:", "story("]
+# types = ["feat", "feature", "story"]   # default
 
 # Area mappings (reusable, default: any change in docs/)
-[checks.docs.areas.api]
+[check.docs.area.api]
 docs = "docs/api/**"
 source = "src/api/**"
 ```
@@ -339,5 +341,5 @@ source = "src/api/**"
 | Tables | Forbidden | Allowed |
 | Index file | N/A | Required by default |
 | Sync behavior | Yes | No |
-| Token limits | Strict (2000) | Relaxed (5000) |
+| Token limits | Strict (20000) | Relaxed (20000) |
 | Correlation | N/A | CI mode (opt-in) |

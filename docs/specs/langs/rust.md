@@ -145,11 +145,11 @@ compile: time
 The `cargo` runner provides implicit Rust coverage via `cargo llvm-cov`. Other runners (bats, pytest) can also contribute Rust coverage by specifying build targets:
 
 ```toml
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "cargo"
 # Implicit: covers Rust code via llvm-cov
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/cli/"
 setup = "cargo build"
@@ -192,4 +192,4 @@ lint_changes = "standalone"
 lint_config = ["rustfmt.toml", "clippy.toml"]
 ```
 
-Test suites and coverage thresholds are configured in `[checks.tests]`.
+Test suites and coverage thresholds are configured in `[check.tests]`.

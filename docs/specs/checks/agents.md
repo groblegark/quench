@@ -24,7 +24,7 @@ Quench recognizes these agent context files:
 Configure which files are recognized:
 
 ```toml
-[checks.agents]
+[check.agents]
 # Files to check (default: all recognized)
 files = ["CLAUDE.md", ".cursorrules"]
 ```
@@ -39,7 +39,7 @@ This happens regardless of whether files are `required` or optional:
 - If neither exists but one is required → fail on missing file
 
 ```toml
-[checks.agents]
+[check.agents]
 # Sync check is ON by default when multiple files exist
 sync = true
 
@@ -58,18 +58,18 @@ sync_source = "CLAUDE.md"
 Configure which files must exist at each scope:
 
 ```toml
-[checks.agents.root]
+[check.agents.root]
 # At project root
 required = ["CLAUDE.md"]              # Must exist
 optional = [".cursorrules"]           # Checked if present, not required
 forbid = []                        # Must not exist
 
-[checks.agents.package]
+[check.agents.package]
 # At each package
 required = []                         # None required by default
 optional = ["CLAUDE.md"]
 
-[checks.agents.module]
+[check.agents.module]
 # At subdirectories
 required = []
 optional = ["CLAUDE.md"]
@@ -78,7 +78,7 @@ optional = ["CLAUDE.md"]
 Simpler flat config (root only):
 
 ```toml
-[checks.agents]
+[check.agents]
 required = ["CLAUDE.md"]
 optional = [".cursorrules"]
 ```
@@ -114,21 +114,21 @@ Sections that must be present. Matching is **case-insensitive**.
 
 Simple form (no advice):
 ```toml
-[checks.agents]
+[check.agents]
 sections.required = ["Project Structure", "Development"]
 ```
 
 Extended form (with advice for agents):
 ```toml
-[[checks.agents.sections.required]]
+[[check.agents.sections.required]]
 name = "Project Structure"
 advice = "Overview of directory layout and key files"
 
-[[checks.agents.sections.required]]
+[[check.agents.sections.required]]
 name = "Development"
 advice = "How to build, test, and run the project"
 
-[[checks.agents.sections.required]]
+[[check.agents.sections.required]]
 name = "Landing the Plane"
 advice = "Checklist for AI agents before finishing work"
 ```
@@ -145,7 +145,7 @@ agents: FAIL
 Sections that should not be present (case-insensitive, supports globs):
 
 ```toml
-[checks.agents]
+[check.agents]
 sections.forbid = [
   "API Keys",           # Exact match (case-insensitive)
   "Secrets",
@@ -179,15 +179,15 @@ mermaid = "allow"        # ```mermaid blocks
 Keep agent files concise. Configure per-scope:
 
 ```toml
-[checks.agents.root]
+[check.agents.root]
 max_lines = 500
 max_tokens = 20000          # use false to disable
 
-[checks.agents.package]
+[check.agents.package]
 max_lines = 200
 max_tokens = 800
 
-[checks.agents.module]
+[check.agents.module]
 max_lines = 100
 max_tokens = 400
 ```
@@ -275,7 +275,7 @@ agents: FIXED
 ## Configuration
 
 ```toml
-[checks.agents]
+[check.agents]
 check = "error"
 
 # Which agent files to check
@@ -296,7 +296,7 @@ sections.required = ["Project Structure", "Development"]
 sections.forbid = ["Secrets", "API Keys"]
 
 # Section validation (extended form with advice)
-# [[checks.agents.sections.required]]
+# [[check.agents.sections.required]]
 # name = "Landing the Plane"
 # advice = "Checklist for AI agents before finishing work"
 
@@ -310,16 +310,16 @@ max_lines = 500
 max_tokens = 20000
 
 # Per-scope overrides
-[checks.agents.root]
+[check.agents.root]
 required = ["CLAUDE.md"]
 max_tokens = 20000
 
-[checks.agents.package]
+[check.agents.package]
 required = []
 optional = ["CLAUDE.md"]
 max_tokens = 800
 
-[checks.agents.module]
+[check.agents.module]
 required = []
 max_tokens = 400
 ```

@@ -82,7 +82,7 @@ license: FIXED
 ## Configuration
 
 ```toml
-[checks.license]
+[check.license]
 check = "off"              # Disabled by default, opt-in check
 
 # SPDX license identifier
@@ -92,7 +92,7 @@ license = "MIT"              # or "Apache-2.0", "BUSL-1.1", etc.
 copyright = "Your Organization"
 
 # File patterns to check (by extension)
-[checks.license.patterns]
+[check.license.patterns]
 rust = ["**/*.rs"]
 shell = ["**/*.sh", "**/*.bash", "scripts/*"]
 typescript = ["**/*.ts", "**/*.tsx"]
@@ -120,7 +120,7 @@ Automatically determined by file extension:
 Override with explicit config:
 
 ```toml
-[checks.license.syntax]
+[check.license.syntax]
 # Custom comment syntax for specific patterns
 "scripts/*" = "#"
 "*.config.js" = "//"

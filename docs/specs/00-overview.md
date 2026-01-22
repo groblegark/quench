@@ -53,6 +53,7 @@ When configuration is needed, it's hierarchical (monorepo-friendly) and minimal.
 | `agents` | ✓ | ✓ | Agent file validation (CLAUDE.md, .cursorrules, sync) |
 | `docs` | ✓ | ✓ | File refs, specs validation + doc correlation (CI) |
 | `tests` | ✓ | ✓ | Test correlation (fast) + execution, coverage, time (CI) |
+| `git` | ✓ | ✓ | Commit message format validation (disabled by default) |
 | `compile` | | ✓ | Binary size + compile time (cold/hot) |
 | `license` | | ✓ | License header validation and auto-fix (disabled by default) |
 
@@ -132,7 +133,7 @@ project-root/
 │   └── core/
 ```
 
-Per-package and per-module behavior defined in root config via `[checks.*.package.package_name]`.
+Per-package and per-module behavior defined in root config via `[check.*.package.package_name]`.
 
 ## Modes
 

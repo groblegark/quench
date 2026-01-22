@@ -9,7 +9,7 @@ The `tests` check validates test practices and collects test metrics.
 
 ## Commit Checking (Fast Mode)
 
-Ensures code changes are accompanied by test changes. Configured via `[checks.tests.commit]`.
+Ensures code changes are accompanied by test changes. Configured via `[check.tests.commit]`.
 
 ### Scope
 
@@ -39,7 +39,7 @@ quench check --base HEAD~5     # Recent commits
 ```
 
 ```toml
-[checks.tests.commit]
+[check.tests.commit]
 scope = "branch"  # or "commit"
 ```
 
@@ -125,7 +125,7 @@ test.fixme('parser broken on empty input');
 When placeholder tests exist for a source file, correlation is satisfied even without implementation—the test intent is recorded.
 
 ```toml
-[checks.tests]
+[check.tests]
 # Recognize placeholder patterns as valid correlation
 placeholders = "allow"  # default: true
 ```
@@ -197,12 +197,13 @@ tests: WARN
 ## Configuration
 
 ```toml
-[checks.tests]
+[check.tests]
 check = "error"
 
 # Commit checking (source changes need test changes)
-[checks.tests.commit]
+[check.tests.commit]
 check = "error"                # error | warn | off
+# types = ["feat", "feature", "story"]   # default; only these commits require tests
 
 # Scope: branch | commit
 # branch = all changes on branch count together (order doesn't matter)
@@ -234,12 +235,12 @@ exclude = [
 ]
 
 # Test suites (time thresholds per-suite)
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "cargo"
 max_total = "30s"
 max_test = "1s"
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/cli/"
 setup = "cargo build"
@@ -247,7 +248,7 @@ targets = ["myapp"]
 max_total = "10s"
 max_test = "500ms"
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "pytest"
 path = "tests/integration/"
 ci = true                              # only run in CI mode (slow)
@@ -255,15 +256,15 @@ targets = ["myserver"]
 max_total = "60s"
 
 # Coverage settings
-[checks.tests.coverage]
+[check.tests.coverage]
 check = "error"
 min = 75
 
-[checks.tests.coverage.package.core]
+[check.tests.coverage.package.core]
 min = 90
 
 # Test time check level (thresholds are per-suite)
-[checks.tests.time]
+[check.tests.time]
 check = "warn"
 ```
 
@@ -274,14 +275,14 @@ In CI mode (`--ci`), the tests check also **runs test suites** and collects metr
 - **Test time**: Total, average, and slowest test
 - **Coverage**: Line coverage percentage
 
-Test suites are configured via `[[checks.tests.suites]]`. See [11-test-runners.md](../11-test-runners.md) for runner details.
+Test suites are configured via `[[check.tests.suite]]`. See [11-test-runners.md](../11-test-runners.md) for runner details.
 
 ```toml
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "cargo"
 # Implicit: targets Rust code via llvm-cov
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/cli/"
 setup = "cargo build"
@@ -302,11 +303,10 @@ Coverage is collected based on what each suite exercises. Runners that test thei
 For integration tests of compiled binaries or shell scripts, use the `targets` field:
 
 ```toml
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/cli/"
-targets = ["myapp"]                     # Rust binary
-targets = ["scripts/*.sh"]              # Shell scripts via kcov
+targets = ["myapp", "scripts/*.sh"]     # Rust binary + shell scripts via kcov
 ```
 
 Output:
@@ -317,14 +317,14 @@ tests: coverage 78.4%
   python: 71.2% (pytest)
 ```
 
-Configure thresholds via `[checks.tests.coverage]`:
+Configure thresholds via `[check.tests.coverage]`:
 
 ```toml
-[checks.tests.coverage]
+[check.tests.coverage]
 check = "error"
 min = 75
 
-[checks.tests.coverage.package.core]
+[check.tests.coverage.package.core]
 min = 90
 ```
 
@@ -340,22 +340,22 @@ tests: time
 Time thresholds are configured per-suite:
 
 ```toml
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "cargo"
 max_total = "30s"
 max_test = "1s"
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/cli/"
 ci = true                              # Only run in CI mode
 max_total = "60s"
 ```
 
-Configure check level via `[checks.tests.time]`:
+Configure check level via `[check.tests.time]`:
 
 ```toml
-[checks.tests.time]
+[check.tests.time]
 check = "warn"                         # error | warn | off
 ```
 

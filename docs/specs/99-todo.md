@@ -57,18 +57,6 @@ Auto-publish metrics to GitHub Pages. Based on pattern from wok project.
 - Links to CI runs
 - Responsive design
 
-## Git Checks
-
-### Commit Format Validation
-
-Validate conventional commit format.
-
-- `feat:`, `fix:`, `chore:` prefixes (or `feat(...):`)
-- Configurable patterns
-- Default: disabled
-- Could integrate with `docs` check `on_commit` patterns
-
-
 ## Future Adapters
 
 | Adapter | Detection | Notes |

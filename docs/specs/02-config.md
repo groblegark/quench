@@ -28,7 +28,7 @@ version = 1    # Config format version (required)
 [git]          # Git integration settings
 [rust]         # Rust language config (optional, has defaults)
 [shell]        # Shell language config (optional, has defaults)
-[checks.*]     # Check-specific configuration
+[check.*]     # Check-specific configuration
 [ratchet]      # Regression prevention
 ```
 
@@ -89,6 +89,22 @@ Git integration settings.
 [git]
 base = "main"                          # Default for --base (auto: main > master > develop)
 baseline = ".quench/baseline.json"     # Metrics storage path
+
+[git.commit]
+check = "off"                          # error | warn | off (disabled by default)
+# format = "conventional"              # conventional | none (default: conventional)
+
+# Optional: restrict to specific types (default: common conventional types)
+# types = ["feat", "fix", "chore", "docs", "test", "refactor", "perf", "ci", "build", "style"]
+
+# Optional: restrict to specific scopes (default: any)
+# scopes = ["api", "cli", "core"]
+
+# Check that commit format is documented in agent files
+agents = true                          # default: true
+
+# Create .gitmessage template with --fix
+template = true                        # default: true
 ```
 
 ### [rust]
@@ -152,7 +168,7 @@ lint_changes = "standalone"
 lint_config = [".shellcheckrc"]
 ```
 
-### [checks.*]
+### [check.*]
 
 Each check has its own section. Common fields:
 
@@ -161,12 +177,12 @@ Each check has its own section. Common fields:
 | `check` | string | `"error"` \| `"warn"` \| `"off"` (default: `"error"`, except license) |
 | `exclude` | [string] | Patterns to skip |
 
-#### [checks.cloc]
+#### [check.cloc]
 
 Lines of code and file size limits.
 
 ```toml
-[checks.cloc]
+[check.cloc]
 check = "error"                        # error | warn | off
 max_lines = 750                        # Source file limit
 max_lines_test = 1100                  # Test file limit
@@ -174,53 +190,53 @@ max_tokens = 20000                     # Use false to disable
 exclude = ["**/generated/**"]
 
 # Per-package overrides
-[checks.cloc.package.cli]
+[check.cloc.package.cli]
 max_lines = 500                        # Stricter for CLI
 
-[checks.cloc.package.generated]
+[check.cloc.package.generated]
 check = "off"                          # Skip entirely
 ```
 
-#### [checks.escapes]
+#### [check.escapes]
 
 Escape hatch detection with configurable patterns.
 
 ```toml
-[checks.escapes]
+[check.escapes]
 check = "error"                        # error | warn | off
 
-[[checks.escapes.patterns]]
+[[check.escapes.patterns]]
 name = "unsafe"
 pattern = "unsafe\\s*\\{"
 action = "comment"             # count | comment | forbid
 comment = "// SAFETY:"
 advice = "Add a // SAFETY: comment explaining the invariants."
 
-[[checks.escapes.patterns]]
+[[check.escapes.patterns]]
 name = "unwrap"
 pattern = "\\.unwrap\\(\\)"
 action = "forbid"
 
-[[checks.escapes.patterns]]
+[[check.escapes.patterns]]
 name = "todo"
 pattern = "TODO|FIXME|XXX"
 action = "count"
 threshold = 10
 ```
 
-#### [checks.agents]
+#### [check.agents]
 
 Agent file validation (CLAUDE.md, .cursorrules). Supports scope hierarchy.
 
 ```toml
-[checks.agents]
+[check.agents]
 check = "error"                        # error | warn | off
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
 
 # Root scope (project root)
-[checks.agents.root]
+[check.agents.root]
 required = ["CLAUDE.md"]
 optional = [".cursorrules"]
 sections.required = ["Project Structure", "Development"]
@@ -229,41 +245,41 @@ max_tokens = 20000                     # Use false to disable
 tables = "forbid"
 
 # Package scope (each package directory)
-[checks.agents.package]
+[check.agents.package]
 required = []
 optional = ["CLAUDE.md"]
 max_lines = 200
 max_tokens = 800
 
 # Module scope (subdirectories)
-[checks.agents.module]
+[check.agents.module]
 required = []
 max_lines = 100
 max_tokens = 400
 ```
 
-#### [checks.docs]
+#### [check.docs]
 
 TOC validation, link validation, spec files, and commit checking.
 
 ```toml
-[checks.docs]
+[check.docs]
 check = "error"                            # error | warn | off
 
 # TOC validation (directory trees in markdown)
-[checks.docs.toc]
+[check.docs.toc]
 check = "error"                            # error | warn | off
 # include = ["**/*.md", "**/*.mdc"]        # optional, defaults shown
 exclude = ["plans/**", "plan.md", "*_plan.md", "plan_*"]
 
 # Link validation (markdown links)
-[checks.docs.links]
+[check.docs.links]
 check = "error"                            # error | warn | off
 # include = ["**/*.md", "**/*.mdc"]        # optional
 exclude = ["plans/**"]
 
 # Specs validation
-[checks.docs.specs]
+[check.docs.specs]
 check = "error"                            # error | warn | off
 path = "docs/specs"
 # extension = ".md"                        # optional
@@ -271,39 +287,40 @@ path = "docs/specs"
 index = "auto"                             # auto | toc | linked | exists
 
 # Commit checking (CI mode only)
-[checks.docs.commit]
+[check.docs.commit]
 check = "off"                              # error | warn | off (default: off)
-on_commit = ["feat:", "feat(", "story:", "story("]
+# types = ["feat", "feature", "story"]     # default
 
 # Area mappings (reusable across features)
-[checks.docs.areas.api]
+[check.docs.area.api]
 docs = "docs/api/**"
 source = "src/api/**"
 ```
 
-#### [checks.tests]
+#### [check.tests]
 
 Test correlation, execution, and metrics.
 
 ```toml
-[checks.tests]
+[check.tests]
 check = "error"                        # error | warn | off
 
 # Commit checking (source changes need test changes)
-[checks.tests.commit]
+[check.tests.commit]
 check = "error"                        # error | warn | off
+# types = ["feat", "feature", "story"] # default; only these commits require tests
 scope = "branch"                       # branch | commit
 placeholders = "allow"
 exclude = ["**/mod.rs", "**/main.rs"]
 
 # Test suites (time limits per-suite)
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "cargo"
 # covers Rust automatically via llvm-cov
 max_total = "30s"
 max_test = "1s"
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/cli/"
 setup = "cargo build"
@@ -311,42 +328,42 @@ targets = ["myapp"]                     # instrument Rust binary
 max_total = "10s"
 max_test = "500ms"
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "pytest"
 path = "tests/integration/"
 ci = true                              # only run in CI mode (slow)
 targets = ["myserver"]                  # also instrument Rust binary
 max_total = "60s"
 
-[[checks.tests.suites]]
+[[check.tests.suite]]
 runner = "bats"
 path = "tests/scripts/"
 targets = ["scripts/*.sh"]              # shell scripts via kcov
 
 # Coverage settings
-[checks.tests.coverage]
+[check.tests.coverage]
 check = "error"                        # error | warn | off
 min = 75                               # minimum coverage %
 
 # Per-package coverage thresholds
-[checks.tests.coverage.package.core]
+[check.tests.coverage.package.core]
 min = 90
 
-[checks.tests.coverage.package.cli]
+[check.tests.coverage.package.cli]
 min = 60
 exclude = ["src/main.rs"]
 
 # Test time check level (thresholds are per-suite)
-[checks.tests.time]
+[check.tests.time]
 check = "warn"                         # error | warn | off
 ```
 
-#### [checks.license]
+#### [check.license]
 
 License header validation (CI only, disabled by default).
 
 ```toml
-[checks.license]
+[check.license]
 check = "off"                          # error | warn | off (default: off)
 license = "MIT"
 copyright = "Your Organization"
@@ -405,7 +422,7 @@ Invalid config produces clear errors:
 
 ```
 quench: error in quench.toml
-  checks.escapes.patterns[0].mode: invalid value "warn"
+  check.escapes.patterns[0].action: invalid value "warn"
     expected one of: count, comment, forbid
 ```
 
@@ -413,5 +430,5 @@ Unknown keys are warnings (forward compatibility):
 
 ```
 quench: warning in quench.toml
-  checks.unknown: unrecognized field (ignored)
+  check.unknown: unrecognized field (ignored)
 ```
