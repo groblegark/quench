@@ -9,9 +9,21 @@ Within each range, phases use increments of 5 (001, 005, 010...) to allow insert
 
 - [ ] Project scaffolding (Cargo.toml workspace, crates/cli, directory structure, dependencies)
 - [ ] Error types and Result aliases
-- [ ] Unit test setup (cargo test)
+- [ ] Unit test setup (cargo test, yare for concise tests, proptest for property-based testing)
 - [ ] Integration test harness (CLI invocation via assert_cmd)
 - [ ] Snapshot testing setup (insta crate)
+- [ ] Benchmarking setup (criterion crate)
+
+## Phase 002: Benchmark Fixtures
+
+- [ ] fixtures/bench-small/ - 50 files, 5K LOC (baseline)
+- [ ] fixtures/bench-medium/ - 500 files, 50K LOC (target case)
+- [ ] fixtures/bench-large/ - 5K files, 500K LOC (stress test)
+- [ ] fixtures/bench-deep/ - 1K files, 50+ levels deep
+- [ ] fixtures/bench-large-files/ - 100 files including several >1MB
+- [ ] Benchmark: file walking only (no checking)
+- [ ] Benchmark: full check pipeline
+- [ ] CI benchmark tracking (track regressions in quench's own performance)
 
 ## Phase 003: CLI Contract - Specs
 
@@ -60,7 +72,11 @@ Within each range, phases use increments of 5 (001, 005, 010...) to allow insert
 - [ ] Symlink loop detection
 - [ ] Directory depth limiting (max 100)
 - [ ] File metadata reading (size, mtime)
+- [ ] Size-gated file reading (check size before read, skip >10MB with warning)
+- [ ] Direct read for files <64KB, memory-mapped I/O for 64KB-10MB
+- [ ] Per-file processing timeout (5s default)
 - [ ] Unit tests for walker with temp directories
+- [ ] Benchmark: file walking on bench-medium fixture
 
 ## Phase 025: Output Infrastructure - Specs
 
@@ -112,6 +128,7 @@ Within each range, phases use increments of 5 (001, 005, 010...) to allow insert
 - [ ] Check toggle flags (--[no-]cloc, --[no-]escapes, etc.)
 - [ ] Per-package metrics aggregation infrastructure
 - [ ] Error recovery (continue on check failure, skip on error)
+- [ ] Early termination when violation limit reached (non-CI mode)
 - [ ] Unit tests for check runner with mock checks
 
 ### Checkpoint: CLI Runs
@@ -119,6 +136,20 @@ Within each range, phases use increments of 5 (001, 005, 010...) to allow insert
 - [ ] `quench check --help` shows all flags
 - [ ] `quench check -o json` produces valid JSON structure
 - [ ] Exit code 0 when no checks enabled
+
+## Phase 045: Performance - Caching (P0)
+
+File-level caching is P0 per the performance spec: it directly serves the primary use case
+of agents iterating on fixes. Most runs are re-runs where few files changed.
+
+- [ ] File cache structure (path -> mtime, size, result)
+- [ ] Cache lookup before file processing
+- [ ] Cache population after processing
+- [ ] In-memory cache for single session
+- [ ] Persistent cache (.quench/cache.bin)
+- [ ] Cache invalidation (config change, version change)
+- [ ] --no-cache flag to bypass cache
+- [ ] Benchmark: warm run on bench-medium (target <100ms)
 
 ---
 
@@ -626,6 +657,7 @@ Within each range, phases use increments of 5 (001, 005, 010...) to allow insert
 - [ ] Metrics storage path configuration
 - [ ] --save FILE flag
 - [ ] --save-notes flag (git notes)
+- [ ] Benchmark regression tracking (compare against baseline, fail CI if >20% slower)
 
 ## Phase 910: Test Runners - Specs
 
@@ -938,42 +970,23 @@ Within each range, phases use increments of 5 (001, 005, 010...) to allow insert
 - [ ] Cache statistics (hits, misses, hit rate)
 - [ ] Timing output formatter (text and JSON)
 
-## Phase 1401: Performance - Caching
+## Phase 1401: Performance - Optimization Backlog
 
-- [ ] File cache structure (path -> mtime, size, result)
-- [ ] Cache lookup before file processing
-- [ ] Cache population after processing
-- [ ] In-memory cache for single session
-- [ ] Persistent cache (.quench/cache.bin)
-- [ ] Cache invalidation (config change, version change)
-- [ ] --no-cache flag to bypass cache
+Apply P1+ optimizations from the performance spec only when profiling justifies them.
+Core performance (caching, size-gated reading, timeouts) was implemented in Phases 020/045.
 
-## Phase 1405: Performance - File Reading
-
-- [ ] Size check before reading (from metadata)
-- [ ] Direct read for files < 64KB
-- [ ] Memory-mapped I/O for files 64KB - 10MB
-- [ ] Skip with warning for files > 10MB
-- [ ] Report as oversized for files > 1MB
-
-## Phase 1410: Performance - Timeouts
-
-- [ ] Per-file processing timeout (5s default)
-- [ ] Timeout handling (skip file, continue)
-- [ ] Timeout warning in output
-
-## Phase 1415: Performance - Early Termination
-
-- [ ] Violation limit tracking during scan
-- [ ] Early file termination when limit reached
-- [ ] Early check termination when limit reached
-- [ ] Disable early termination in CI mode
+- [ ] Profile on real-world large repos to identify bottlenecks
+- [ ] P1: File walking optimizations if >50% time in discovery
+- [ ] P2: Pattern matching optimizations if >50% time in matching (Aho-Corasick combining)
+- [ ] P3: Memory optimizations if constrained (bounded cache with moka, batch processing)
+- [ ] P4: Micro-optimizations only if profiling shows specific bottleneck
 
 ### Checkpoint: Performance Complete
-- [ ] Benchmark: cold run < 500ms on 50K LOC fixture
-- [ ] Benchmark: warm run < 100ms on 50K LOC fixture
+- [ ] Benchmark: cold run < 500ms on bench-medium (50K LOC)
+- [ ] Benchmark: warm run < 100ms on bench-medium (50K LOC)
 - [ ] Large file (>10MB) skipped with warning
 - [ ] Cache invalidation works correctly
+- [ ] No P1+ optimizations applied without profiling justification
 
 ---
 
