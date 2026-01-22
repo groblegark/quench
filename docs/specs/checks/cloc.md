@@ -105,7 +105,17 @@ Typical healthy ranges: `0.5x` to `2.0x` (project-dependent).
 ```json
 {
   "name": "cloc",
-  "passed": true,
+  "passed": false,
+  "violations": [
+    {
+      "file": "src/parser.rs",
+      "line": null,
+      "type": "file_too_large",
+      "value": 923,
+      "threshold": 750,
+      "advice": "Split into smaller modules."
+    }
+  ],
   "metrics": {
     "source_lines": 12453,
     "source_files": 47,
@@ -132,7 +142,10 @@ Typical healthy ranges: `0.5x` to `2.0x` (project-dependent).
 }
 ```
 
-**Note**: `by_package` is omitted if no packages are configured. `passed` is always `true` (reporting only).
+**Notes**:
+- `violations` only present when file size limits exceeded
+- `by_package` omitted if no packages configured
+- `metrics` always present (LOC is reporting-only)
 
 ## File Size Limits
 

@@ -160,39 +160,34 @@ tests: WARN
 {
   "name": "tests",
   "passed": false,
-  "commit": {
-    "check": "error",
-    "scope": "branch",
-    "violations": [
-      {
-        "source_file": "src/parser.rs",
-        "change_type": "modified",
-        "lines_added": 67,
-        "lines_removed": 12,
-        "test_file": null,
-        "inline_tests": false,
-        "test_changes": false,
-        "advice": "Add tests in tests/parser_tests.rs or update inline #[cfg(test)] block"
-      },
-      {
-        "source_file": "src/lexer.rs",
-        "change_type": "added",
-        "lines_added": 234,
-        "lines_removed": 0,
-        "test_file": null,
-        "inline_tests": false,
-        "test_changes": false,
-        "advice": "Create tests/lexer_tests.rs with tests for the lexer module."
-      }
-    ],
-    "summary": {
-      "source_files_changed": 5,
-      "with_test_changes": 3,
-      "without_test_changes": 2
+  "violations": [
+    {
+      "file": "src/parser.rs",
+      "line": null,
+      "type": "missing_tests",
+      "change_type": "modified",
+      "lines_changed": 79,
+      "advice": "Add tests in tests/parser_tests.rs or update inline #[cfg(test)] block"
+    },
+    {
+      "file": "src/lexer.rs",
+      "line": null,
+      "type": "missing_tests",
+      "change_type": "added",
+      "lines_changed": 234,
+      "advice": "Create tests/lexer_tests.rs with tests for the lexer module."
     }
+  ],
+  "metrics": {
+    "source_files_changed": 5,
+    "with_test_changes": 3,
+    "without_test_changes": 2,
+    "scope": "branch"
   }
 }
 ```
+
+**Violation types**: `missing_tests`
 
 ## Configuration
 

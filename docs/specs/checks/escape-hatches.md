@@ -155,25 +155,22 @@ escapes: FAIL
     {
       "file": "src/parser.rs",
       "line": 47,
+      "type": "missing_comment",
       "pattern": "unsafe",
-      "action": "comment",
-      "required_comment": "// SAFETY:",
+      "comment": "// SAFETY:",
       "advice": "Add a // SAFETY: comment explaining why this unsafe block is sound."
+    },
+    {
+      "file": "src/client.rs",
+      "line": 89,
+      "type": "forbidden",
+      "pattern": "unwrap",
+      "advice": "Handle the error case or use .expect() with a message if truly infallible."
     }
   ],
-  "counts": {
-    "source": {
-      "unsafe": 3,
-      "unwrap": 0,
-      "expect": 0,
-      "allow": 12
-    },
-    "test": {
-      "unsafe": 0,
-      "unwrap": 47,
-      "expect": 5,
-      "allow": 0
-    }
+  "metrics": {
+    "source": { "unsafe": 3, "unwrap": 0, "expect": 0, "allow": 12 },
+    "test": { "unsafe": 0, "unwrap": 47, "expect": 5, "allow": 0 }
   },
   "by_package": {
     "cli": {
@@ -187,6 +184,8 @@ escapes: FAIL
   }
 }
 ```
+
+**Violation types**: `missing_comment`, `forbidden`, `threshold_exceeded`
 
 ## Configuration
 

@@ -185,19 +185,35 @@ git: FIXED
   "passed": false,
   "violations": [
     {
+      "file": null,
+      "line": null,
+      "type": "invalid_format",
       "commit": "abc123",
       "message": "update stuff",
-      "error": "missing_type",
       "advice": "Expected: <type>(<scope>): <description>"
     },
     {
-      "type": "missing_docs",
+      "file": null,
+      "line": null,
+      "type": "invalid_scope",
+      "commit": "def456",
+      "message": "feat(unknown): add thing",
+      "scope": "unknown",
+      "advice": "Allowed scopes: api, cli, core"
+    },
+    {
       "file": "CLAUDE.md",
+      "line": null,
+      "type": "missing_docs",
       "advice": "Add a Commits section describing the format."
     }
   ]
 }
 ```
+
+**Violation types**: `invalid_format`, `invalid_type`, `invalid_scope`, `missing_docs`
+
+**Note**: Commit-related violations have `file: null` with `commit` field instead.
 
 ## Scope
 

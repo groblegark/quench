@@ -306,31 +306,50 @@ source = "src/api/**"
 {
   "name": "docs",
   "passed": false,
-  "specs": {
+  "violations": [
+    {
+      "file": "docs/specs/escapes.md",
+      "line": null,
+      "type": "missing_section",
+      "section": "Purpose",
+      "advice": "Add a \"## Purpose\" section: What problem this spec addresses"
+    },
+    {
+      "file": "CLAUDE.md",
+      "line": 72,
+      "type": "broken_toc",
+      "path": "checks/coverage.md",
+      "advice": "File does not exist. Update the tree or create the file."
+    },
+    {
+      "file": "README.md",
+      "line": 45,
+      "type": "broken_link",
+      "target": "docs/old-guide.md",
+      "advice": "Linked file does not exist. Update the link or create the file."
+    },
+    {
+      "file": null,
+      "line": null,
+      "type": "missing_docs",
+      "commit": "abc123",
+      "message": "feat(api): add export endpoint",
+      "expected_docs": "docs/api/**",
+      "advice": "Update docs/api/ with the new API functionality."
+    }
+  ],
+  "metrics": {
     "index_file": "docs/specs/00-overview.md",
-    "spec_files": ["00-overview.md", "01-cli.md", "escapes.md"],
-    "violations": [
-      {
-        "file": "docs/specs/escapes.md",
-        "type": "missing_section",
-        "section": "Purpose"
-      }
-    ]
-  },
-  "commit": {
-    "check": "error",
-    "feature_commits": [
-      {
-        "sha": "abc123",
-        "message": "feat(api): add export endpoint",
-        "scope": "api",
-        "expected_docs": "docs/api/**",
-        "doc_changes_found": false
-      }
-    ]
+    "spec_files": 12,
+    "feature_commits": 1,
+    "with_docs": 0
   }
 }
 ```
+
+**Violation types**: `missing_section`, `forbidden_section`, `broken_toc`, `broken_link`, `missing_docs`
+
+**Note**: `missing_docs` violations (CI mode) have `file: null` with `commit` field instead.
 
 ## Comparison to `agents` Check
 

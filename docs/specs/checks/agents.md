@@ -249,11 +249,12 @@ agents: FIXED
 
 ```json
 {
-  "name": "agent",
+  "name": "agents",
   "passed": false,
   "violations": [
     {
       "file": "CLAUDE.md",
+      "line": null,
       "type": "out_of_sync",
       "other_file": ".cursorrules",
       "section": "Code Style",
@@ -262,15 +263,19 @@ agents: FIXED
     {
       "file": "CLAUDE.md",
       "line": 45,
-      "type": "forbid_table",
+      "type": "forbidden_table",
       "advice": "Tables are not token-efficient. Convert to a list."
     }
   ],
-  "files_found": ["CLAUDE.md", ".cursorrules"],
-  "files_missing": [],
-  "in_sync": false
+  "metrics": {
+    "files_found": ["CLAUDE.md", ".cursorrules"],
+    "files_missing": [],
+    "in_sync": false
+  }
 }
 ```
+
+**Violation types**: `missing_file`, `out_of_sync`, `missing_section`, `forbidden_section`, `forbidden_table`, `file_too_large`
 
 ## Configuration
 

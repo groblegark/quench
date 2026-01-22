@@ -163,11 +163,12 @@ license: FIXED
 
 ```json
 {
-  "name": "license-headers",
+  "name": "license",
   "passed": false,
   "violations": [
     {
       "file": "src/parser.rs",
+      "line": null,
       "type": "missing_header",
       "advice": "Add SPDX-License-Identifier and Copyright at file start."
     },
@@ -180,7 +181,7 @@ license: FIXED
       "advice": "Update copyright year or run --fix."
     }
   ],
-  "summary": {
+  "metrics": {
     "files_checked": 47,
     "files_with_headers": 45,
     "files_missing_headers": 2,
@@ -188,6 +189,8 @@ license: FIXED
   }
 }
 ```
+
+**Violation types**: `missing_header`, `outdated_year`, `wrong_license`
 
 ## Supported Licenses
 

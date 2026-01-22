@@ -62,6 +62,77 @@ file-size: FAIL
 
 ### JSON Format (`-o json`)
 
+#### Top-Level Schema
+
+```json
+{
+  "timestamp": "2026-01-21T10:30:00Z",
+  "passed": false,
+  "checks": [
+    { /* check object */ }
+  ]
+}
+```
+
+#### Check Object Schema
+
+Every check follows this normalized structure:
+
+```json
+{
+  "name": "check_name",
+  "passed": false,
+  "violations": [
+    {
+      "file": "path/to/file",
+      "line": 47,
+      "type": "violation_category",
+      "advice": "Actionable guidance."
+    }
+  ],
+  "metrics": {
+    "total_field": 123,
+    "other_field": 456
+  },
+  "by_package": {
+    "package_name": {
+      "total_field": 45,
+      "other_field": 67
+    }
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Check identifier (e.g., `"escapes"`, `"cloc"`) |
+| `passed` | boolean | Whether check passed |
+| `violations` | array | List of violations (omit if empty) |
+| `metrics` | object | Aggregated counts and measurements (omit if none) |
+| `by_package` | object | Per-package metrics breakdown (omit if no packages) |
+
+#### Violation Object Schema
+
+```json
+{
+  "file": "src/parser.rs",
+  "line": 47,
+  "type": "missing_comment",
+  "advice": "Add a // SAFETY: comment explaining the invariants."
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `file` | string\|null | File path (null for non-file violations like commit messages) |
+| `line` | number\|null | Line number (null if not applicable) |
+| `type` | string | Violation category (check-specific) |
+| `advice` | string | Actionable guidance |
+
+Checks may add context-specific fields alongside these (e.g., `pattern`, `threshold`, `commit`).
+
+#### Example
+
 ```json
 {
   "timestamp": "2026-01-21T10:30:00Z",
@@ -74,31 +145,40 @@ file-size: FAIL
         {
           "file": "src/parser.rs",
           "line": 47,
+          "type": "missing_comment",
           "pattern": "unsafe",
-          "mode": "comment",
           "advice": "Add a // SAFETY: comment explaining the invariants."
-        },
-        {
-          "file": "src/parser.rs",
-          "line": 112,
-          "pattern": "unwrap",
-          "action": "forbid",
-          "advice": "Handle the error case or add // OK: comment if infallible."
         }
-      ]
+      ],
+      "metrics": {
+        "source": { "unsafe": 3, "unwrap": 0 },
+        "test": { "unsafe": 0, "unwrap": 47 }
+      },
+      "by_package": {
+        "core": {
+          "source": { "unsafe": 2, "unwrap": 0 },
+          "test": { "unsafe": 0, "unwrap": 24 }
+        }
+      }
     },
     {
-      "name": "file-size",
+      "name": "cloc",
       "passed": false,
       "violations": [
         {
           "file": "src/lexer.rs",
           "line": null,
+          "type": "file_too_large",
           "value": 923,
-          "threshold": 900,
+          "threshold": 750,
           "advice": "Split into smaller modules."
         }
-      ]
+      ],
+      "metrics": {
+        "source_lines": 12453,
+        "test_lines": 8921,
+        "ratio": 0.72
+      }
     }
   ]
 }
