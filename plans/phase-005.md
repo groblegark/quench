@@ -1,5 +1,7 @@
 # Phase 005: Project Foundation - Implementation
 
+**Root Feature:** `quench-6909`
+
 ## Overview
 
 Implement the foundational CLI skeleton and configuration system for quench. This phase brings the CLI contract to life by implementing the command structure, global flags, config file discovery and parsing, and logging infrastructure. All Phase 003 behavioral specs marked `#[ignore = "TODO: Phase 005 - CLI skeleton"]` will be enabled upon completion.
