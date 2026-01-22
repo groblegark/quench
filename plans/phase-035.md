@@ -1,6 +1,6 @@
 # Phase 035: Check Framework - Specs
 
-**Root Feature:** `quench-f350`
+**Root Feature:** `quench-52de`
 
 ## Overview
 
