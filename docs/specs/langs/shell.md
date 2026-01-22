@@ -6,6 +6,14 @@ Shell-specific behavior for quench checks.
 
 Detected when `*.sh` files exist in project root, `bin/`, or `scripts/`.
 
+## Default Patterns
+
+```toml
+[shell]
+source = ["**/*.sh", "**/*.bash"]
+tests = ["tests/**/*.bats", "test/**/*.bats", "*_test.sh"]
+```
+
 ## Test Code Detection
 
 **Test files** (entire file is test code):
@@ -33,75 +41,55 @@ Controls `# shellcheck disable=` comments.
 | `"allow"` | Always allowed |
 
 ```toml
-[checks.shell.suppress]
+[shell.suppress]
 check = "forbid"               # forbid | comment | allow
 # comment = "# OK:"            # optional: require specific pattern (default: any)
 
-[checks.shell.suppress.source]
+[shell.suppress.source]
 allow = ["SC2034"]             # unused variable OK
 
-[checks.shell.suppress.test]
+[shell.suppress.test]
 check = "allow"                # tests can suppress freely
 ```
 
 ## Policy
 
 ```toml
-[checks.shell.policy]
+[shell.policy]
 lint_changes = "standalone"
 lint_config = [".shellcheckrc"]
 ```
 
-## CI Mode: Test Metrics
+## Coverage
 
-Controlled by `--[no-]tests` flag. In CI mode, runs test suites and collects metrics.
-
-### Test Time
-
-Uses BATS test runner by default. See [11-test-runners.md](../11-test-runners.md) for runner details.
-
-```
-tests: time
-  total: 4.2s
-  avg: 120ms
-  max: 850ms (tests/cli/large_input.bats)
-```
-
-### Coverage
-
-Shell coverage via `kcov` (optional, not default).
+Shell coverage uses `kcov`. To enable coverage for shell scripts, specify them as targets in test suites:
 
 ```toml
-[checks.shell]
-coverage = true
-coverage_tool = "kcov"           # kcov, bashcov, or shcov
-coverage_min = 70
+[[checks.tests.suites]]
+runner = "bats"
+path = "tests/"
+targets = ["scripts/*.sh", "bin/*"]    # Shell scripts via kcov
 ```
+
+Coverage targets resolve against `[shell].source` patterns.
 
 ## Configuration
 
 ```toml
-[checks.shell]
-check = "error"
+[shell]
+# Source/test patterns (defaults shown)
+# source = ["**/*.sh", "**/*.bash"]
+# tests = ["tests/**/*.bats", "test/**/*.bats", "*_test.sh"]
 
-# Lint suppression (# shellcheck disable=)
-[checks.shell.suppress]
-check = "forbid"               # forbid | comment | allow
-# comment = "# OK:"            # optional: require specific pattern
-# allow = []                   # codes that don't need comment
-# forbid = []                  # codes never allowed
+[shell.suppress]
+check = "forbid"
 
-# Policy
-[checks.shell.policy]
+[shell.suppress.test]
+check = "allow"
+
+[shell.policy]
 lint_changes = "standalone"
 lint_config = [".shellcheckrc"]
-
-# CI mode metrics
-coverage = false               # Disabled by default
-test_time = true
-
-# Test suites
-[[checks.shell.test_suites]]
-runner = "bats"
-path = "tests/"
 ```
+
+Test suites and coverage thresholds are configured in `[checks.tests]`.

@@ -6,6 +6,15 @@ Rust-specific behavior for quench checks.
 
 Detected when `Cargo.toml` exists in project root.
 
+## Default Patterns
+
+```toml
+[rust]
+source = ["**/*.rs"]
+tests = ["tests/**", "test/**/*.rs", "*_test.rs", "*_tests.rs"]
+ignore = ["target/"]
+```
+
 ## Test Code Detection
 
 **Test files** (entire file is test code):
@@ -54,15 +63,15 @@ Controls `#[allow(...)]` and `#[expect(...)]` attributes.
 Default: `"comment"` for source, `"allow"` for test code.
 
 ```toml
-[checks.rust.suppress]
+[rust.suppress]
 check = "comment"              # forbid | comment | allow
 # comment = "// JUSTIFIED:"    # optional: require specific pattern (default: any)
 
-[checks.rust.suppress.source]
+[rust.suppress.source]
 allow = ["dead_code"]          # no comment needed
 forbid = ["unsafe_code"]       # never allowed
 
-[checks.rust.suppress.test]
+[rust.suppress.test]
 check = "allow"                # tests can suppress freely
 ```
 
@@ -71,7 +80,7 @@ check = "allow"                # tests can suppress freely
 Enforce lint configuration hygiene.
 
 ```toml
-[checks.rust.policy]
+[rust.policy]
 lint_changes = "standalone"    # lint config changes must be standalone PRs
 lint_config = [                # files that trigger standalone requirement
   "rustfmt.toml",
@@ -91,13 +100,20 @@ rust: FAIL
   Submit lint config changes in a separate PR.
 ```
 
-## CI Mode: Compile Metrics
+## Build Metrics
 
-Controlled by `--[no-]compile` flag. Only runs in CI mode.
+### Targets
+
+Build targets for coverage and binary size tracking. Auto-detected from `[[bin]]` entries in Cargo.toml.
+
+```toml
+[rust]
+targets = ["myapp", "myserver"]    # Override auto-detection
+```
 
 ### Binary Size
 
-Track release binary sizes. Binaries auto-detected from `[[bin]]` in Cargo.toml.
+Track release binary sizes (CI mode).
 
 ```
 compile: binary size
@@ -113,7 +129,7 @@ compile: FAIL
 
 ### Compile Time
 
-Track compile times:
+Track compile times (CI mode):
 
 - **Cold**: `cargo clean && cargo build --release`
 - **Hot**: Incremental debug rebuild
@@ -124,36 +140,20 @@ compile: time
   hot (debug): 1.8s
 ```
 
-## CI Mode: Test Metrics
+## Coverage
 
-Controlled by `--[no-]tests` flag. In CI mode, `--tests` runs test suites and collects metrics.
+The `cargo` runner provides implicit Rust coverage via `cargo llvm-cov`. Other runners (bats, pytest) can also contribute Rust coverage by specifying build targets:
 
-### Test Time
+```toml
+[[checks.tests.suites]]
+runner = "cargo"
+# Implicit: covers Rust code via llvm-cov
 
-Track test execution times across configured test suites.
-
-- **Total**: Sum of all suite times
-- **Average**: Average per-test time
-- **Max**: Slowest individual test
-
-```
-tests: time
-  total: 12.4s
-  avg: 45ms
-  max: 2.1s (tests::integration::large_file_parse)
-  suites:
-    cargo: 8.2s
-    bats: 4.2s
-```
-
-### Coverage
-
-Uses `cargo llvm-cov` by default.
-
-```
-tests: coverage 78.4%
-  core: 82.3%
-  cli: 68.9%
+[[checks.tests.suites]]
+runner = "bats"
+path = "tests/cli/"
+setup = "cargo build"
+targets = ["myapp"]             # Instrument Rust binary
 ```
 
 Multiple test suites contribute to coverage via LLVM profile merging.
@@ -161,48 +161,35 @@ Multiple test suites contribute to coverage via LLVM profile merging.
 ## Configuration
 
 ```toml
-[checks.rust]
-check = "error"
+[rust]
+# Source/test patterns (defaults shown)
+# source = ["**/*.rs"]
+# tests = ["tests/**", "test/**/*.rs", "*_test.rs", "*_tests.rs"]
+# ignore = ["target/"]
+
 split_cfg_test = true            # Count #[cfg(test)] as test LOC
 
-# Compile metrics (CI mode)
+# Build targets (default: all [[bin]] entries)
+# targets = ["myapp", "myserver"]
+
+# Build metrics (CI mode)
 binary_size = true
 compile_time = true
 
-# Compile thresholds (fail if exceeded)
+# Thresholds
 binary_size_max = "5 MB"
 compile_time_cold_max = "60s"
 compile_time_hot_max = "2s"
 
-# Test/coverage metrics (CI mode)
-coverage = true
-test_time = true
+[rust.suppress]
+check = "comment"
 
-# Test thresholds
-coverage_min = 75
-test_time_total_max = "30s"
-test_time_max = "1s"
+[rust.suppress.test]
+check = "allow"
 
-# Test suites (see [11-test-runners.md](../11-test-runners.md))
-[[checks.rust.test_suites]]
-runner = "cargo"
-
-[[checks.rust.test_suites]]
-runner = "bats"
-path = "tests/cli/"
-setup = "cargo build"
+[rust.policy]
+lint_changes = "standalone"
+lint_config = ["rustfmt.toml", "clippy.toml"]
 ```
 
-### Per-Package Coverage
-
-```toml
-[checks.rust.coverage.package.core]
-min = 90                         # Higher coverage for core
-
-[checks.rust.coverage.package.cli]
-min = 60
-exclude_files = ["src/main.rs"]
-
-[checks.rust.coverage.package.experimental]
-check = "off"                  # Skip coverage for experimental
-```
+Test suites and coverage thresholds are configured in `[checks.tests]`.

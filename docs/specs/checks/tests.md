@@ -232,6 +232,39 @@ exclude = [
   "**/main.rs",          # Binary entry points
   "**/generated/**",     # Generated code
 ]
+
+# Test suites (time thresholds per-suite)
+[[checks.tests.suites]]
+runner = "cargo"
+max_total = "30s"
+max_test = "1s"
+
+[[checks.tests.suites]]
+runner = "bats"
+path = "tests/cli/"
+setup = "cargo build"
+targets = ["myapp"]
+max_total = "10s"
+max_test = "500ms"
+
+[[checks.tests.suites]]
+runner = "pytest"
+path = "tests/integration/"
+ci = true                              # only run in CI mode (slow)
+targets = ["myserver"]
+max_total = "60s"
+
+# Coverage settings
+[checks.tests.coverage]
+check = "error"
+min = 75
+
+[checks.tests.coverage.package.core]
+min = 90
+
+# Test time check level (thresholds are per-suite)
+[checks.tests.time]
+check = "warn"
 ```
 
 ## CI Mode: Test Execution
@@ -241,35 +274,59 @@ In CI mode (`--ci`), the tests check also **runs test suites** and collects metr
 - **Test time**: Total, average, and slowest test
 - **Coverage**: Line coverage percentage
 
-This requires configuring test suites. See [11-test-runners.md](../11-test-runners.md) for runner details.
+Test suites are configured via `[[checks.tests.suites]]`. See [11-test-runners.md](../11-test-runners.md) for runner details.
 
 ```toml
-# Test suites to run (language-specific)
-[[checks.rust.test_suites]]
+[[checks.tests.suites]]
 runner = "cargo"
+# Implicit: targets Rust code via llvm-cov
 
-[[checks.rust.test_suites]]
+[[checks.tests.suites]]
 runner = "bats"
 path = "tests/cli/"
 setup = "cargo build"
+targets = ["myapp"]                     # Instrument Rust binary
 ```
 
 ### Coverage
 
-Coverage is collected when running tests in CI mode. Language adapters determine the coverage tool:
+Coverage is collected based on what each suite exercises. Runners that test their own language provide implicit coverage:
 
-| Language | Tool |
-|----------|------|
-| Rust | `cargo llvm-cov` |
-| Shell | `kcov` (optional) |
+| Runner | Implicit Coverage | Tool |
+|--------|-------------------|------|
+| `cargo` | Rust | llvm-cov |
+| `go` | Go | built-in |
+| `pytest` | Python | coverage.py |
+| `jest`/`vitest`/`bun` | JS/TS | built-in |
+
+For integration tests of compiled binaries or shell scripts, use the `targets` field:
+
+```toml
+[[checks.tests.suites]]
+runner = "bats"
+path = "tests/cli/"
+targets = ["myapp"]                     # Rust binary
+targets = ["scripts/*.sh"]              # Shell scripts via kcov
+```
+
+Output:
 
 ```
 tests: coverage 78.4%
-  core: 82.3%
-  cli: 68.9%
+  rust: 82.3% (cargo + bats)
+  python: 71.2% (pytest)
 ```
 
-Configure thresholds per-language. See `langs/rust.md` for Rust-specific options.
+Configure thresholds via `[checks.tests.coverage]`:
+
+```toml
+[checks.tests.coverage]
+check = "error"
+min = 75
+
+[checks.tests.coverage.package.core]
+min = 90
+```
 
 ### Test Time
 
@@ -278,6 +335,28 @@ tests: time
   total: 12.4s
   avg: 45ms
   max: 2.1s (tests::integration::large_file_parse)
+```
+
+Time thresholds are configured per-suite:
+
+```toml
+[[checks.tests.suites]]
+runner = "cargo"
+max_total = "30s"
+max_test = "1s"
+
+[[checks.tests.suites]]
+runner = "bats"
+path = "tests/cli/"
+ci = true                              # Only run in CI mode
+max_total = "60s"
+```
+
+Configure check level via `[checks.tests.time]`:
+
+```toml
+[checks.tests.time]
+check = "warn"                         # error | warn | off
 ```
 
 ### Ratcheting

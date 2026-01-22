@@ -30,17 +30,18 @@ See [langs/rust.md](langs/rust.md) for full Rust configuration.
 - **Test detection**: `#[cfg(test)]` blocks, `tests/` directory, `*_test.rs` files
 - **Escape patterns**: `unsafe`, `.unwrap()`, `.expect()`, `mem::transmute`
 - **Lint suppression**: `#[allow(...)]`, `#[expect(...)]`
-- **CI metrics**: Binary size, compile time, coverage, test time
+- **Build metrics**: Binary size, compile time
 
 ```toml
-[checks.rust]
-check = "error"
+[rust]
 split_cfg_test = true            # Count #[cfg(test)] as test LOC
+binary_size = true
+compile_time = true
 
-[checks.rust.suppress]
+[rust.suppress]
 check = "comment"                # forbid | comment | allow
 
-[checks.rust.policy]
+[rust.policy]
 lint_changes = "standalone"
 ```
 
@@ -53,39 +54,38 @@ See [langs/shell.md](langs/shell.md) for full Shell configuration.
 - **Test detection**: `*.bats` files, `*_test.sh`, `tests/` directory
 - **Escape patterns**: `set +e`, `eval`
 - **Lint suppression**: `# shellcheck disable=`
-- **CI metrics**: Coverage (optional), test time
 
 ```toml
-[checks.shell]
-check = "error"
+[shell]
+# source = ["**/*.sh", "**/*.bash"]
+# tests = ["tests/**/*.bats", "*_test.sh"]
 
-[checks.shell.suppress]
+[shell.suppress]
 check = "forbid"               # forbid | comment | allow
 
-[checks.shell.policy]
+[shell.policy]
 lint_changes = "standalone"
 ```
 
-## Generic Adapter
+## Generic / Fallback
 
-Fallback for unrecognized languages. Uses only configured patterns.
+For unrecognized languages, quench uses patterns from `[project]`:
 
 ### Test Code Detection
 
 Pattern-based only (no inline detection):
-- Files matching `test_patterns` from config
+- Files matching `tests` patterns from `[project]`
 
 ### Escape Patterns
 
-No defaults. Only user-configured patterns apply.
+No defaults. Only user-configured patterns in `[checks.escapes]` apply.
 
 ### Configuration
 
 ```toml
-[checks.generic]
-check = "error"
-source_patterns = ["src/**/*", "lib/**/*"]
-test_patterns = ["test/**/*", "tests/**/*"]
+[project]
+source = ["src/**/*", "lib/**/*"]
+tests = ["test/**/*", "tests/**/*", "**/*_test.*", "**/*.spec.*"]
 ```
 
 ## Future Adapters

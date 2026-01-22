@@ -23,8 +23,11 @@ project-root/
 ## Config Sections
 
 ```toml
+version = 1    # Config format version (required)
 [project]      # Project identity and file patterns
 [git]          # Git integration settings
+[rust]         # Rust language config (optional, has defaults)
+[shell]        # Shell language config (optional, has defaults)
 [checks.*]     # Check-specific configuration
 [ratchet]      # Regression prevention
 ```
@@ -32,6 +35,26 @@ project-root/
 ## Minimal Config
 
 Most projects need no config. Missing `quench.toml` uses all defaults.
+
+When a config file exists, `version` is required:
+
+```toml
+version = 1
+```
+
+## Version
+
+The `version` field is a required integer at the top of the config file.
+
+- Bumped only on breaking changes (renamed/removed fields, changed semantics)
+- Additions don't bump the version
+- Quench validates version before parsing:
+  ```
+  quench: unsupported config version 2 (supported: 1)
+    Upgrade quench to use this config.
+  ```
+
+Current version: **1**
 
 ## Full Schema
 
@@ -66,6 +89,67 @@ Git integration settings.
 [git]
 base = "main"                          # Default for --base (auto: main > master > develop)
 baseline = ".quench/baseline.json"     # Metrics storage path
+```
+
+### [rust]
+
+Rust language configuration. Auto-detected when `Cargo.toml` exists.
+
+```toml
+[rust]
+# Source/test patterns (defaults shown, override if needed)
+# source = ["**/*.rs"]
+# tests = ["tests/**", "test/**/*.rs", "*_test.rs", "*_tests.rs"]
+# ignore = ["target/"]
+
+split_cfg_test = true                  # Count #[cfg(test)] as test LOC
+
+# Build targets for coverage + binary size (default: all [[bin]] entries)
+# targets = ["myapp", "myserver"]
+
+# Build metrics (CI mode)
+binary_size = true
+compile_time = true
+
+# Thresholds (optional)
+binary_size_max = "5 MB"
+compile_time_cold_max = "60s"
+compile_time_hot_max = "2s"
+
+# Lint suppression (#[allow(...)])
+[rust.suppress]
+check = "comment"                      # forbid | comment | allow
+# comment = "// JUSTIFIED:"            # optional: require specific pattern
+
+[rust.suppress.test]
+check = "allow"                        # tests can suppress freely
+
+# Policy
+[rust.policy]
+lint_changes = "standalone"
+lint_config = ["rustfmt.toml", "clippy.toml"]
+```
+
+### [shell]
+
+Shell language configuration. Auto-detected when `*.sh` files exist in root, `bin/`, or `scripts/`.
+
+```toml
+[shell]
+# Source/test patterns (defaults shown)
+# source = ["**/*.sh", "**/*.bash"]
+# tests = ["tests/**/*.bats", "test/**/*.bats", "*_test.sh"]
+
+# Suppress (# shellcheck disable=)
+[shell.suppress]
+check = "forbid"                       # forbid | comment | allow
+
+[shell.suppress.test]
+check = "allow"
+
+[shell.policy]
+lint_changes = "standalone"
+lint_config = [".shellcheckrc"]
 ```
 
 ### [checks.*]
@@ -199,7 +283,7 @@ source = "src/api/**"
 
 #### [checks.tests]
 
-Test correlation and metrics.
+Test correlation, execution, and metrics.
 
 ```toml
 [checks.tests]
@@ -211,6 +295,50 @@ check = "error"                        # error | warn | off
 scope = "branch"                       # branch | commit
 placeholders = "allow"
 exclude = ["**/mod.rs", "**/main.rs"]
+
+# Test suites (time limits per-suite)
+[[checks.tests.suites]]
+runner = "cargo"
+# covers Rust automatically via llvm-cov
+max_total = "30s"
+max_test = "1s"
+
+[[checks.tests.suites]]
+runner = "bats"
+path = "tests/cli/"
+setup = "cargo build"
+targets = ["myapp"]                     # instrument Rust binary
+max_total = "10s"
+max_test = "500ms"
+
+[[checks.tests.suites]]
+runner = "pytest"
+path = "tests/integration/"
+ci = true                              # only run in CI mode (slow)
+targets = ["myserver"]                  # also instrument Rust binary
+max_total = "60s"
+
+[[checks.tests.suites]]
+runner = "bats"
+path = "tests/scripts/"
+targets = ["scripts/*.sh"]              # shell scripts via kcov
+
+# Coverage settings
+[checks.tests.coverage]
+check = "error"                        # error | warn | off
+min = 75                               # minimum coverage %
+
+# Per-package coverage thresholds
+[checks.tests.coverage.package.core]
+min = 90
+
+[checks.tests.coverage.package.cli]
+min = 60
+exclude = ["src/main.rs"]
+
+# Test time check level (thresholds are per-suite)
+[checks.tests.time]
+check = "warn"                         # error | warn | off
 ```
 
 #### [checks.license]
@@ -223,73 +351,6 @@ check = "off"                          # error | warn | off (default: off)
 license = "MIT"
 copyright = "Your Organization"
 exclude = ["**/generated/**"]
-```
-
-#### [checks.rust]
-
-Rust language adapter settings.
-
-```toml
-[checks.rust]
-check = "error"                        # error | warn | off
-split_cfg_test = true                  # Count #[cfg(test)] as test LOC
-
-# Lint suppression (#[allow(...)])
-[checks.rust.suppress]
-check = "comment"                      # forbid | comment | allow
-# comment = "// JUSTIFIED:"            # optional: require specific pattern (default: any)
-# allow = ["dead_code"]                # lints that don't need comment
-# forbid = ["unsafe_code"]             # lints never allowed
-
-[checks.rust.suppress.test]
-check = "allow"                        # tests can suppress freely
-
-# Policy
-[checks.rust.policy]
-lint_changes = "standalone"            # lint config changes must be standalone
-lint_config = ["rustfmt.toml", "clippy.toml"]
-
-# CI mode metrics
-binary_size = true
-compile_time = true
-test_time = true
-
-# Optional thresholds (enables enforcement outside CI)
-binary_size_max = "5 MB"
-compile_time_cold_max = "60s"
-test_time_max = "1s"
-
-# Test suites
-[[checks.rust.test_suites]]
-runner = "cargo"
-
-[[checks.rust.test_suites]]
-runner = "bats"
-path = "tests/cli/"
-setup = "cargo build"
-```
-
-#### [checks.shell]
-
-Shell language adapter settings.
-
-```toml
-[checks.shell]
-check = "error"                        # error | warn | off
-
-# Lint suppression (# shellcheck disable=)
-[checks.shell.suppress]
-check = "forbid"                       # forbid | comment | allow
-# allow = ["SC2034"]                   # codes that don't need comment
-# forbid = ["SC1090"]                  # codes never allowed
-
-[checks.shell.suppress.test]
-check = "allow"                        # tests can suppress freely
-
-# Policy
-[checks.shell.policy]
-lint_changes = "standalone"
-lint_config = [".shellcheckrc"]
 ```
 
 ### [ratchet]

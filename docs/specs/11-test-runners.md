@@ -2,9 +2,9 @@
 
 Test runners execute tests and report timing and coverage information.
 
-Test suites configured via `[[checks.<lang>.test_suites]]` are used for both:
+Test suites are configured via `[[checks.tests.suites]]` and provide:
 - **Test time**: Timing metrics (total, avg, max)
-- **Coverage**: Code coverage collection (if enabled)
+- **Coverage**: Code coverage collection (via `targets` field)
 
 ## Runner Independence
 
@@ -14,19 +14,122 @@ Runners are independent of the code being tested. Any runner can test any projec
 - A Go service can have `pytest` integration tests
 - A shell script project can have `cargo` tests for a Rust helper binary
 
-The adapter (rust, shell, etc.) determines defaults and language-specific features. The runner determines how tests are executed and parsed.
+The runner determines how tests are executed and how output is parsed. Coverage depends on what code the tests exercise (see [Coverage Targets](#coverage-targets)).
 
 ## Supported Runners
 
-| Runner | Per-Test Timing | Auto-Detection |
-|--------|-----------------|----------------|
-| `cargo` | Yes | `Cargo.toml` |
-| `bats` | Yes | `*.bats` files |
-| `pytest` | Yes | `pytest.ini`, `pyproject.toml` |
-| `vitest` | Yes | `vitest.config.*` |
-| `bun` | Yes | `bun.lockb` |
-| `jest` | Yes | `jest.config.*` |
-| `go` | Yes | `go.mod` |
+| Runner | Per-Test Timing | Implicit Coverage |
+|--------|-----------------|-------------------|
+| `cargo` | Yes | Rust (llvm-cov) |
+| `go` | Yes | Go (built-in) |
+| `pytest` | Yes | Python (coverage.py) |
+| `vitest` | Yes | JS/TS (built-in) |
+| `bun` | Yes | JS/TS (built-in) |
+| `jest` | Yes | JS/TS (built-in) |
+| `bats` | Yes | None (use `targets`) |
+
+## Suite Configuration
+
+```toml
+[[checks.tests.suites]]
+runner = "cargo"
+# Implicit: targets Rust code via llvm-cov
+# Runs in fast mode and CI mode
+
+[[checks.tests.suites]]
+runner = "bats"
+path = "tests/cli/"
+setup = "cargo build"
+targets = ["myapp"]                     # Instrument Rust binary
+max_total = "10s"
+max_test = "500ms"
+
+[[checks.tests.suites]]
+runner = "pytest"
+path = "tests/integration/"
+ci = true                              # Only run in CI mode (slow)
+targets = ["myserver"]                  # Also instrument Rust binary
+max_total = "60s"
+
+[[checks.tests.suites]]
+runner = "bats"
+path = "tests/scripts/"
+targets = ["scripts/*.sh"]              # Shell scripts via kcov
+```
+
+### Suite Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `runner` | string | Runner to use (required) |
+| `path` | string | Test directory or file pattern |
+| `setup` | string | Command to run before tests |
+| `targets` | [string] | Coverage targets (see below) |
+| `ci` | bool | Only run in CI mode (default: false) |
+| `max_total` | duration | Max total time for this suite |
+| `max_avg` | duration | Max average time per test |
+| `max_test` | duration | Max time for slowest individual test |
+
+### Custom Commands
+
+For unsupported runners, use custom command:
+
+```toml
+[[checks.tests.suites]]
+name = "custom"
+command = "./scripts/run-tests.sh"
+# No per-test timing available for custom commands
+```
+
+## Coverage Targets
+
+The `targets` field specifies what code a test suite exercises for coverage.
+
+### Implicit Coverage
+
+Runners that test their own language provide implicit coverage:
+
+| Runner | Covers | Tool |
+|--------|--------|------|
+| `cargo` | Rust | llvm-cov |
+| `go` | Go | built-in |
+| `pytest` | Python | coverage.py |
+| `vitest`/`jest`/`bun` | JS/TS | built-in |
+
+These don't need a `targets` field—coverage just works.
+
+### Explicit Coverage
+
+For integration tests exercising compiled binaries or shell scripts:
+
+```toml
+[[checks.tests.suites]]
+runner = "bats"
+path = "tests/cli/"
+targets = ["myapp"]                     # Build target name → Rust binary
+
+[[checks.tests.suites]]
+runner = "pytest"
+path = "tests/e2e/"
+targets = ["myserver", "scripts/*.sh"]  # Rust binary + shell scripts
+```
+
+Coverage targets are resolved:
+1. **Build target name** (e.g., `myapp`) → Matches `[rust].targets` → llvm-cov
+2. **Glob pattern** (e.g., `scripts/*.sh`) → Matches `[shell].source` → kcov
+
+### No Coverage
+
+For suites that only contribute timing:
+
+```toml
+[[checks.tests.suites]]
+runner = "bats"
+path = "tests/smoke/"
+targets = []                            # Explicit: timing only
+```
+
+Or simply omit the `targets` field.
 
 ## Timing Metrics
 
@@ -42,49 +145,10 @@ Requires runner support for parsing individual test results.
 **Max**: Slowest individual test (with name)
 
 ```
-rust: test time
+tests: time
   total: 12.4s
   avg: 45ms (276 tests)
   max: 2.1s (tests::integration::large_file_parse)
-```
-
-## Runner Configuration
-
-### Auto-Detection
-
-Runners are auto-detected based on project files. Default runner per adapter:
-
-| Adapter | Default Runner |
-|---------|----------------|
-| `rust` | `cargo` |
-| `shell` | `bats` (if `*.bats` exist) |
-| `generic` | None |
-
-### Additional Suites
-
-Add test suites beyond the default:
-
-```toml
-# Rust project with additional test suites
-[[checks.rust.test_suites]]
-runner = "bats"
-path = "tests/cli/"
-
-[[checks.rust.test_suites]]
-runner = "pytest"
-path = "tests/integration/"
-setup = "cargo build"        # Build binary before running
-```
-
-### Custom Commands
-
-For unsupported runners, use custom command:
-
-```toml
-[[checks.rust.test_suites]]
-name = "custom"
-command = "./scripts/run-tests.sh"
-# No per-test timing available for custom commands
 ```
 
 ## Runner Details
@@ -95,7 +159,7 @@ command = "./scripts/run-tests.sh"
 cargo test --release -- --format json
 ```
 
-Parses Rust's JSON test output for per-test timing.
+Parses Rust's JSON test output for per-test timing. Coverage via `cargo llvm-cov`.
 
 ### bats
 
@@ -111,7 +175,7 @@ Parses BATS TAP output with timing information.
 pytest --durations=0 -v tests/
 ```
 
-Parses pytest duration report.
+Parses pytest duration report. Coverage via `coverage.py`.
 
 ### vitest
 
@@ -119,7 +183,7 @@ Parses pytest duration report.
 vitest run --reporter=json
 ```
 
-Parses Vitest JSON reporter output.
+Parses Vitest JSON reporter output. Built-in coverage support.
 
 ### bun
 
@@ -127,7 +191,7 @@ Parses Vitest JSON reporter output.
 bun test --reporter=json
 ```
 
-Parses Bun's JSON test output.
+Parses Bun's JSON test output. Built-in coverage support.
 
 ### jest
 
@@ -135,7 +199,7 @@ Parses Bun's JSON test output.
 jest --json
 ```
 
-Parses Jest JSON output.
+Parses Jest JSON output. Built-in coverage support.
 
 ### go
 
@@ -143,7 +207,7 @@ Parses Jest JSON output.
 go test -json ./...
 ```
 
-Parses Go's JSON test output.
+Parses Go's JSON test output. Built-in coverage support.
 
 ## Aggregation
 
@@ -152,9 +216,10 @@ When multiple test suites are configured, metrics are aggregated:
 - **Total**: Sum of all suite times
 - **Average**: Weighted by test count
 - **Max**: Slowest test across all suites
+- **Coverage**: Merged across suites covering the same language
 
 ```
-rust: test time
+tests: time
   total: 18.6s
   avg: 52ms (358 tests)
   max: 2.1s (tests::integration::large_file_parse)
@@ -162,25 +227,40 @@ rust: test time
     cargo: 12.4s (276 tests)
     bats: 4.2s (45 tests)
     pytest: 2.0s (37 tests)
+
+tests: coverage 78.4%
+  rust: 82.3% (cargo + bats)
+  python: 71.2% (pytest)
 ```
 
 ## Thresholds
 
-Enforce test time limits:
+Time limits are configured per-suite:
 
 ```toml
-[checks.rust]
-test_time_total_max = "30s"   # Total suite time
-test_time_avg_max = "100ms"   # Average per test
-test_time_max = "1s"          # Slowest individual test
-```
+[[checks.tests.suites]]
+runner = "cargo"
+max_total = "30s"
+max_avg = "50ms"
+max_test = "1s"
 
-Per-suite thresholds:
-
-```toml
-[[checks.rust.test_suites]]
+[[checks.tests.suites]]
 runner = "bats"
 path = "tests/cli/"
-total_max = "10s"
-max = "500ms"
+max_total = "10s"
+max_test = "500ms"
+
+[[checks.tests.suites]]
+runner = "pytest"
+path = "tests/integration/"
+ci = true                              # Slow suite, CI only
+max_total = "120s"
+max_test = "5s"
+```
+
+Configure check level via `[checks.tests.time]`:
+
+```toml
+[checks.tests.time]
+check = "warn"                         # error | warn | off
 ```
