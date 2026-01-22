@@ -6,17 +6,27 @@ Test suites configured via `[[checks.<lang>.test_suites]]` are used for both:
 - **Test time**: Timing metrics (total, avg, max)
 - **Coverage**: Code coverage collection (if enabled)
 
+## Runner Independence
+
+Runners are independent of the code being tested. Any runner can test any project:
+
+- A Rust CLI can have `bats` tests for end-to-end behavior
+- A Go service can have `pytest` integration tests
+- A shell script project can have `cargo` tests for a Rust helper binary
+
+The adapter (rust, shell, etc.) determines defaults and language-specific features. The runner determines how tests are executed and parsed.
+
 ## Supported Runners
 
-| Runner | Languages | Per-Test Timing | Detection |
-|--------|-----------|-----------------|-----------|
-| `cargo` | Rust | Yes | `Cargo.toml` |
-| `bats` | Shell | Yes | `*.bats` files |
-| `pytest` | Python | Yes | `pytest.ini`, `pyproject.toml` |
-| `vitest` | JS/TS | Yes | `vitest.config.*` |
-| `bun` | JS/TS | Yes | `bun.lockb` |
-| `jest` | JS/TS | Yes | `jest.config.*` |
-| `go` | Go | Yes | `go.mod` |
+| Runner | Per-Test Timing | Auto-Detection |
+|--------|-----------------|----------------|
+| `cargo` | Yes | `Cargo.toml` |
+| `bats` | Yes | `*.bats` files |
+| `pytest` | Yes | `pytest.ini`, `pyproject.toml` |
+| `vitest` | Yes | `vitest.config.*` |
+| `bun` | Yes | `bun.lockb` |
+| `jest` | Yes | `jest.config.*` |
+| `go` | Yes | `go.mod` |
 
 ## Timing Metrics
 

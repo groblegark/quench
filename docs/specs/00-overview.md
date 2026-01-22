@@ -49,20 +49,12 @@ When configuration is needed, it's hierarchical (monorepo-friendly) and minimal.
 | Check | Fast | CI | Description |
 |-------|------|-----|-------------|
 | `cloc` | ✓ | ✓ | Lines of code, file size limits (750 source, 1100 test) |
-| `escapes` | ✓ | ✓ | Pattern detection with count/require-comment/forbid modes |
+| `escapes` | ✓ | ✓ | Pattern detection with count/comment/forbid actions |
 | `agents` | ✓ | ✓ | Agent file validation (CLAUDE.md, .cursorrules, sync) |
-| `docs` | ✓ | ✓ | Specs validation (fast) + doc correlation (CI, opt-in) |
-| `tests` | ✓ | ✓ | Source changes require corresponding test changes |
+| `docs` | ✓ | ✓ | File refs, specs validation + doc correlation (CI) |
+| `tests` | ✓ | ✓ | Test correlation (fast) + execution, coverage, time (CI) |
+| `compile` | | ✓ | Binary size + compile time (cold/hot) |
 | `license` | | ✓ | License header validation and auto-fix (disabled by default) |
-
-### CI Mode Metrics (Per Adapter)
-
-| Metric | Description |
-|--------|-------------|
-| `coverage` | Code coverage via test suites (llvm-cov for Rust) |
-| `binary_size` | Release binary sizes |
-| `compile_time` | Cold (release) and hot (debug) compile times |
-| `test_time` | Total, average, and max individual test times |
 
 ### Language Adapters
 
@@ -77,7 +69,7 @@ When configuration is needed, it's hierarchical (monorepo-friendly) and minimal.
 Shared across adapters for test time and coverage:
 - `cargo`, `bats`, `pytest`, `vitest`, `bun`, `jest`, `go`
 
-See `05-test-runners.md` for details.
+See [11-test-runners.md](11-test-runners.md) for details.
 
 ### Ratcheting
 
@@ -86,7 +78,7 @@ Prevent quality regressions (enabled by default for coverage and escapes):
 - Escape counts can't increase
 - Optional: binary size, compile time, test time
 
-See `ratcheting.md` for details.
+See [04-ratcheting.md](04-ratcheting.md) for details.
 
 ## Output Design
 
@@ -151,7 +143,7 @@ Quick checks suitable for frequent runs:
 - `escapes`: Escape hatch detection
 - `agents`: Agent file validation (CLAUDE.md, .cursorrules)
 - `docs`: Specs validation (structure, index, sections)
-- `tests`: Test correlation (with `--staged` or `--branch`)
+- `tests`: Test correlation (with `--staged` or `--base`)
 
 ### CI Mode (`--ci`)
 

@@ -76,7 +76,7 @@ mod tests {
 }
 ```
 
-When `checks.rust.parse_cfg_test = true` (default), lines inside `#[cfg(test)]`
+When `checks.rust.split_cfg_test = true` (default), lines inside `#[cfg(test)]`
 blocks are counted as test LOC even in source files.
 
 ## Output
@@ -136,15 +136,16 @@ Typical healthy ranges: `0.5x` to `2.0x` (project-dependent).
 
 ## File Size Limits
 
-Per-file line limits (enabled by default):
+Per-file limits (enabled by default):
 
 ```toml
 [checks.cloc]
-# Max lines per source file (default: 750)
+# Max lines per file (default: 750 source, 1100 test)
 max_lines = 750
-
-# Max lines per test file (default: 1100)
 max_lines_test = 1100
+
+# Max tokens per file (default: 20000, use false to disable)
+max_tokens = 20000
 ```
 
 When limits are set, violations are reported:
@@ -161,7 +162,7 @@ Average lines per file is **reported** in metrics but not enforced.
 
 ```toml
 [checks.cloc]
-enabled = true
+check = "error"
 
 # Override default patterns
 source_patterns = ["src/**/*.rs", "lib/**/*.rs"]
@@ -170,12 +171,13 @@ test_patterns = ["tests/**/*.rs", "**/*_tests.rs"]
 # File size limits (defaults shown)
 max_lines = 750
 max_lines_test = 1100
+max_tokens = 20000               # use false to disable
 
 # Exclude from size limits
 exclude = ["**/generated/**", "**/migrations/**"]
 
 # Rust-specific: parse #[cfg(test)] blocks
-# checks.rust.parse_cfg_test = true  # default
+# checks.rust.split_cfg_test = true  # default
 ```
 
 **Note**: Ratio is reporting-only. File size limits are enforced if configured.

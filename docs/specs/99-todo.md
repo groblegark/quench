@@ -18,7 +18,7 @@ Reports read from:
 - `.quench/baseline.json` (committed file)
 - Git notes (`git notes --ref=quench`)
 
-History is derived from git blame (for committed baseline) or git notes history.
+History is derived from git notes history or git log/blame (for committed baseline).
 
 ### Weekly Summary (Future)
 
@@ -42,9 +42,9 @@ Auto-publish metrics to GitHub Pages. Based on pattern from wok project.
 ```yaml
 - name: Generate reports
   run: |
-    quench --ci --save .quench/baseline.json
-    quench report -f json -o docs/reports/quality/latest.json
-    quench report -f html -o docs/reports/index.html
+    quench check --ci --save .quench/baseline.json
+    quench report -o json > docs/reports/quality/latest.json
+    quench report -o html > docs/reports/index.html
 
 - name: Deploy to GitHub Pages
   uses: actions/deploy-pages@v2
@@ -66,16 +66,8 @@ Validate conventional commit format.
 - `feat:`, `fix:`, `chore:` prefixes (or `feat(...):`)
 - Configurable patterns
 - Default: disabled
-- Could integrate with `docs-correlation` triggers
+- Could integrate with `docs` check `on_commit` patterns
 
-## Memory Profiling
-
-Track peak RSS during operations.
-
-- Memory during `quench` command itself
-- Memory during `quench help`
-- Useful for ensuring quench stays lightweight
-- Reporting only, no thresholds
 
 ## Future Adapters
 

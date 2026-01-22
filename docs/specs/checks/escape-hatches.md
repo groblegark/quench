@@ -9,17 +9,17 @@ Track and control "escape hatches" - code patterns that:
 - Skip error handling (`.unwrap()`, `.expect()`)
 - Silence warnings (`#[allow(...)]`)
 
-## Modes
+## Actions
 
-Each pattern can be configured with one of three modes:
+Each pattern can be configured with one of three actions:
 
-### Count Mode
+### Count
 
 Just count occurrences. Fail if count exceeds per-pattern threshold (default: 0).
 
 Use for: Patterns you want to monitor with a specific tolerance.
 
-### Require Comment Mode
+### Comment
 
 Pattern is allowed if accompanied by a justification comment.
 
@@ -30,7 +30,7 @@ Use for: Patterns that are sometimes necessary but should be documented.
 unsafe { *ptr = value; }
 ```
 
-### Forbid Mode
+### Forbid
 
 Pattern is never allowed in source code. Always allowed in test code.
 
@@ -42,24 +42,24 @@ Use for: Patterns that should not appear in production code.
 
 | Pattern | Default Mode | Comment Required | Threshold |
 |---------|--------------|------------------|-----------|
-| `unsafe { }` | require_comment | `// SAFETY:` | 0 |
+| `unsafe { }` | comment | `// SAFETY:` | 0 |
 | `.unwrap()` | forbid | - | 0 |
 | `.expect(` | forbid | - | 0 |
-| `mem::transmute` | require_comment | `// SAFETY:` | 0 |
-| `#[allow(` | require_comment | `// JUSTIFIED:` | 0 |
+| `mem::transmute` | comment | `// SAFETY:` | 0 |
+| `#[allow(` | comment | `// JUSTIFIED:` | 0 |
 
 ### Shell
 
 | Pattern | Default Mode | Comment Required | Threshold |
 |---------|--------------|------------------|-----------|
 | `# shellcheck disable=` | forbid | - | 0 |
-| `set +e` | require_comment | `# OK:` | 0 |
-| `eval ` | require_comment | `# OK:` | 0 |
+| `set +e` | comment | `# OK:` | 0 |
+| `eval ` | comment | `# OK:` | 0 |
 
 ## Source vs Test
 
 Escape hatches are **counted separately** for source and test code:
-- **Source code**: Thresholds and modes are enforced
+- **Source code**: Thresholds and actions are enforced
 - **Test code**: Counted for metrics, but never fails (test code is allowed escape hatches)
 
 Test code identification uses the same patterns as the `loc` check:
@@ -76,7 +76,7 @@ When packages are configured, counts are tracked per-package:
 
 ## Comment Detection
 
-For `require_comment` mode, quench searches **upward** for the required comment:
+For `comment` action, quench searches **upward** for the required comment:
 1. On the same line as the pattern
 2. On preceding lines, searching upward until a non-blank, non-comment line is found
 
@@ -111,13 +111,13 @@ Each pattern can have custom advice:
 [[checks.escapes.patterns]]
 name = "as_uuid"
 pattern = " as UUID"
-mode = "forbid"
+action = "forbid"
 advice = "Use typed UUID fields instead of casting. Mark properties as 'id: UUID' not 'id: string'."
 ```
 
 ## Output
 
-### Fail (require_comment violation)
+### Fail (comment violation)
 
 ```
 escapes: FAIL
@@ -156,7 +156,7 @@ escapes: FAIL
       "file": "src/parser.rs",
       "line": 47,
       "pattern": "unsafe",
-      "mode": "require_comment",
+      "action": "comment",
       "required_comment": "// SAFETY:",
       "advice": "Add a // SAFETY: comment explaining why this unsafe block is sound."
     }
@@ -192,26 +192,26 @@ escapes: FAIL
 
 ```toml
 [checks.escapes]
-enabled = true
+check = "error"
 
 # Custom or override patterns
 [[checks.escapes.patterns]]
 name = "unsafe"
 pattern = "unsafe\\s*\\{"
-mode = "require_comment"
+action = "comment"
 comment = "// SAFETY:"
 
 [[checks.escapes.patterns]]
 name = "unwrap"
 pattern = "\\.unwrap\\(\\)"
-mode = "forbid"
+action = "forbid"
 # Custom advice for this project
 advice = "Use .context() from anyhow or handle the error explicitly."
 
 [[checks.escapes.patterns]]
 name = "todo"
 pattern = "TODO|FIXME|XXX"
-mode = "count"
+action = "count"
 threshold = 10          # Allow up to 10 (default: 0)
 advice = "Reduce TODO/FIXME comments before shipping."
 

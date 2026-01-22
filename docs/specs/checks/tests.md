@@ -1,17 +1,19 @@
 # Tests Check Specification
 
-The `tests` check ensures code changes are accompanied by test changes.
+The `tests` check validates test practices and collects test metrics.
 
 ## Purpose
 
-Verify that modifications to source code have corresponding test coverage:
-- New source files should have new test files
-- Changes to source files should include test updates
-- Prevents shipping untested code
+- **Fast mode**: Verify source changes have corresponding test changes
+- **CI mode**: Run tests and collect coverage/timing metrics
 
-## Scope
+## Commit Checking (Fast Mode)
 
-Correlation can be checked at different scopes:
+Ensures code changes are accompanied by test changes. Configured via `[checks.tests.commit]`.
+
+### Scope
+
+Commit checking can operate at different scopes:
 
 ### Branch Scope (Default)
 
@@ -21,7 +23,7 @@ Checks all changes on the branch together:
 - Ideal for PR checks
 
 ```bash
-quench --compare-branch main
+quench check --base main
 ```
 
 ### Commit Scope
@@ -32,30 +34,34 @@ Checks individual commits with **asymmetric rules**:
 - Supports "tests first" workflows naturally
 
 ```bash
-quench --staged          # Pre-commit
-quench --since HEAD~5    # Recent commits
+quench check --staged          # Pre-commit
+quench check --base HEAD~5     # Recent commits
 ```
 
 ```toml
-[checks.tests]
+[checks.tests.commit]
 scope = "branch"  # or "commit"
 ```
 
-## Modes
+### Check Levels
 
-### Require Mode (Default)
+#### Error (Default)
 
 Source changes require corresponding test changes:
 - New source files → require new test file (or test additions)
 - Modified source files → require test changes
 - Deletions → no test requirement
 
-### Advisory Mode
+#### Warn
 
-Warn but don't fail:
+Report but don't fail:
 - Report when tests appear missing
 - Exit code 0 regardless
 - Useful during adoption
+
+#### Off
+
+Disable commit checking entirely.
 
 ## Change Detection
 
@@ -63,13 +69,14 @@ Warn but don't fail:
 
 ```bash
 # Staged changes (pre-commit)
-quench --staged
+quench check --staged
 
-# Branch changes (PR/CI)
-quench --compare-branch main
+# Compare to branch (PR/CI)
+quench check --base main
 
-# Specific commits
-quench --since HEAD~5
+# Compare to tag or commits
+quench check --base v1.0.0
+quench check --base HEAD~5
 ```
 
 ### What Counts as "Changed"
@@ -120,7 +127,7 @@ When placeholder tests exist for a source file, correlation is satisfied even wi
 ```toml
 [checks.tests]
 # Recognize placeholder patterns as valid correlation
-allow_placeholders = true  # default: true
+placeholders = "allow"  # default: true
 ```
 
 ## Output
@@ -151,36 +158,38 @@ tests: WARN
 
 ```json
 {
-  "name": "test-correlation",
+  "name": "tests",
   "passed": false,
-  "mode": "require",
-  "scope": "branch",
-  "violations": [
-    {
-      "source_file": "src/parser.rs",
-      "change_type": "modified",
-      "lines_added": 67,
-      "lines_removed": 12,
-      "test_file": null,
-      "inline_tests": false,
-      "test_changes": false,
-      "advice": "Add tests in tests/parser_tests.rs or update inline #[cfg(test)] block"
-    },
-    {
-      "source_file": "src/lexer.rs",
-      "change_type": "added",
-      "lines_added": 234,
-      "lines_removed": 0,
-      "test_file": null,
-      "inline_tests": false,
-      "test_changes": false,
-      "advice": "Create tests/lexer_tests.rs with tests for the lexer module."
+  "commit": {
+    "check": "error",
+    "scope": "branch",
+    "violations": [
+      {
+        "source_file": "src/parser.rs",
+        "change_type": "modified",
+        "lines_added": 67,
+        "lines_removed": 12,
+        "test_file": null,
+        "inline_tests": false,
+        "test_changes": false,
+        "advice": "Add tests in tests/parser_tests.rs or update inline #[cfg(test)] block"
+      },
+      {
+        "source_file": "src/lexer.rs",
+        "change_type": "added",
+        "lines_added": 234,
+        "lines_removed": 0,
+        "test_file": null,
+        "inline_tests": false,
+        "test_changes": false,
+        "advice": "Create tests/lexer_tests.rs with tests for the lexer module."
+      }
+    ],
+    "summary": {
+      "source_files_changed": 5,
+      "with_test_changes": 3,
+      "without_test_changes": 2
     }
-  ],
-  "summary": {
-    "source_files_changed": 5,
-    "with_test_changes": 3,
-    "without_test_changes": 2
   }
 }
 ```
@@ -189,10 +198,11 @@ tests: WARN
 
 ```toml
 [checks.tests]
-enabled = true
+check = "error"
 
-# Mode: require | advisory
-mode = "require"
+# Commit checking (source changes need test changes)
+[checks.tests.commit]
+check = "error"                # error | warn | off
 
 # Scope: branch | commit
 # branch = all changes on branch count together (order doesn't matter)
@@ -200,7 +210,7 @@ mode = "require"
 scope = "branch"
 
 # Placeholder tests
-allow_placeholders = true      # #[ignore], test.todo(), test.fixme() count
+placeholders = "allow"      # #[ignore], test.todo(), test.fixme() count
 
 # Test file patterns (extend defaults)
 test_patterns = [
@@ -222,4 +232,60 @@ exclude = [
   "**/main.rs",          # Binary entry points
   "**/generated/**",     # Generated code
 ]
+```
+
+## CI Mode: Test Execution
+
+In CI mode (`--ci`), the tests check also **runs test suites** and collects metrics:
+
+- **Test time**: Total, average, and slowest test
+- **Coverage**: Line coverage percentage
+
+This requires configuring test suites. See [11-test-runners.md](../11-test-runners.md) for runner details.
+
+```toml
+# Test suites to run (language-specific)
+[[checks.rust.test_suites]]
+runner = "cargo"
+
+[[checks.rust.test_suites]]
+runner = "bats"
+path = "tests/cli/"
+setup = "cargo build"
+```
+
+### Coverage
+
+Coverage is collected when running tests in CI mode. Language adapters determine the coverage tool:
+
+| Language | Tool |
+|----------|------|
+| Rust | `cargo llvm-cov` |
+| Shell | `kcov` (optional) |
+
+```
+tests: coverage 78.4%
+  core: 82.3%
+  cli: 68.9%
+```
+
+Configure thresholds per-language. See `langs/rust.md` for Rust-specific options.
+
+### Test Time
+
+```
+tests: time
+  total: 12.4s
+  avg: 45ms
+  max: 2.1s (tests::integration::large_file_parse)
+```
+
+### Ratcheting
+
+Coverage and test time can be ratcheted to prevent regressions:
+
+```toml
+[ratchet]
+coverage = true          # Coverage can't drop
+test_time_max = false    # Don't ratchet slowest test (too noisy)
 ```

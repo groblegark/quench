@@ -16,10 +16,10 @@ Quench recognizes these agent context files:
 | File | Description |
 |------|-------------|
 | `CLAUDE.md` | Claude Code / Anthropic agents |
-| `.cursorrules` | Cursor IDE |
-| `.cursorignore` | Cursor IDE ignore patterns |
-| `COPILOT.md` | GitHub Copilot (future) |
 | `AGENTS.md` | Generic agent instructions |
+| `.cursorrules` | Cursor IDE |
+| `.cursor/rules/*.md[c]` | Cursor IDE |
+| `.cursorignore` | Cursor IDE ignore patterns |
 
 Configure which files are recognized:
 
@@ -160,7 +160,7 @@ sections.forbid = [
 Tables are verbose and not token-efficient. Default: forbid.
 
 ```toml
-allow_tables = false  # default (tables forbid)
+tables = "forbid"           # allow | forbid (default: forbid)
 ```
 
 Advice: Use lists or prose instead.
@@ -170,25 +170,29 @@ Advice: Use lists or prose instead.
 Control which diagram types are allowed (both default to true):
 
 ```toml
-allow_box_diagrams = true   # ┌─┐ style ASCII diagrams
-allow_mermaid = true        # ```mermaid blocks
+box_diagrams = "allow"   # ┌─┐ style ASCII diagrams
+mermaid = "allow"        # ```mermaid blocks
 ```
 
 ### Size Limits
 
-Keep agent files concise:
+Keep agent files concise. Configure per-scope:
 
 ```toml
-[checks.agents.limits]
-root_max_lines = 500
-root_max_tokens = 2000
-package_max_lines = 200
-package_max_tokens = 800
-module_max_lines = 100
-module_max_tokens = 400
+[checks.agents.root]
+max_lines = 500
+max_tokens = 20000          # use false to disable
+
+[checks.agents.package]
+max_lines = 200
+max_tokens = 800
+
+[checks.agents.module]
+max_lines = 100
+max_tokens = 400
 ```
 
-Token estimation: `tokens ≈ characters / 4`
+Token estimation: `tokens ≈ chars / 4`
 
 ## Output
 
@@ -272,7 +276,7 @@ agents: FIXED
 
 ```toml
 [checks.agents]
-enabled = true
+check = "error"
 
 # Which agent files to check
 files = ["CLAUDE.md", ".cursorrules"]
@@ -297,27 +301,25 @@ sections.forbid = ["Secrets", "API Keys"]
 # advice = "Checklist for AI agents before finishing work"
 
 # Content rules
-allow_tables = false
-allow_box_diagrams = true
-allow_mermaid = true
+tables = "forbid"
+box_diagrams = "allow"
+mermaid = "allow"
 
-# Size limits
-max_lines = 500 # default: 500
-max_tokens = 5000 # default: unlimited
+# Size limits (use false to disable)
+max_lines = 500
+max_tokens = 20000
 
 # Per-scope overrides
 [checks.agents.root]
 required = ["CLAUDE.md"]
-max_tokens = 2000
+max_tokens = 20000
 
 [checks.agents.package]
 required = []
 optional = ["CLAUDE.md"]
 max_tokens = 800
-# max_lines: # default 250
 
 [checks.agents.module]
 required = []
 max_tokens = 400
-# max_lines: # default 150
 ```

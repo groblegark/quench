@@ -26,19 +26,12 @@ This enables incremental quality improvement without manual threshold maintenanc
 
 ## Baseline Storage
 
-Ratcheting requires a stored baseline. Two options:
+Ratcheting requires a stored baseline. Configure the path in `[git]`:
 
-**Committed file** (recommended):
+```toml
+[git]
+baseline = ".quench/baseline.json"
 ```
-.quench/baseline.json
-```
-
-**Git notes** (alternative):
-```bash
-git notes --ref=quench show HEAD
-```
-
-See `99-todo.md` for baseline storage details.
 
 ## Configuration
 
@@ -46,7 +39,7 @@ Enable ratcheting per-metric:
 
 ```toml
 [ratchet]
-enabled = true
+check = "error"          # error | warn | off
 
 # Which metrics to ratchet (defaults shown)
 coverage = true          # Coverage can't drop
@@ -110,19 +103,32 @@ The baseline file is updated automatically.
 
 ### CI Workflow
 
-Typical CI setup:
+Using baseline file (recommended):
 
 ```yaml
 - name: Check quality
-  run: quench --ci
+  run: quench check --ci
 
 - name: Update baseline on main
   if: github.ref == 'refs/heads/main'
   run: |
-    quench --fix
+    quench check --ci --fix
     git add .quench/baseline.json
     git commit -m "chore: update quality baseline" || true
     git push
+```
+
+Using git notes (no file commits):
+
+```yaml
+- name: Check quality
+  run: quench check --ci
+
+- name: Update baseline on main
+  if: github.ref == 'refs/heads/main'
+  run: |
+    quench check --ci --fix --save-notes
+    git push origin refs/notes/quench
 ```
 
 ## Output
@@ -206,7 +212,7 @@ coverage: FAIL
 
 ## Notes
 
-- Ratcheting is **opt-in** - must explicitly enable
+- Coverage and escapes ratcheting are **on by default**; other metrics are opt-in
 - Tolerance prevents failing on noise (especially compile time)
 - Per-package ratcheting allows different policies for different maturity levels
 - `--fix` updates baseline only when metrics improve (never on regression)

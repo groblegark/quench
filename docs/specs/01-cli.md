@@ -25,14 +25,15 @@ quench check              # All files, fast checks
 | Flag | Description |
 |------|-------------|
 | `--staged` | Check staged files only (pre-commit hook) |
-| `--branch [NAME]` | Compare against branch (default: main > master > develop) |
-| `--ci` | CI mode: slow checks + auto-detect base branch |
+| `--base <REF>` | Compare against git ref (branch, tag, commit) |
+| `--ci` | CI mode: slow checks + auto-detect base |
 | `--package <NAME>` | Target specific package |
 
 ```bash
 quench check --staged         # Pre-commit: staged files only
-quench check --branch         # Compare against default branch
-quench check --branch dev     # Compare against specific branch
+quench check --base main      # Compare against main branch
+quench check --base v1.0.0    # Compare against a tag
+quench check --base HEAD~5    # Compare against recent commits
 quench check --ci             # Full CI mode
 ```
 
@@ -45,8 +46,9 @@ Enable or disable specific checks:
 | `--[no-]cloc` | cloc | Lines of code, file size limits |
 | `--[no-]escapes` | escapes | Escape hatch detection |
 | `--[no-]agents` | agents | CLAUDE.md, .cursorrules validation |
-| `--[no-]docs` | docs | Spec files + doc correlation (CI) |
-| `--[no-]tests` | tests | Test correlation |
+| `--[no-]docs` | docs | File refs, specs, doc correlation (CI) |
+| `--[no-]tests` | tests | Test correlation + coverage/time (CI) |
+| `--[no-]compile` | compile | Binary size + compile time (CI only) |
 | `--[no-]license` | license | License headers (CI only) |
 
 ```bash
@@ -167,12 +169,13 @@ Available on all commands:
 | `cloc` | ✓ | ✓ | | Lines of code, file size limits |
 | `escapes` | ✓ | ✓ | | Escape hatch detection |
 | `agents` | ✓ | ✓ | ✓ | Agent file validation and sync |
-| `docs` | ✓ | ✓ | | Specs validation + correlation (CI) |
-| `tests` | ✓ | ✓ | | Test correlation |
+| `docs` | ✓ | ✓ | | File refs, specs, correlation (CI) |
+| `tests` | ✓ | ✓ | | Test correlation + coverage/time (CI) |
+| `compile` | | ✓ | | Binary size + compile time |
 | `license` | | ✓ | ✓ | License header validation |
 
 **Fast mode**: Runs by default, quick checks only.
-**CI mode**: `--ci` flag, enables slow checks (license, docs correlation, coverage metrics).
+**CI mode**: `--ci` flag, enables slow checks (compile, license, test execution).
 
 ## CI Integration
 

@@ -60,7 +60,7 @@ file-size: FAIL
     Split into smaller modules. The tokenize() function could be extracted.
 ```
 
-### JSON Format (`-f json` or `--format json`)
+### JSON Format (`-o json`)
 
 ```json
 {
@@ -75,14 +75,14 @@ file-size: FAIL
           "file": "src/parser.rs",
           "line": 47,
           "pattern": "unsafe",
-          "mode": "require_comment",
+          "mode": "comment",
           "advice": "Add a // SAFETY: comment explaining the invariants."
         },
         {
           "file": "src/parser.rs",
           "line": 112,
           "pattern": "unwrap",
-          "mode": "forbid",
+          "action": "forbid",
           "advice": "Handle the error case or add // OK: comment if infallible."
         }
       ]
@@ -104,7 +104,7 @@ file-size: FAIL
 }
 ```
 
-JSON is pipe-friendly: `quench -f json | jq '.checks[] | select(.passed == false)'`
+JSON is pipe-friendly: `quench check -o json | jq '.checks[] | select(.passed == false)'`
 
 ## Colorization
 
@@ -202,13 +202,13 @@ escapes: FAIL
   ... (8 more violations)
 ```
 
-### Show All (`--all`)
+### Show All (`--no-limit`)
 
 To see all violations (e.g., for human review):
 
 ```bash
-quench --all          # Show all violations
-quench -f json --all  # JSON with all violations
+quench check --no-limit       # Show all violations
+quench check -o json --no-limit  # JSON with all violations
 ```
 
 Full counts are always available in `--ci` mode for metrics storage.

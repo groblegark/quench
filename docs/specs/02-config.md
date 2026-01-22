@@ -64,7 +64,7 @@ Git integration settings.
 
 ```toml
 [git]
-branch = "main"                        # Default for --branch (auto: main > master > develop)
+base = "main"                          # Default for --base (auto: main > master > develop)
 baseline = ".quench/baseline.json"     # Metrics storage path
 ```
 
@@ -74,7 +74,7 @@ Each check has its own section. Common fields:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `enabled` | bool | Enable/disable check (default: true, except license) |
+| `check` | string | `"error"` \| `"warn"` \| `"off"` (default: `"error"`, except license) |
 | `exclude` | [string] | Patterns to skip |
 
 #### [checks.cloc]
@@ -83,9 +83,10 @@ Lines of code and file size limits.
 
 ```toml
 [checks.cloc]
-enabled = true
+check = "error"                        # error | warn | off
 max_lines = 750                        # Source file limit
 max_lines_test = 1100                  # Test file limit
+max_tokens = 20000                     # Use false to disable
 exclude = ["**/generated/**"]
 
 # Per-package overrides
@@ -93,7 +94,7 @@ exclude = ["**/generated/**"]
 max_lines = 500                        # Stricter for CLI
 
 [checks.cloc.package.generated]
-enabled = false                        # Skip entirely
+check = "off"                          # Skip entirely
 ```
 
 #### [checks.escapes]
@@ -102,24 +103,24 @@ Escape hatch detection with configurable patterns.
 
 ```toml
 [checks.escapes]
-enabled = true
+check = "error"                        # error | warn | off
 
 [[checks.escapes.patterns]]
 name = "unsafe"
 pattern = "unsafe\\s*\\{"
-mode = "require_comment"               # count | require_comment | forbid
+action = "comment"             # count | comment | forbid
 comment = "// SAFETY:"
 advice = "Add a // SAFETY: comment explaining the invariants."
 
 [[checks.escapes.patterns]]
 name = "unwrap"
 pattern = "\\.unwrap\\(\\)"
-mode = "forbid"
+action = "forbid"
 
 [[checks.escapes.patterns]]
 name = "todo"
 pattern = "TODO|FIXME|XXX"
-mode = "count"
+action = "count"
 threshold = 10
 ```
 
@@ -129,7 +130,7 @@ Agent file validation (CLAUDE.md, .cursorrules). Supports scope hierarchy.
 
 ```toml
 [checks.agents]
-enabled = true
+check = "error"                        # error | warn | off
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
@@ -140,8 +141,8 @@ required = ["CLAUDE.md"]
 optional = [".cursorrules"]
 sections.required = ["Project Structure", "Development"]
 max_lines = 500
-max_tokens = 2000
-allow_tables = false
+max_tokens = 20000                     # Use false to disable
+tables = "forbid"
 
 # Package scope (each package directory)
 [checks.agents.package]
@@ -159,38 +160,56 @@ max_tokens = 400
 
 #### [checks.docs]
 
-Spec file validation and doc correlation.
+TOC validation, link validation, spec files, and commit checking.
 
 ```toml
 [checks.docs]
-enabled = true
+check = "error"                            # error | warn | off
+
+# TOC validation (directory trees in markdown)
+[checks.docs.toc]
+check = "error"                            # error | warn | off
+# include = ["**/*.md", "**/*.mdc"]        # optional, defaults shown
+exclude = ["plans/**", "plan.md", "*_plan.md", "plan_*"]
+
+# Link validation (markdown links)
+[checks.docs.links]
+check = "error"                            # error | warn | off
+# include = ["**/*.md", "**/*.mdc"]        # optional
+exclude = ["plans/**"]
+
+# Specs validation
+[checks.docs.specs]
+check = "error"                            # error | warn | off
 path = "docs/specs"
-require_index = true
+# extension = ".md"                        # optional
+# index_file = "docs/specs/CLAUDE.md"      # optional, auto-detected
+index = "auto"                             # auto | toc | linked | exists
 
-# Section validation
-sections.required = ["Purpose"]
-sections.forbid = ["TODO"]
+# Commit checking (CI mode only)
+[checks.docs.commit]
+check = "off"                              # error | warn | off (default: off)
+on_commit = ["feat:", "feat(", "story:", "story("]
 
-# Correlation (CI mode only)
-correlation = false                    # Enable doc correlation
-correlation_mode = "require"           # require | advisory
-triggers = ["feat:", "feat("]
-
-[checks.docs.areas]
-api = "docs/api/**"
-default = ["README.md", "docs/**"]
+# Area mappings (reusable across features)
+[checks.docs.areas.api]
+docs = "docs/api/**"
+source = "src/api/**"
 ```
 
 #### [checks.tests]
 
-Test correlation.
+Test correlation and metrics.
 
 ```toml
 [checks.tests]
-enabled = true
-mode = "require"                       # require | advisory
+check = "error"                        # error | warn | off
+
+# Commit checking (source changes need test changes)
+[checks.tests.commit]
+check = "error"                        # error | warn | off
 scope = "branch"                       # branch | commit
-allow_placeholders = true
+placeholders = "allow"
 exclude = ["**/mod.rs", "**/main.rs"]
 ```
 
@@ -200,7 +219,7 @@ License header validation (CI only, disabled by default).
 
 ```toml
 [checks.license]
-enabled = false
+check = "off"                          # error | warn | off (default: off)
 license = "MIT"
 copyright = "Your Organization"
 exclude = ["**/generated/**"]
@@ -212,8 +231,23 @@ Rust language adapter settings.
 
 ```toml
 [checks.rust]
-enabled = true
-parse_cfg_test = true                  # Count #[cfg(test)] as test LOC
+check = "error"                        # error | warn | off
+split_cfg_test = true                  # Count #[cfg(test)] as test LOC
+
+# Lint suppression (#[allow(...)])
+[checks.rust.suppress]
+check = "comment"                      # forbid | comment | allow
+# comment = "// JUSTIFIED:"            # optional: require specific pattern (default: any)
+# allow = ["dead_code"]                # lints that don't need comment
+# forbid = ["unsafe_code"]             # lints never allowed
+
+[checks.rust.suppress.test]
+check = "allow"                        # tests can suppress freely
+
+# Policy
+[checks.rust.policy]
+lint_changes = "standalone"            # lint config changes must be standalone
+lint_config = ["rustfmt.toml", "clippy.toml"]
 
 # CI mode metrics
 binary_size = true
@@ -241,8 +275,21 @@ Shell language adapter settings.
 
 ```toml
 [checks.shell]
-enabled = true
-forbid_inline_disables = true          # Forbid # shellcheck disable=
+check = "error"                        # error | warn | off
+
+# Lint suppression (# shellcheck disable=)
+[checks.shell.suppress]
+check = "forbid"                       # forbid | comment | allow
+# allow = ["SC2034"]                   # codes that don't need comment
+# forbid = ["SC1090"]                  # codes never allowed
+
+[checks.shell.suppress.test]
+check = "allow"                        # tests can suppress freely
+
+# Policy
+[checks.shell.policy]
+lint_changes = "standalone"
+lint_config = [".shellcheckrc"]
 ```
 
 ### [ratchet]
@@ -251,7 +298,7 @@ Prevent quality regressions.
 
 ```toml
 [ratchet]
-enabled = true
+check = "error"                        # error | warn | off
 
 # Metrics to ratchet (defaults shown)
 coverage = true                        # Coverage can't drop
@@ -298,7 +345,7 @@ Invalid config produces clear errors:
 ```
 quench: error in quench.toml
   checks.escapes.patterns[0].mode: invalid value "warn"
-    expected one of: count, require_comment, forbid
+    expected one of: count, comment, forbid
 ```
 
 Unknown keys are warnings (forward compatibility):
