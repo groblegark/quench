@@ -21,6 +21,9 @@
       "items": {
         "$ref": "#/$defs/check"
       }
+    },
+    "ratchet": {
+      "$ref": "#/$defs/ratchet"
     }
   },
   "$defs": {

@@ -105,9 +105,9 @@ For source file `src/parser.rs`, look for tests in:
 6. `test/parser.rs`
 7. Any file matching test patterns containing "parser"
 
-## Placeholder Tests (Future)
+## Placeholder Tests
 
-Support for placeholder tests that indicate planned implementation:
+Placeholder tests indicate planned test implementation in the target project. Quench recognizes these patterns and treats them as valid test correlation:
 
 **Rust:**
 ```rust

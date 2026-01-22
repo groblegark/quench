@@ -219,9 +219,9 @@ git: FIXED
 
 ### What Gets Checked
 
-- `--staged`: Validates the commit message being created (from `COMMIT_EDITMSG`)
 - `--base <ref>`: Validates all commits on branch since base
-- `--ci`: Validates all commits on branch (auto-detects base)
+- `--ci`: Validates all commits on branch
+- `--staged`: No commit message exists yet; git check is skipped
 
 ### Interaction with Other Checks
 
