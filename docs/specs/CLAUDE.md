@@ -122,6 +122,7 @@ docs/specs/
 ├── 04-ratcheting.md    # Regression prevention
 ├── 10-language-adapters.md
 ├── 11-test-runners.md
+├── 20-performance.md   # Performance strategy
 ├── 99-todo.md          # Future work
 ├── checks/             # Per-check specifications
 │   ├── agents.md
