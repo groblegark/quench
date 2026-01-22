@@ -1,0 +1,4 @@
+# Intentionally malformed TOML
+version = 1
+[check.cloc
+max_lines = "not a number"  # Missing closing bracket, wrong type

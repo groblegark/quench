@@ -28,6 +28,7 @@ assert_cmd = "2"
 criterion = { version = "0.5", features = ["html_reports"] }
 ignore = "0.4"
 insta = { version = "1", features = ["filters", "redactions"] }
+jsonschema = "0.29"
 predicates = "3"
 proptest = "1"
 serde_json = "1"
