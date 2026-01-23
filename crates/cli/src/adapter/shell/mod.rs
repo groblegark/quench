@@ -51,13 +51,16 @@ pub struct ShellAdapter {
 
 impl ShellAdapter {
     /// Create a new Shell adapter with default patterns.
+    ///
+    /// Note: `**/*_test.sh` matches root-level files like `foo_test.sh` too
+    /// (the `**/` prefix matches zero or more path components), so a separate
+    /// `*_test.sh` pattern is not needed.
     pub fn new() -> Self {
         Self {
             source_patterns: build_glob_set(&["**/*.sh".to_string(), "**/*.bash".to_string()]),
             test_patterns: build_glob_set(&[
                 "tests/**/*.bats".to_string(),
                 "test/**/*.bats".to_string(),
-                "*_test.sh".to_string(),
                 "**/*_test.sh".to_string(),
             ]),
         }

@@ -13,6 +13,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_main};
+use globset::{Glob, GlobSetBuilder};
 use std::path::{Path, PathBuf};
 
 use quench::adapter::rust::{CargoWorkspace, CfgTestInfo, RustAdapter, parse_suppress_attrs};
@@ -55,6 +56,128 @@ fn bench_adapter_creation(c: &mut Criterion) {
 
     group.bench_function("GenericAdapter::new_with_patterns", |b| {
         b.iter(|| black_box(GenericAdapter::new(&source_patterns, &test_patterns)))
+    });
+
+    group.finish();
+}
+
+/// Benchmark individual GlobSet pattern compilation.
+///
+/// Investigates why Shell adapter creation (6 patterns, 2 builds) is slower
+/// than Rust adapter creation (6 patterns, 3 builds).
+fn bench_globset_patterns(c: &mut Criterion) {
+    let mut group = c.benchmark_group("globset_patterns");
+
+    // Shell source patterns (2 patterns)
+    group.bench_function("shell_source_patterns", |b| {
+        b.iter(|| {
+            let mut builder = GlobSetBuilder::new();
+            builder.add(Glob::new("**/*.sh").unwrap());
+            builder.add(Glob::new("**/*.bash").unwrap());
+            black_box(builder.build().unwrap())
+        })
+    });
+
+    // Shell test patterns (3 patterns - *_test.sh removed as redundant with **/*_test.sh)
+    group.bench_function("shell_test_patterns", |b| {
+        b.iter(|| {
+            let mut builder = GlobSetBuilder::new();
+            builder.add(Glob::new("tests/**/*.bats").unwrap());
+            builder.add(Glob::new("test/**/*.bats").unwrap());
+            builder.add(Glob::new("**/*_test.sh").unwrap());
+            black_box(builder.build().unwrap())
+        })
+    });
+
+    // Rust source pattern (1 pattern)
+    group.bench_function("rust_source_pattern", |b| {
+        b.iter(|| {
+            let mut builder = GlobSetBuilder::new();
+            builder.add(Glob::new("**/*.rs").unwrap());
+            black_box(builder.build().unwrap())
+        })
+    });
+
+    // Rust test patterns (4 patterns)
+    group.bench_function("rust_test_patterns", |b| {
+        b.iter(|| {
+            let mut builder = GlobSetBuilder::new();
+            builder.add(Glob::new("tests/**").unwrap());
+            builder.add(Glob::new("test/**/*.rs").unwrap());
+            builder.add(Glob::new("*_test.rs").unwrap());
+            builder.add(Glob::new("*_tests.rs").unwrap());
+            black_box(builder.build().unwrap())
+        })
+    });
+
+    // Rust ignore pattern (1 pattern)
+    group.bench_function("rust_ignore_pattern", |b| {
+        b.iter(|| {
+            let mut builder = GlobSetBuilder::new();
+            builder.add(Glob::new("target/**").unwrap());
+            black_box(builder.build().unwrap())
+        })
+    });
+
+    // Individual pattern compilation time
+    group.bench_function("single_pattern_star_sh", |b| {
+        b.iter(|| {
+            let mut builder = GlobSetBuilder::new();
+            builder.add(Glob::new("**/*.sh").unwrap());
+            black_box(builder.build().unwrap())
+        })
+    });
+
+    group.bench_function("single_pattern_star_rs", |b| {
+        b.iter(|| {
+            let mut builder = GlobSetBuilder::new();
+            builder.add(Glob::new("**/*.rs").unwrap());
+            black_box(builder.build().unwrap())
+        })
+    });
+
+    group.bench_function("single_pattern_star_bash", |b| {
+        b.iter(|| {
+            let mut builder = GlobSetBuilder::new();
+            builder.add(Glob::new("**/*.bash").unwrap());
+            black_box(builder.build().unwrap())
+        })
+    });
+
+    group.bench_function("single_pattern_star_bats", |b| {
+        b.iter(|| {
+            let mut builder = GlobSetBuilder::new();
+            builder.add(Glob::new("**/*.bats").unwrap());
+            black_box(builder.build().unwrap())
+        })
+    });
+
+    // Test combined single build (optimization candidate)
+    group.bench_function("shell_combined_single_build", |b| {
+        b.iter(|| {
+            let mut builder = GlobSetBuilder::new();
+            // All shell patterns in single build (optimized - 5 patterns)
+            builder.add(Glob::new("**/*.sh").unwrap());
+            builder.add(Glob::new("**/*.bash").unwrap());
+            builder.add(Glob::new("tests/**/*.bats").unwrap());
+            builder.add(Glob::new("test/**/*.bats").unwrap());
+            builder.add(Glob::new("**/*_test.sh").unwrap());
+            black_box(builder.build().unwrap())
+        })
+    });
+
+    group.bench_function("rust_combined_single_build", |b| {
+        b.iter(|| {
+            let mut builder = GlobSetBuilder::new();
+            // All rust patterns in single build
+            builder.add(Glob::new("**/*.rs").unwrap());
+            builder.add(Glob::new("tests/**").unwrap());
+            builder.add(Glob::new("test/**/*.rs").unwrap());
+            builder.add(Glob::new("*_test.rs").unwrap());
+            builder.add(Glob::new("*_tests.rs").unwrap());
+            builder.add(Glob::new("target/**").unwrap());
+            black_box(builder.build().unwrap())
+        })
     });
 
     group.finish();
@@ -406,6 +529,7 @@ fn bench_shellcheck_suppress_parse(c: &mut Criterion) {
 criterion_group!(
     benches,
     bench_adapter_creation,
+    bench_globset_patterns,
     bench_classify,
     bench_cfg_test_parse,
     bench_classify_lines,
