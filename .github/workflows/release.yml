@@ -24,7 +24,7 @@ jobs:
             name: quench-macos-aarch64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
@@ -34,7 +34,7 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           tar czf ../../../${{ matrix.name }}.tar.gz quench
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.name }}
           path: ${{ matrix.name }}.tar.gz
@@ -44,7 +44,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Extract version
         id: version
@@ -60,7 +60,7 @@ jobs:
           git archive --format=tar.gz --prefix=quench-${VERSION}/ -o "dist/quench-${VERSION}.tar.gz" HEAD
           echo "Created dist/quench-${VERSION}.tar.gz"
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: dist
 
