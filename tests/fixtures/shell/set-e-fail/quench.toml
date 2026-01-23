@@ -1,7 +1,5 @@
 version = 1
 
-[project]
-name = "symlink-loop"
-
 [check.agents]
 required = []
+

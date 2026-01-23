@@ -24,15 +24,15 @@ fn default_files_includes_cursor_rules_glob() {
 }
 
 #[test]
-fn default_config_has_no_required_files() {
+fn default_config_requires_any_agent_file() {
     let config = AgentsConfig::default();
-    assert!(config.required.is_empty());
+    assert_eq!(config.required, vec!["*".to_string()]);
 }
 
 #[test]
-fn default_sync_is_disabled() {
+fn default_sync_is_enabled() {
     let config = AgentsConfig::default();
-    assert!(!config.sync);
+    assert!(config.sync);
     assert!(config.sync_source.is_none());
 }
 
@@ -55,15 +55,15 @@ fn default_mermaid_is_allow() {
 }
 
 #[test]
-fn default_max_lines_is_none() {
+fn default_max_lines_is_500() {
     let config = AgentsConfig::default();
-    assert!(config.max_lines.is_none());
+    assert_eq!(config.max_lines, Some(500));
 }
 
 #[test]
-fn default_max_tokens_is_none() {
+fn default_max_tokens_is_20000() {
     let config = AgentsConfig::default();
-    assert!(config.max_tokens.is_none());
+    assert_eq!(config.max_tokens, Some(20000));
 }
 
 #[test]

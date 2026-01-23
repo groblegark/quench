@@ -45,6 +45,12 @@ mod adapters;
 
 use prelude::*;
 
+/// Minimal config that disables agents check (for tests not focused on agents)
+const MINIMAL_CONFIG: &str = r#"version = 1
+[check.agents]
+required = []
+"#;
+
 // =============================================================================
 // COMMAND SPECS
 // =============================================================================
@@ -98,7 +104,7 @@ fn version_exits_successfully() {
 #[test]
 fn check_command_exists() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
+    std::fs::write(dir.path().join("quench.toml"), MINIMAL_CONFIG).unwrap();
 
     quench_cmd()
         .arg("check")
@@ -175,7 +181,7 @@ fn short_version_flag_works() {
 fn short_config_flag_works() {
     let dir = tempfile::tempdir().unwrap();
     let config_path = dir.path().join("custom.toml");
-    std::fs::write(&config_path, "version = 1\n").unwrap();
+    std::fs::write(&config_path, MINIMAL_CONFIG).unwrap();
 
     quench_cmd()
         .args(["-C", config_path.to_str().unwrap(), "check"])
@@ -218,7 +224,7 @@ fn unknown_long_flag_fails() {
 #[test]
 fn check_short_output_flag_works() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
+    std::fs::write(dir.path().join("quench.toml"), MINIMAL_CONFIG).unwrap();
 
     quench_cmd()
         .args(["check", "-o", "json"])
@@ -234,7 +240,7 @@ fn check_short_output_flag_works() {
 #[test]
 fn check_output_json_format() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
+    std::fs::write(dir.path().join("quench.toml"), MINIMAL_CONFIG).unwrap();
 
     let output = quench_cmd()
         .args(["check", "-o", "json"])
@@ -286,7 +292,12 @@ fn unknown_config_key_warns() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(
         dir.path().join("quench.toml"),
-        "version = 1\nunknown_key = true\n",
+        r#"version = 1
+unknown_key = true
+
+[check.agents]
+required = []
+"#,
     )
     .unwrap();
 
@@ -306,10 +317,12 @@ fn unknown_nested_config_key_warns() {
     let dir = tempfile::tempdir().unwrap();
     std::fs::write(
         dir.path().join("quench.toml"),
-        r#"version = 1
+        format!(
+            r#"{MINIMAL_CONFIG}
 [check.unknown]
 field = "value"
-"#,
+"#
+        ),
     )
     .unwrap();
 
@@ -327,7 +340,7 @@ field = "value"
 #[test]
 fn valid_config_no_warnings() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
+    std::fs::write(dir.path().join("quench.toml"), MINIMAL_CONFIG).unwrap();
 
     quench_cmd()
         .arg("check")
@@ -347,7 +360,7 @@ fn valid_config_no_warnings() {
 #[test]
 fn env_no_color_disables_color() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
+    std::fs::write(dir.path().join("quench.toml"), MINIMAL_CONFIG).unwrap();
 
     // Create a file that would trigger a violation with colored output
     std::fs::write(dir.path().join("test.rs"), "fn main() {}\n").unwrap();
@@ -374,7 +387,7 @@ fn env_no_color_disables_color() {
 fn env_config_sets_path() {
     let dir = tempfile::tempdir().unwrap();
     let config_path = dir.path().join("custom-config.toml");
-    std::fs::write(&config_path, "version = 1\n").unwrap();
+    std::fs::write(&config_path, MINIMAL_CONFIG).unwrap();
 
     quench_cmd()
         .arg("check")
@@ -390,7 +403,7 @@ fn env_config_sets_path() {
 #[test]
 fn env_log_enables_debug() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
+    std::fs::write(dir.path().join("quench.toml"), MINIMAL_CONFIG).unwrap();
 
     quench_cmd()
         .arg("check")
@@ -407,7 +420,7 @@ fn env_log_enables_debug() {
 #[test]
 fn env_log_trace_level() {
     let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
+    std::fs::write(dir.path().join("quench.toml"), MINIMAL_CONFIG).unwrap();
 
     quench_cmd()
         .arg("check")

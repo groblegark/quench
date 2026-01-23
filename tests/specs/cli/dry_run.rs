@@ -14,7 +14,8 @@
 use crate::prelude::*;
 
 /// Valid source content with required sections.
-const SOURCE: &str = "# Source\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n";
+const SOURCE: &str =
+    "# Source\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n";
 
 /// Different target content (will need syncing).
 const TARGET: &str = "# Target\n\n## Different\n\nContent B\n";
