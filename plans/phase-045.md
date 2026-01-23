@@ -1,5 +1,7 @@
 # Phase 045: Performance - Caching (P0)
 
+**Root Feature:** `quench-53b3`
+
 ## Overview
 
 Implement file-level caching to achieve 10x speedup on iterative runs. Caching is P0 per the performance spec because agents iterate repeatedly on the same codebase—most runs are re-runs where few files changed.
