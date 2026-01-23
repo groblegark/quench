@@ -226,16 +226,22 @@ impl Check for EscapesCheck {
             let is_test_file = classify_file(&file_adapter, &file.path, ctx.root) == FileKind::Test;
             let package = find_package(&file.path, ctx.root, packages);
 
+            // Parse cfg(test) info for Rust files (reuse for suppress + escape checking)
+            let cfg_info = if is_rust_file(&file.path) {
+                Some(CfgTestInfo::parse(&content))
+            } else {
+                None
+            };
+
             // Check for Rust suppress attribute violations
-            if is_rust_file(&file.path) {
-                let cfg_info = CfgTestInfo::parse(&content);
+            if let Some(ref info) = cfg_info {
                 let suppress_violations = check_suppress_violations(
                     ctx,
                     relative,
                     &content,
                     &ctx.config.rust.suppress,
                     is_test_file,
-                    &cfg_info,
+                    info,
                     &mut limit_reached,
                 );
                 violations.extend(suppress_violations);
@@ -259,14 +265,20 @@ impl Check for EscapesCheck {
                     .collect();
 
                 for m in unique_matches {
+                    // Check if line is in test code (file-level OR inline #[cfg(test)])
+                    let is_test_code = is_test_file
+                        || cfg_info
+                            .as_ref()
+                            .is_some_and(|info| info.is_test_line(m.line as usize));
+
                     // Always track metrics (both source and test)
-                    metrics.increment(&pattern.name, is_test_file);
+                    metrics.increment(&pattern.name, is_test_code);
                     if let Some(ref pkg) = package {
-                        metrics.increment_package(pkg, &pattern.name, is_test_file);
+                        metrics.increment_package(pkg, &pattern.name, is_test_code);
                     }
 
                     // Test code: tracked in metrics but no violations
-                    if is_test_file {
+                    if is_test_code {
                         continue;
                     }
 

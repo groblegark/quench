@@ -262,6 +262,42 @@ fn rust_adapter_unwrap_in_test_code_allowed() {
     check("escapes").on("rust/unwrap-test").passes();
 }
 
+/// Spec: docs/specs/langs/rust.md#escapes-in-test-code
+///
+/// > Inline test blocks: Lines inside #[cfg(test)] blocks in source files
+#[test]
+fn rust_adapter_unwrap_in_cfg_test_block_allowed() {
+    check("escapes").on("rust/unwrap-cfg-test").passes();
+}
+
+/// Spec: docs/specs/langs/rust.md#escapes-in-test-code
+///
+/// > Escape patterns in #[cfg(test)] blocks are tracked as test metrics
+#[test]
+fn rust_adapter_escape_in_cfg_test_tracked_as_test_metric() {
+    let result = check("escapes").on("rust/unwrap-cfg-test").json().passes();
+    let metrics = result.require("metrics");
+
+    let test_unwrap = metrics
+        .get("test")
+        .and_then(|t| t.get("unwrap"))
+        .and_then(|v| v.as_u64());
+    let source_unwrap = metrics
+        .get("source")
+        .and_then(|s| s.get("unwrap"))
+        .and_then(|v| v.as_u64());
+
+    assert!(
+        test_unwrap.unwrap_or(0) > 0,
+        "unwrap in #[cfg(test)] should be tracked as test"
+    );
+    assert_eq!(
+        source_unwrap.unwrap_or(0),
+        0,
+        "should not be tracked as source"
+    );
+}
+
 /// Spec: docs/specs/langs/rust.md#default-escape-patterns
 ///
 /// > .expect( | forbid | -

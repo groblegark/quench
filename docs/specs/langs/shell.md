@@ -8,7 +8,8 @@ Detected when `*.sh` files exist in project root, `bin/`, or `scripts/`.
 
 ## Profile Defaults
 
-When using [`quench init --profile shell`](../01-cli.md#profile-selection-recommended), the following opinionated defaults are configured:
+When using [`quench init --profile shell`](../01-cli.md#profile-selection-recommended),
+the following opinionated defaults are configured:
 
 ```toml
 [shell]

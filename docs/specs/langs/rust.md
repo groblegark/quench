@@ -127,6 +127,14 @@ mod tests { }
 mod tests { }
 ```
 
+### Escapes in Test Code
+
+Escape patterns (`unwrap`, `expect`, `panic`, etc.) are allowed in test code:
+- **Test files**: Matched by test file patterns (`*_tests.rs`, `tests/**`)
+- **Inline test blocks**: Lines inside `#[cfg(test)]` blocks in source files
+
+This matches Clippy's behavior where `#[cfg(test)]` code is exempt from `unwrap_used`, `expect_used`, and `panic` lints.
+
 ### Limitations
 
 **Macro-generated test blocks**: `#[cfg(test)]` attributes inside macro definitions are not detected for test LOC counting:
