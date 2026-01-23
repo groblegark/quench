@@ -274,3 +274,46 @@ fn count_tokens_unicode() {
     let count = count_tokens(file.path()).unwrap();
     assert_eq!(count, 1); // 4 chars / 4 = 1 token
 }
+
+// =============================================================================
+// PATTERN MATCHING BENCHMARK
+// =============================================================================
+
+#[test]
+#[ignore = "benchmark only"]
+fn bench_pattern_matching() {
+    use std::path::PathBuf;
+
+    let matcher = PatternMatcher::new(
+        &[
+            "**/tests/**".into(),
+            "**/test/**".into(),
+            "**/*_test.*".into(),
+            "**/*_tests.*".into(),
+            "**/*.test.*".into(),
+            "**/*.spec.*".into(),
+            "**/test_*.*".into(),
+        ],
+        &["**/vendor/**".into()],
+    );
+
+    let root = Path::new("/project");
+    let paths: Vec<PathBuf> = (0..1000)
+        .map(|i| PathBuf::from(format!("/project/src/module_{}.rs", i)))
+        .collect();
+
+    let start = std::time::Instant::now();
+    for _ in 0..100 {
+        for path in &paths {
+            let _ = matcher.is_test_file(path, root);
+        }
+    }
+    let elapsed = start.elapsed();
+    println!("100K pattern matches: {:?}", elapsed);
+    // Target: < 100ms for 100K matches
+    assert!(
+        elapsed.as_millis() < 100,
+        "Pattern matching too slow: {:?}",
+        elapsed
+    );
+}
