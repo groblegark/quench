@@ -1,5 +1,7 @@
 # Checkpoint 6A: Pre-Checkpoint Fix - Dogfooding Milestone 1
 
+**Root Feature:** `quench-3700`
+
 ## Overview
 
 Verification checkpoint to ensure the codebase is clean and all behavioral specs pass before proceeding to dogfooding milestone 1. This checkpoint validates:
