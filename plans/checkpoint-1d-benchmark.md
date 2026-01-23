@@ -1,5 +1,7 @@
 # Checkpoint 1D: Benchmark Analysis - CLI Runs
 
+**Root Feature:** `quench-409c`
+
 ## Overview
 
 Run criterion benchmarks and profile CLI performance to identify bottlenecks. This checkpoint establishes baseline measurements and documents whether current implementation meets performance targets defined in `docs/specs/20-performance.md`.
