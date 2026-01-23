@@ -1,6 +1,6 @@
 # Phase 301: Rust Adapter - Specs
 
-**Root Feature:** `quench-rust-adapter`
+**Root Feature:** `quench-a0ea`
 
 ## Overview
 
