@@ -10,11 +10,13 @@ use std::sync::atomic::Ordering;
 use serde_json::{Value as JsonValue, json};
 
 use crate::adapter::{
-    EscapePattern as AdapterEscapePattern, FileKind, GenericAdapter, ProjectLanguage, RustAdapter,
-    detect_language,
+    CfgTestInfo, EscapePattern as AdapterEscapePattern, FileKind, GenericAdapter, ProjectLanguage,
+    RustAdapter, detect_language, parse_suppress_attrs,
 };
 use crate::check::{Check, CheckContext, CheckResult, Violation};
-use crate::config::{CheckLevel, EscapeAction, EscapePattern as ConfigEscapePattern};
+use crate::config::{
+    CheckLevel, EscapeAction, EscapePattern as ConfigEscapePattern, SuppressConfig, SuppressLevel,
+};
 use crate::pattern::{CompiledPattern, PatternError};
 
 /// Compiled escape pattern ready for matching.
@@ -207,8 +209,27 @@ impl Check for EscapesCheck {
             let relative = file.path.strip_prefix(ctx.root).unwrap_or(&file.path);
 
             // Classify file as source or test
-            let is_test = classify_file(&file_adapter, &file.path, ctx.root) == FileKind::Test;
+            let is_test_file = classify_file(&file_adapter, &file.path, ctx.root) == FileKind::Test;
             let package = find_package(&file.path, ctx.root, packages);
+
+            // Check for Rust suppress attribute violations
+            if is_rust_file(&file.path) {
+                let cfg_info = CfgTestInfo::parse(&content);
+                let suppress_violations = check_suppress_violations(
+                    ctx,
+                    relative,
+                    &content,
+                    &ctx.config.rust.suppress,
+                    is_test_file,
+                    &cfg_info,
+                    &mut limit_reached,
+                );
+                violations.extend(suppress_violations);
+
+                if limit_reached {
+                    break;
+                }
+            }
 
             // Find matches for each pattern
             for pattern in &patterns {
@@ -225,13 +246,13 @@ impl Check for EscapesCheck {
 
                 for m in unique_matches {
                     // Always track metrics (both source and test)
-                    metrics.increment(&pattern.name, is_test);
+                    metrics.increment(&pattern.name, is_test_file);
                     if let Some(ref pkg) = package {
-                        metrics.increment_package(pkg, &pattern.name, is_test);
+                        metrics.increment_package(pkg, &pattern.name, is_test_file);
                     }
 
                     // Test code: tracked in metrics but no violations
-                    if is_test {
+                    if is_test_file {
                         continue;
                     }
 
@@ -663,6 +684,153 @@ fn is_source_file(path: &Path) -> bool {
         // Other
         | "sql" | "ex" | "exs" | "erl" | "clj" | "hs" | "ml"
     )
+}
+
+/// Check if a file is a Rust source file.
+fn is_rust_file(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.eq_ignore_ascii_case("rs"))
+        .unwrap_or(false)
+}
+
+/// Check suppress attributes in a Rust file.
+fn check_suppress_violations(
+    ctx: &CheckContext,
+    path: &Path,
+    content: &str,
+    config: &SuppressConfig,
+    is_test_file: bool,
+    cfg_info: &CfgTestInfo,
+    limit_reached: &mut bool,
+) -> Vec<Violation> {
+    let mut violations = Vec::new();
+
+    // Determine effective check level based on source vs test
+    let effective_check = if is_test_file {
+        config.test.check.unwrap_or(SuppressLevel::Allow)
+    } else {
+        config.check
+    };
+
+    // If allow, no checking needed
+    if effective_check == SuppressLevel::Allow {
+        return violations;
+    }
+
+    // Parse suppress attributes
+    let attrs = parse_suppress_attrs(content, config.comment.as_deref());
+
+    for attr in attrs {
+        if *limit_reached {
+            break;
+        }
+
+        // Check if this line is in test code (inline #[cfg(test)])
+        let is_test_line = cfg_info.is_test_line(attr.line);
+
+        if is_test_line {
+            // Use test policy
+            let test_check = config.test.check.unwrap_or(SuppressLevel::Allow);
+            if test_check == SuppressLevel::Allow {
+                continue;
+            }
+        }
+
+        // Get scope config (source or test)
+        let scope_config = if is_test_file || is_test_line {
+            &config.test
+        } else {
+            &config.source
+        };
+
+        // Get the effective check level for this scope
+        let scope_check = if is_test_file || is_test_line {
+            config.test.check.unwrap_or(SuppressLevel::Allow)
+        } else {
+            scope_config.check.unwrap_or(config.check)
+        };
+
+        // Check each lint code
+        for code in &attr.codes {
+            if *limit_reached {
+                break;
+            }
+
+            let pattern = format!("#[{}({})]", attr.kind, code);
+
+            // Check forbid list first
+            if scope_config.forbid.contains(code) {
+                let advice = format!(
+                    "Suppressing `{}` is forbidden. Remove the suppression or address the issue.",
+                    code
+                );
+                if let Some(v) = try_create_violation(
+                    ctx,
+                    path,
+                    (attr.line + 1) as u32,
+                    "suppress_forbidden",
+                    &advice,
+                    &pattern,
+                ) {
+                    violations.push(v);
+                } else {
+                    *limit_reached = true;
+                }
+                continue;
+            }
+
+            // Check allow list (skip comment check)
+            if scope_config.allow.contains(code) {
+                continue;
+            }
+
+            // Check if comment is required
+            if scope_check == SuppressLevel::Comment && !attr.has_comment {
+                let advice = if let Some(ref pat) = config.comment {
+                    format!(
+                        "Lint suppression requires justification. Add a {} comment.",
+                        pat
+                    )
+                } else {
+                    "Lint suppression requires justification. Add a comment above the attribute."
+                        .into()
+                };
+                if let Some(v) = try_create_violation(
+                    ctx,
+                    path,
+                    (attr.line + 1) as u32,
+                    "suppress_missing_comment",
+                    &advice,
+                    &pattern,
+                ) {
+                    violations.push(v);
+                } else {
+                    *limit_reached = true;
+                }
+            }
+
+            // Forbid level means all suppressions fail
+            if scope_check == SuppressLevel::Forbid {
+                let advice =
+                    "Lint suppressions are forbidden. Remove and fix the underlying issue.";
+                if let Some(v) = try_create_violation(
+                    ctx,
+                    path,
+                    (attr.line + 1) as u32,
+                    "suppress_forbidden",
+                    advice,
+                    &pattern,
+                ) {
+                    violations.push(v);
+                } else {
+                    *limit_reached = true;
+                }
+            }
+        }
+    }
+
+    violations
 }
 
 #[cfg(test)]

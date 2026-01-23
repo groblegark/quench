@@ -272,7 +272,6 @@ fn rust_adapter_transmute_without_safety_comment_fails() {
 ///
 /// > "comment" - Requires justification comment (default for source)
 #[test]
-#[ignore = "TODO: Phase 302 - Rust Adapter Implementation"]
 fn rust_adapter_allow_without_comment_fails_when_configured() {
     let dir = temp_project();
     std::fs::write(
@@ -306,7 +305,6 @@ check = "comment"
 ///
 /// > "comment" - Requires justification comment
 #[test]
-#[ignore = "TODO: Phase 302 - Rust Adapter Implementation"]
 fn rust_adapter_allow_with_comment_passes() {
     let dir = temp_project();
     std::fs::write(
@@ -337,7 +335,6 @@ check = "comment"
 ///
 /// > [rust.suppress.test] check = "allow" - tests can suppress freely
 #[test]
-#[ignore = "TODO: Phase 302 - Rust Adapter Implementation"]
 fn rust_adapter_allow_in_test_code_always_passes() {
     let dir = temp_project();
     std::fs::write(
@@ -370,7 +367,6 @@ check = "allow"
 ///
 /// > allow = ["dead_code"] - no comment needed for specific codes
 #[test]
-#[ignore = "TODO: Phase 302 - Rust Adapter Implementation"]
 fn rust_adapter_allow_list_skips_comment_check() {
     let dir = temp_project();
     std::fs::write(
@@ -403,7 +399,6 @@ allow = ["dead_code"]
 ///
 /// > forbid = ["unsafe_code"] - never allowed
 #[test]
-#[ignore = "TODO: Phase 302 - Rust Adapter Implementation"]
 fn rust_adapter_forbid_list_always_fails() {
     let dir = temp_project();
     std::fs::write(

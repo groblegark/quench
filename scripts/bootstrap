@@ -18,7 +18,9 @@ failed=0
 echo "Checking for unauthorized #[allow(dead_code)]..."
 
 # Find #[allow(dead_code)] without "// KEEP UNTIL:" comment on same line
-DEAD_CODE=$(rg -n '#\[allow\(dead_code\)\]' --type rust crates 2>/dev/null | \
+# Exclude _tests.rs files which may contain sample code as test data
+DEAD_CODE=$(rg -n '#\[allow\(dead_code\)\]' --type rust crates \
+    --glob '!*_tests.rs' 2>/dev/null | \
     rg -v '// KEEP UNTIL:' || true)
 
 if [[ -n "$DEAD_CODE" ]]; then
