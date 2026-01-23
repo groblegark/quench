@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
 //! Shellcheck suppress directive parsing.
 //!
 //! Parses `# shellcheck disable=SC2034,SC2086` comments in shell scripts.
