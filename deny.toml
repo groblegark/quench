@@ -28,6 +28,12 @@ allow = [
 multiple-versions = "deny"
 wildcards = "deny"
 
+# hashbrown version conflict: dashmap uses 0.14.x while indexmap uses 0.16.x
+# This is a transitive dependency issue and both versions are safe to use
+skip = [
+    { crate = "hashbrown@0.14" },
+]
+
 [sources]
 unknown-registry = "deny"
 unknown-git = "deny"

@@ -72,6 +72,10 @@ pub struct CheckArgs {
     #[arg(long, short = 'v')]
     pub verbose: bool,
 
+    /// Bypass the cache (force fresh check)
+    #[arg(long)]
+    pub no_cache: bool,
+
     // Check enable flags (run only these checks)
     /// Run only the cloc check
     #[arg(long)]

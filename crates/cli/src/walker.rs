@@ -6,6 +6,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::SystemTime;
 
 use crossbeam_channel::{Receiver, bounded};
 use ignore::overrides::OverrideBuilder;
@@ -83,6 +84,12 @@ pub struct WalkedFile {
 
     /// File size in bytes.
     pub size: u64,
+
+    /// Modification time seconds since epoch.
+    pub mtime_secs: i64,
+
+    /// Modification time nanoseconds.
+    pub mtime_nanos: u32,
 
     /// Directory depth from root.
     pub depth: usize,
@@ -234,11 +241,24 @@ impl FileWalker {
                             return WalkState::Continue;
                         }
 
-                        let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
+                        let meta = entry.metadata();
+                        let size = meta.as_ref().map(|m| m.len()).unwrap_or(0);
+                        let (mtime_secs, mtime_nanos) = meta
+                            .as_ref()
+                            .ok()
+                            .and_then(|m| m.modified().ok())
+                            .map(|t| {
+                                let dur =
+                                    t.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default();
+                                (dur.as_secs() as i64, dur.subsec_nanos())
+                            })
+                            .unwrap_or((0, 0));
                         let depth = entry.depth();
                         let walked = WalkedFile {
                             path: entry.into_path(),
                             size,
+                            mtime_secs,
+                            mtime_nanos,
                             depth,
                         };
 
@@ -296,11 +316,24 @@ impl FileWalker {
                             continue;
                         }
 
-                        let size = entry.metadata().map(|m| m.len()).unwrap_or(0);
+                        let meta = entry.metadata();
+                        let size = meta.as_ref().map(|m| m.len()).unwrap_or(0);
+                        let (mtime_secs, mtime_nanos) = meta
+                            .as_ref()
+                            .ok()
+                            .and_then(|m| m.modified().ok())
+                            .map(|t| {
+                                let dur =
+                                    t.duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default();
+                                (dur.as_secs() as i64, dur.subsec_nanos())
+                            })
+                            .unwrap_or((0, 0));
                         let depth = entry.depth();
                         let walked = WalkedFile {
                             path: entry.into_path(),
                             size,
+                            mtime_secs,
+                            mtime_nanos,
                             depth,
                         };
 

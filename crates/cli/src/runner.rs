@@ -1,15 +1,18 @@
-//! Parallel check runner with error recovery.
+//! Parallel check runner with error recovery and caching.
 //!
 //! Runs checks in parallel using rayon, isolating errors so one
 //! check failure doesn't prevent other checks from running.
+//! Supports file-level caching for faster iterative runs.
 
-use std::path::Path;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 
 use rayon::prelude::*;
 
-use crate::check::{Check, CheckContext, CheckResult};
+use crate::cache::{CachedViolation, FileCache, FileCacheKey};
+use crate::check::{Check, CheckContext, CheckResult, Violation};
 use crate::config::Config;
 use crate::walker::WalkedFile;
 
@@ -22,18 +25,186 @@ pub struct RunnerConfig {
 /// The check runner executes multiple checks in parallel.
 pub struct CheckRunner {
     config: RunnerConfig,
+    cache: Option<Arc<FileCache>>,
 }
 
 impl CheckRunner {
     pub fn new(config: RunnerConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            cache: None,
+        }
+    }
+
+    /// Enable caching for this runner.
+    pub fn with_cache(mut self, cache: Arc<FileCache>) -> Self {
+        self.cache = Some(cache);
+        self
     }
 
     /// Run all provided checks and return results.
     ///
     /// Checks run in parallel. Errors are isolated - one check failing
     /// doesn't prevent other checks from running.
+    ///
+    /// If a cache is configured, files with valid cache entries will
+    /// use cached violations instead of re-running checks.
     pub fn run(
+        &self,
+        checks: Vec<Arc<dyn Check>>,
+        files: &[WalkedFile],
+        config: &Config,
+        root: &Path,
+    ) -> Vec<CheckResult> {
+        // If no cache, run checks normally
+        let Some(cache) = &self.cache else {
+            return self.run_uncached(checks, files, config, root);
+        };
+
+        // Separate files into cached and uncached
+        let mut cached_violations: HashMap<PathBuf, Vec<CachedViolation>> = HashMap::new();
+        let mut uncached_files: Vec<&WalkedFile> = Vec::new();
+
+        for file in files {
+            let key = FileCacheKey::from_walked_file(file);
+            if let Some(violations) = cache.lookup(&file.path, &key) {
+                cached_violations.insert(file.path.clone(), violations);
+            } else {
+                uncached_files.push(file);
+            }
+        }
+
+        // Build owned files for uncached (needed for CheckContext)
+        // Note: We need owned WalkedFiles for the context, so we clone
+        let uncached_owned: Vec<WalkedFile> = uncached_files
+            .iter()
+            .map(|f| WalkedFile {
+                path: f.path.clone(),
+                size: f.size,
+                mtime_secs: f.mtime_secs,
+                mtime_nanos: f.mtime_nanos,
+                depth: f.depth,
+            })
+            .collect();
+
+        let violation_count = AtomicUsize::new(0);
+
+        // Run checks on uncached files
+        let results: Vec<CheckResult> = checks
+            .into_par_iter()
+            .map(|check| {
+                let check_name = check.name();
+
+                // Get cached violations for this check
+                let cached_for_check: Vec<Violation> = cached_violations
+                    .iter()
+                    .flat_map(|(path, violations)| {
+                        violations
+                            .iter()
+                            .filter(|v| v.check == check_name)
+                            .map(|v| {
+                                // Convert to relative path for display
+                                let display_path = path.strip_prefix(root).unwrap_or(path);
+                                v.to_violation(display_path.to_path_buf())
+                            })
+                    })
+                    .collect();
+
+                let ctx = CheckContext {
+                    root,
+                    files: &uncached_owned,
+                    config,
+                    limit: self.config.limit,
+                    violation_count: &violation_count,
+                };
+
+                // Run check on uncached files
+                let result = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    check.run(&ctx)
+                })) {
+                    Ok(result) => result,
+                    Err(_) => CheckResult::skipped(
+                        check_name,
+                        "Internal error: check panicked".to_string(),
+                    ),
+                };
+
+                // Merge cached violations into result
+                if cached_for_check.is_empty() {
+                    result
+                } else {
+                    let mut all_violations = cached_for_check;
+                    all_violations.extend(result.violations);
+
+                    // Sort violations by file path for consistent output
+                    all_violations.sort_by(|a, b| {
+                        a.file
+                            .as_deref()
+                            .cmp(&b.file.as_deref())
+                            .then_with(|| a.line.cmp(&b.line))
+                    });
+
+                    let passed = all_violations.is_empty() && !result.skipped;
+                    CheckResult {
+                        name: result.name,
+                        passed,
+                        skipped: result.skipped,
+                        error: result.error,
+                        violations: all_violations,
+                        metrics: result.metrics,
+                        by_package: result.by_package,
+                    }
+                }
+            })
+            .collect();
+
+        // Update cache with violations from newly processed files
+        // Group violations by file path
+        let mut violations_by_file: HashMap<PathBuf, Vec<CachedViolation>> = HashMap::new();
+
+        for result in &results {
+            for violation in &result.violations {
+                if let Some(file_path) = &violation.file {
+                    // Only cache violations from files we just processed
+                    let abs_path = if file_path.is_absolute() {
+                        file_path.clone()
+                    } else {
+                        root.join(file_path)
+                    };
+
+                    // Check if this file was in uncached_files
+                    let was_processed = uncached_files.iter().any(|f| f.path == abs_path);
+                    if was_processed {
+                        violations_by_file
+                            .entry(abs_path)
+                            .or_default()
+                            .push(CachedViolation::from_violation(violation, &result.name));
+                    }
+                }
+            }
+        }
+
+        // Insert all processed files into cache (including those with no violations)
+        for file in &uncached_files {
+            let key = FileCacheKey::from_walked_file(file);
+            let violations = violations_by_file.remove(&file.path).unwrap_or_default();
+            cache.insert(file.path.clone(), key, violations);
+        }
+
+        // Sort results by canonical check order for consistent output
+        let mut sorted = results;
+        sorted.sort_by_key(|r| {
+            crate::checks::CHECK_NAMES
+                .iter()
+                .position(|&n| n == r.name)
+                .unwrap_or(usize::MAX)
+        });
+
+        sorted
+    }
+
+    /// Run checks without caching.
+    fn run_uncached(
         &self,
         checks: Vec<Arc<dyn Check>>,
         files: &[WalkedFile],

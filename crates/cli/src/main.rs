@@ -1,9 +1,12 @@
 //! Quench CLI entry point.
 
+use std::sync::Arc;
+
 use clap::{CommandFactory, Parser};
 use termcolor::ColorChoice;
 use tracing_subscriber::{EnvFilter, fmt};
 
+use quench::cache::{self, CACHE_FILE_NAME, FileCache};
 use quench::checks;
 use quench::cli::{CheckArgs, Cli, Command, InitArgs, OutputFormat, ReportArgs};
 use quench::color::is_no_color_env;
@@ -156,10 +159,54 @@ fn run_check(cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
     } else {
         Some(args.limit)
     };
-    let runner = CheckRunner::new(RunnerConfig { limit });
+    let mut runner = CheckRunner::new(RunnerConfig { limit });
+
+    // Set up caching (unless --no-cache)
+    let cache_dir = root.join(".quench");
+    let cache_path = cache_dir.join(CACHE_FILE_NAME);
+    let config_hash = cache::hash_config(&config);
+
+    let cache = if args.no_cache {
+        None
+    } else {
+        match FileCache::from_persistent(&cache_path, config_hash) {
+            Ok(cache) => {
+                tracing::debug!("loaded cache from {}", cache_path.display());
+                Some(Arc::new(cache))
+            }
+            Err(e) => {
+                tracing::debug!("cache not loaded ({}), starting fresh", e);
+                Some(Arc::new(FileCache::new(config_hash)))
+            }
+        }
+    };
+
+    if let Some(ref cache) = cache {
+        runner = runner.with_cache(Arc::clone(cache));
+    }
 
     // Run checks
     let check_results = runner.run(checks, &files, &config, &root);
+
+    // Persist cache (best effort)
+    if let Some(cache) = &cache {
+        if let Err(e) = std::fs::create_dir_all(&cache_dir) {
+            tracing::warn!("failed to create cache directory: {}", e);
+        } else if let Err(e) = cache.persist(&cache_path) {
+            tracing::warn!("failed to persist cache: {}", e);
+        } else {
+            tracing::debug!("persisted cache to {}", cache_path.display());
+        }
+
+        // Report cache stats in verbose mode
+        if args.verbose {
+            let stats = cache.stats();
+            eprintln!(
+                "Cache: {} hits, {} misses, {} entries",
+                stats.hits, stats.misses, stats.entries
+            );
+        }
+    }
 
     // Create output
     let output = json::create_output(check_results);

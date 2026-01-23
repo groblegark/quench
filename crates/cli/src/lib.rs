@@ -1,3 +1,4 @@
+pub mod cache;
 pub mod check;
 pub mod checks;
 pub mod cli;
@@ -10,6 +11,7 @@ pub mod reader;
 pub mod runner;
 pub mod walker;
 
+pub use cache::{CacheStats, FileCache};
 pub use check::{Check, CheckContext, CheckOutput, CheckResult, Violation};
 pub use cli::{CheckArgs, Cli, Command, InitArgs, OutputFormat, ReportArgs};
 pub use color::ColorMode;
