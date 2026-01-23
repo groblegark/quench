@@ -24,6 +24,9 @@ struct FlexibleConfig {
     project: Option<toml::Value>,
 
     #[serde(default)]
+    workspace: Option<toml::Value>,
+
+    #[serde(default)]
     check: Option<toml::Value>,
 
     #[serde(flatten)]
@@ -40,9 +43,21 @@ pub struct Config {
     #[serde(default)]
     pub project: ProjectConfig,
 
+    /// Workspace configuration (for monorepos).
+    #[serde(default)]
+    pub workspace: WorkspaceConfig,
+
     /// Check configurations.
     #[serde(default)]
     pub check: CheckConfig,
+}
+
+/// Workspace configuration for monorepos.
+#[derive(Debug, Default, Clone, Deserialize)]
+pub struct WorkspaceConfig {
+    /// Package directories within the workspace.
+    #[serde(default)]
+    pub packages: Vec<String>,
 }
 
 /// Check-specific configurations.
@@ -67,6 +82,14 @@ pub struct ClocConfig {
     /// Check level: error, warn, or off.
     #[serde(default)]
     pub check: CheckLevel,
+
+    /// Test file patterns (default: common test directory/file patterns).
+    #[serde(default = "ClocConfig::default_test_patterns")]
+    pub test_patterns: Vec<String>,
+
+    /// Patterns to exclude from size limit checks.
+    #[serde(default)]
+    pub exclude: Vec<String>,
 }
 
 impl Default for ClocConfig {
@@ -75,6 +98,8 @@ impl Default for ClocConfig {
             max_lines: Self::default_max_lines(),
             max_lines_test: Self::default_max_lines_test(),
             check: CheckLevel::default(),
+            test_patterns: Self::default_test_patterns(),
+            exclude: Vec::new(),
         }
     }
 }
@@ -86,6 +111,18 @@ impl ClocConfig {
 
     fn default_max_lines_test() -> usize {
         1100
+    }
+
+    fn default_test_patterns() -> Vec<String> {
+        vec![
+            "**/tests/**".to_string(),
+            "**/test/**".to_string(),
+            "**/*_test.*".to_string(),
+            "**/*_tests.*".to_string(),
+            "**/*.test.*".to_string(),
+            "**/*.spec.*".to_string(),
+            "**/test_*.*".to_string(),
+        ]
     }
 }
 
@@ -122,7 +159,7 @@ pub struct IgnoreConfig {
 pub const SUPPORTED_VERSION: i64 = 1;
 
 /// Known top-level keys in the config.
-const KNOWN_KEYS: &[&str] = &["version", "project", "check"];
+const KNOWN_KEYS: &[&str] = &["version", "project", "workspace", "check"];
 
 /// Known project keys in the config.
 const KNOWN_PROJECT_KEYS: &[&str] = &["name", "ignore"];
@@ -255,6 +292,24 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
         _ => ProjectConfig::default(),
     };
 
+    // Parse workspace config
+    let workspace = match flexible.workspace {
+        Some(toml::Value::Table(t)) => {
+            let packages = t
+                .get("packages")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(String::from))
+                        .collect()
+                })
+                .unwrap_or_default();
+
+            WorkspaceConfig { packages }
+        }
+        _ => WorkspaceConfig::default(),
+    };
+
     // Parse check config
     let check = match flexible.check {
         Some(toml::Value::Table(t)) => {
@@ -292,10 +347,32 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
                         _ => CheckLevel::default(),
                     };
 
+                    let test_patterns = cloc_table
+                        .get("test_patterns")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(String::from))
+                                .collect()
+                        })
+                        .unwrap_or_else(ClocConfig::default_test_patterns);
+
+                    let exclude = cloc_table
+                        .get("exclude")
+                        .and_then(|v| v.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(String::from))
+                                .collect()
+                        })
+                        .unwrap_or_default();
+
                     ClocConfig {
                         max_lines,
                         max_lines_test,
                         check,
+                        test_patterns,
+                        exclude,
                     }
                 }
                 _ => ClocConfig::default(),
@@ -309,6 +386,7 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
     Ok(Config {
         version: flexible.version,
         project,
+        workspace,
         check,
     })
 }

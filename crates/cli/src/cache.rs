@@ -16,7 +16,8 @@ use serde::{Deserialize, Serialize};
 use crate::check::Violation;
 
 /// Cache version for invalidation on format changes.
-pub const CACHE_VERSION: u32 = 1;
+/// Incremented when check logic changes (e.g., counting nonblank vs all lines).
+pub const CACHE_VERSION: u32 = 2;
 
 /// Cache file name within .quench directory.
 pub const CACHE_FILE_NAME: &str = "cache.bin";
@@ -275,6 +276,9 @@ pub fn hash_config(config: &crate::config::Config) -> u64 {
     // Hash check config fields that affect results
     config.check.cloc.max_lines.hash(&mut hasher);
     config.check.cloc.max_lines_test.hash(&mut hasher);
+    config.check.cloc.test_patterns.hash(&mut hasher);
+    config.check.cloc.exclude.hash(&mut hasher);
+    config.workspace.packages.hash(&mut hasher);
 
     hasher.finish()
 }

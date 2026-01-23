@@ -73,10 +73,12 @@ pub fn temp_project() -> tempfile::TempDir {
 }
 
 /// Run quench check with JSON output, return parsed JSON
+///
+/// Uses --no-cache to avoid test pollution from cached results.
 #[allow(dead_code)] // KEEP UNTIL: More specs use this helper
 pub fn check_json(dir: &Path) -> serde_json::Value {
     let output = quench_cmd()
-        .args(["check", "-o", "json"])
+        .args(["check", "-o", "json", "--no-cache"])
         .current_dir(dir)
         .output()
         .unwrap();

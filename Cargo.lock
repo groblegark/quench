@@ -1417,6 +1417,7 @@ dependencies = [
  "criterion",
  "crossbeam-channel",
  "dashmap",
+ "globset",
  "ignore",
  "insta",
  "jsonschema",

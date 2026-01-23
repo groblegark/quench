@@ -1,10 +1,14 @@
 fn main() {
 
-    let x = 1;
+    let a = 1;
+    let b = 2;
+    let c = 3;
 
-    let y = 2;
-    let z = 3;
+    let sum = a + b + c;
 
-    println!("{}", x + y + z);
+    println!("Sum: {}", sum);
+}
 
+fn process(n: i32) {
+    println!("Processing: {}", n);
 }

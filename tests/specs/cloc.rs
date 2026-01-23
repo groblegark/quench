@@ -21,7 +21,6 @@ use crate::prelude::*;
 ///
 /// > A line is counted if it contains at least one non-whitespace character.
 #[test]
-#[ignore = "TODO: Phase 105 - CLOC Check Implementation"]
 fn cloc_counts_nonblank_lines_as_loc() {
     let json = check_json(&fixture("cloc/basic"));
     let cloc = find_check(&json, "cloc");
@@ -38,7 +37,6 @@ fn cloc_counts_nonblank_lines_as_loc() {
 ///
 /// > Blank lines (whitespace-only) are not counted.
 #[test]
-#[ignore = "TODO: Phase 105 - CLOC Check Implementation"]
 fn cloc_does_not_count_blank_lines() {
     let json = check_json(&fixture("cloc/basic"));
     let cloc = find_check(&json, "cloc");
@@ -61,7 +59,6 @@ fn cloc_does_not_count_blank_lines() {
 /// > Files matching any test pattern are counted as test code.
 /// > All other files matching source patterns are counted as source code.
 #[test]
-#[ignore = "TODO: Phase 105 - CLOC Check Implementation"]
 fn cloc_separates_source_and_test_by_pattern() {
     let json = check_json(&fixture("cloc/source-test"));
     let cloc = find_check(&json, "cloc");
@@ -83,7 +80,6 @@ fn cloc_separates_source_and_test_by_pattern() {
 ///
 /// > Ratio is test LOC / source LOC.
 #[test]
-#[ignore = "TODO: Phase 105 - CLOC Check Implementation"]
 fn cloc_calculates_source_to_test_ratio() {
     let json = check_json(&fixture("cloc/source-test"));
     let cloc = find_check(&json, "cloc");
@@ -106,7 +102,6 @@ fn cloc_calculates_source_to_test_ratio() {
 ///
 /// > JSON metrics always include: source_lines, source_files, test_lines, test_files, ratio
 #[test]
-#[ignore = "TODO: Phase 105 - CLOC Check Implementation"]
 fn cloc_json_includes_required_metrics() {
     let json = check_json(&fixture("cloc/basic"));
     let cloc = find_check(&json, "cloc");
@@ -129,7 +124,6 @@ fn cloc_json_includes_required_metrics() {
 ///
 /// > violations only present when file size limits exceeded
 #[test]
-#[ignore = "TODO: Phase 105 - CLOC Check Implementation"]
 fn cloc_json_omits_violations_when_none() {
     let json = check_json(&fixture("cloc/basic"));
     let cloc = find_check(&json, "cloc");
@@ -151,7 +145,6 @@ fn cloc_json_omits_violations_when_none() {
 ///
 /// > violation.type is always "file_too_large"
 #[test]
-#[ignore = "TODO: Phase 105 - CLOC Check Implementation"]
 fn cloc_violation_type_is_file_too_large() {
     let json = check_json(&fixture("cloc/oversized-source"));
     let cloc = find_check(&json, "cloc");
@@ -170,7 +163,6 @@ fn cloc_violation_type_is_file_too_large() {
 ///
 /// > max_lines = 750 (default for source files)
 #[test]
-#[ignore = "TODO: Phase 105 - CLOC Check Implementation"]
 fn cloc_fails_on_source_file_over_max_lines() {
     let json = check_json(&fixture("cloc/oversized-source"));
     let cloc = find_check(&json, "cloc");
@@ -194,7 +186,6 @@ fn cloc_fails_on_source_file_over_max_lines() {
 ///
 /// > max_lines_test = 1100 (default for test files)
 #[test]
-#[ignore = "TODO: Phase 105 - CLOC Check Implementation"]
 fn cloc_fails_on_test_file_over_max_lines_test() {
     let json = check_json(&fixture("cloc/oversized-test"));
     let cloc = find_check(&json, "cloc");
@@ -235,7 +226,6 @@ fn cloc_fails_on_file_over_max_tokens() {
 ///
 /// > exclude = [...] - patterns don't generate violations
 #[test]
-#[ignore = "TODO: Phase 105 - CLOC Check Implementation"]
 fn cloc_excluded_patterns_dont_generate_violations() {
     let json = check_json(&fixture("cloc/with-excludes"));
     let cloc = find_check(&json, "cloc");
@@ -259,7 +249,6 @@ fn cloc_excluded_patterns_dont_generate_violations() {
 ///
 /// > by_package omitted if no packages configured
 #[test]
-#[ignore = "TODO: Phase 105 - CLOC Check Implementation"]
 fn cloc_omits_by_package_when_not_configured() {
     let json = check_json(&fixture("cloc/basic"));
     let cloc = find_check(&json, "cloc");
@@ -274,7 +263,6 @@ fn cloc_omits_by_package_when_not_configured() {
 ///
 /// > by_package present with per-package metrics when packages configured
 #[test]
-#[ignore = "TODO: Phase 105 - CLOC Check Implementation"]
 fn cloc_includes_by_package_when_configured() {
     let json = check_json(&fixture("cloc/with-packages"));
     let cloc = find_check(&json, "cloc");

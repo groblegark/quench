@@ -429,8 +429,8 @@ fn check_output_format_snapshot() {
         String::from_utf8_lossy(&output.stdout),
         @r#"
 cloc: FAIL
-  src/oversized.rs: file_too_large (15 vs 10)
-    Split into smaller modules. 15 lines exceeds 10 line limit.
+  src/oversized.rs: file_too_large (14 vs 10)
+    Split into smaller modules. 14 lines exceeds 10 line limit.
 7 checks passed, 1 failed
 "#
     );
