@@ -284,7 +284,7 @@ make check
 5. **#[cfg(test)] Splitting** (via `CfgTestInfo`)
    - Parses brace-balanced `#[cfg(test)]` blocks
    - Returns line ranges for test code
-   - Configurable via `split_cfg_test = true|false`
+   - Configurable via `cfg_test_split = true|false`
 
 ### Output Format Examples
 

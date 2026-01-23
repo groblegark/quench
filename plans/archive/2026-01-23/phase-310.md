@@ -8,10 +8,10 @@ Implement `#[cfg(test)]` block parsing for the Rust adapter to accurately separa
 
 - **Inline test detection** via `#[cfg(test)]` block parsing
 - **LOC separation** counting `#[cfg(test)]` lines as test LOC
-- **Configurable behavior** via `split_cfg_test` option (default: true)
+- **Configurable behavior** via `cfg_test_split` option (default: true)
 - **Accurate test correlation** for escape pattern checks
 
-When `split_cfg_test = true`, lines inside `#[cfg(test)]` blocks are counted as test LOC even in source files like `src/lib.rs`, providing more accurate metrics for Rust's idiomatic inline test pattern.
+When `cfg_test_split = true`, lines inside `#[cfg(test)]` blocks are counted as test LOC even in source files like `src/lib.rs`, providing more accurate metrics for Rust's idiomatic inline test pattern.
 
 Reference docs:
 - `docs/specs/langs/rust.md` (Test Code Detection section)
@@ -45,9 +45,9 @@ No new external dependencies. Uses existing:
 
 ## Implementation Phases
 
-### Phase 1: Config Support for `split_cfg_test`
+### Phase 1: Config Support for `cfg_test_split`
 
-Add the `[rust]` config section with `split_cfg_test` option.
+Add the `[rust]` config section with `cfg_test_split` option.
 
 **Update `crates/cli/src/config.rs`:**
 
@@ -56,20 +56,20 @@ Add the `[rust]` config section with `split_cfg_test` option.
 #[derive(Debug, Clone, Deserialize)]
 pub struct RustConfig {
     /// Split #[cfg(test)] blocks from source LOC (default: true).
-    #[serde(default = "RustConfig::default_split_cfg_test")]
-    pub split_cfg_test: bool,
+    #[serde(default = "RustConfig::default_cfg_test_split")]
+    pub cfg_test_split: bool,
 }
 
 impl Default for RustConfig {
     fn default() -> Self {
         Self {
-            split_cfg_test: Self::default_split_cfg_test(),
+            cfg_test_split: Self::default_cfg_test_split(),
         }
     }
 }
 
 impl RustConfig {
-    fn default_split_cfg_test() -> bool {
+    fn default_cfg_test_split() -> bool {
         true
     }
 }
@@ -89,7 +89,7 @@ pub struct Config {
 
 **Update `parse_with_warnings` to handle `[rust]` section.**
 
-**Milestone:** Config parses `[rust] split_cfg_test = false` without errors.
+**Milestone:** Config parses `[rust] cfg_test_split = false` without errors.
 
 **Verification:**
 ```bash
@@ -400,7 +400,7 @@ cargo test adapter::rust -- classify_lines
 
 ### Phase 5: CLOC Integration
 
-Update the CLOC check to use the Rust adapter's line classification when `split_cfg_test` is enabled.
+Update the CLOC check to use the Rust adapter's line classification when `cfg_test_split` is enabled.
 
 **Update `crates/cli/src/checks/cloc.rs`:**
 
@@ -414,9 +414,9 @@ impl Check for ClocCheck {
     fn run(&self, ctx: &CheckContext) -> CheckResult {
         // ... existing setup ...
 
-        // Get Rust config for split_cfg_test
+        // Get Rust config for cfg_test_split
         let rust_config = &ctx.config.rust;
-        let rust_adapter = if rust_config.split_cfg_test {
+        let rust_adapter = if rust_config.cfg_test_split {
             Some(RustAdapter::new())
         } else {
             None
@@ -469,7 +469,7 @@ impl Check for ClocCheck {
 ```
 
 **Key changes:**
-1. Read `split_cfg_test` from config
+1. Read `cfg_test_split` from config
 2. For Rust source files, parse content and classify lines
 3. Accumulate source/test LOC separately
 4. Apply appropriate size limits based on line type
@@ -502,7 +502,7 @@ fn rust_adapter_cfg_test_blocks_counted_as_test_loc() {
 
 **Specs to enable:**
 - `rust_adapter_cfg_test_blocks_counted_as_test_loc`
-- `rust_adapter_split_cfg_test_can_be_disabled`
+- `rust_adapter_cfg_test_split_can_be_disabled`
 
 **Milestone:** Both cfg_test specs pass without `#[ignore]`.
 
@@ -535,16 +535,16 @@ The parser uses a simplified brace-counting approach:
 
 ```toml
 [rust]
-split_cfg_test = true    # Default: count #[cfg(test)] as test LOC
+cfg_test_split = true    # Default: count #[cfg(test)] as test LOC
 ```
 
-When `split_cfg_test = false`:
+When `cfg_test_split = false`:
 - All lines in source files count as source LOC
 - Only files matching test patterns count as test LOC
 
 ### LOC Counting Rules
 
-| File Type | `split_cfg_test = true` | `split_cfg_test = false` |
+| File Type | `cfg_test_split = true` | `cfg_test_split = false` |
 |-----------|------------------------|-------------------------|
 | `tests/*.rs` | All lines = test | All lines = test |
 | `src/lib.rs` (no `#[cfg(test)]`) | All lines = source | All lines = source |
@@ -596,7 +596,7 @@ make check
 | Test Case | Input | Expected |
 |-----------|-------|----------|
 | Basic `#[cfg(test)]` | `src/lib.rs` with inline tests | source + test LOC separated |
-| `split_cfg_test = false` | Same file, config disabled | All LOC = source |
+| `cfg_test_split = false` | Same file, config disabled | All LOC = source |
 | Nested braces | Complex test code | Correct block end detection |
 | Multiple blocks | Two `#[cfg(test)]` in one file | Both detected |
 | No test blocks | Pure source file | All LOC = source |

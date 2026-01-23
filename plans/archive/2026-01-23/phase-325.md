@@ -65,8 +65,8 @@ Add the `[rust.policy]` configuration section.
 #[derive(Debug, Clone, Deserialize)]
 pub struct RustConfig {
     /// Split #[cfg(test)] blocks from source LOC (default: true).
-    #[serde(default = "RustConfig::default_split_cfg_test")]
-    pub split_cfg_test: bool,
+    #[serde(default = "RustConfig::default_cfg_test_split")]
+    pub cfg_test_split: bool,
 
     /// Lint suppression settings.
     #[serde(default)]
@@ -397,7 +397,7 @@ Add Rust profile defaults to CLI initialization.
 /// Default Rust profile configuration for quench init.
 pub fn rust_profile_defaults() -> String {
     r#"[rust]
-split_cfg_test = true
+cfg_test_split = true
 binary_size = true
 build_time = true
 
@@ -693,7 +693,7 @@ When `quench init --profile rust` is run:
 version = 1
 
 [rust]
-split_cfg_test = true
+cfg_test_split = true
 binary_size = true
 build_time = true
 

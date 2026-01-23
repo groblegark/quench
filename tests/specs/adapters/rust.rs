@@ -126,16 +126,16 @@ fn rust_adapter_cfg_test_blocks_counted_as_test_loc() {
 
 /// Spec: docs/specs/langs/rust.md#test-code-detection
 ///
-/// > Configurable: split_cfg_test = true (default)
+/// > Configurable: cfg_test_split = true (default)
 #[test]
-fn rust_adapter_split_cfg_test_can_be_disabled() {
+fn rust_adapter_cfg_test_split_can_be_disabled() {
     let dir = temp_project();
     std::fs::write(
         dir.path().join("quench.toml"),
         r#"
 version = 1
 [rust]
-split_cfg_test = false
+cfg_test_split = false
 "#,
     )
     .unwrap();
@@ -162,7 +162,7 @@ mod tests {
     let cloc = check("cloc").pwd(dir.path()).json().passes();
     let metrics = cloc.require("metrics");
 
-    // With split_cfg_test = false, all lines should be counted as source
+    // With cfg_test_split = false, all lines should be counted as source
     let test_lines = metrics
         .get("test_lines")
         .and_then(|v| v.as_u64())

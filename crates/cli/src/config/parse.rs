@@ -14,16 +14,16 @@ pub(super) fn parse_rust_config(value: Option<&toml::Value>) -> RustConfig {
         return RustConfig::default();
     };
 
-    let split_cfg_test = t
-        .get("split_cfg_test")
+    let cfg_test_split = t
+        .get("cfg_test_split")
         .and_then(|v| v.as_bool())
-        .unwrap_or_else(RustConfig::default_split_cfg_test);
+        .unwrap_or_else(RustConfig::default_cfg_test_split);
 
     let suppress = parse_suppress_config(t.get("suppress"));
     let policy = parse_policy_config(t.get("policy"));
 
     RustConfig {
-        split_cfg_test,
+        cfg_test_split,
         suppress,
         policy,
     }

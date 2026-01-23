@@ -12,7 +12,7 @@ When using [`quench init --profile rust`](../01-cli.md#profile-selection-recomme
 
 ```toml
 [rust]
-split_cfg_test = true
+cfg_test_split = true
 binary_size = true
 build_time = true
 
@@ -74,7 +74,7 @@ ignore = ["target/"]
 
 **Inline test code** (within source files):
 - Lines inside `#[cfg(test)]` blocks are counted as test LOC
-- Configurable: `split_cfg_test = true` (default)
+- Configurable: `cfg_test_split = true` (default)
 
 ```rust
 pub fn add(a: i32, b: i32) -> i32 {  // ← source LOC
@@ -295,7 +295,7 @@ Multiple test suites contribute to coverage via LLVM profile merging.
 # tests = ["tests/**", "test/**/*.rs", "*_test.rs", "*_tests.rs"]
 # ignore = ["target/"]
 
-split_cfg_test = true            # Count #[cfg(test)] as test LOC
+cfg_test_split = true            # Count #[cfg(test)] as test LOC
 
 # Build targets (default: all [[bin]] entries)
 # targets = ["myapp", "myserver"]

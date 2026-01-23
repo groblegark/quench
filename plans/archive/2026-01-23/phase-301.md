@@ -238,17 +238,17 @@ fn rust_adapter_cfg_test_blocks_counted_as_test_loc() {
 
 /// Spec: docs/specs/langs/rust.md#test-code-detection
 ///
-/// > Configurable: split_cfg_test = true (default)
+/// > Configurable: cfg_test_split = true (default)
 #[test]
 #[ignore = "TODO: Phase 302 - Rust Adapter Implementation"]
-fn rust_adapter_split_cfg_test_can_be_disabled() {
+fn rust_adapter_cfg_test_split_can_be_disabled() {
     let dir = temp_project();
     std::fs::write(
         dir.path().join("quench.toml"),
         r#"
 version = 1
 [rust]
-split_cfg_test = false
+cfg_test_split = false
 "#,
     ).unwrap();
     std::fs::write(dir.path().join("Cargo.toml"), "[package]\nname = \"test\"\nversion = \"0.1.0\"\n").unwrap();
@@ -269,7 +269,7 @@ mod tests {
     let cloc = check("cloc").pwd(dir.path()).json().passes();
     let metrics = cloc.require("metrics");
 
-    // With split_cfg_test = false, all lines should be counted as source
+    // With cfg_test_split = false, all lines should be counted as source
     let test_loc = metrics.get("test_loc").and_then(|v| v.as_u64()).unwrap_or(0);
     assert_eq!(test_loc, 0, "should not split #[cfg(test)] when disabled");
 }
@@ -740,7 +740,7 @@ Fixtures are minimal but complete:
 Per the spec, test code includes:
 1. Files in `tests/` directory
 2. Files matching `*_test.rs` or `*_tests.rs`
-3. Lines inside `#[cfg(test)]` blocks (when `split_cfg_test = true`)
+3. Lines inside `#[cfg(test)]` blocks (when `cfg_test_split = true`)
 
 ### Escape Pattern Defaults
 

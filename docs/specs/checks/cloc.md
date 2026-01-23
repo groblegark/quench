@@ -87,7 +87,7 @@ mod tests {
 }
 ```
 
-When `check.rust.split_cfg_test = true` (default), lines inside `#[cfg(test)]`
+When `check.rust.cfg_test_split = true` (default), lines inside `#[cfg(test)]`
 blocks are counted as test LOC even in source files.
 
 ## Output
@@ -213,7 +213,7 @@ advice = "Can the code be made more concise? If not, split large source files in
 advice_test = "Can tests be parameterized or use shared fixtures to be more concise? If not, split large test files into a folder."
 
 # Rust-specific: parse #[cfg(test)] blocks
-# check.rust.split_cfg_test = true  # default
+# check.rust.cfg_test_split = true  # default
 ```
 
 **Note**: Ratio is reporting-only. File size limits are enforced if configured.

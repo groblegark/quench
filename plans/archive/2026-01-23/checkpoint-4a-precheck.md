@@ -145,7 +145,7 @@ Verify that the Rust adapter documentation is accurate and complete.
 3. **Test Code Detection**:
    - Files in `tests/` directory
    - Files matching `*_test.rs` or `*_tests.rs`
-   - Lines inside `#[cfg(test)]` blocks (configurable via `split_cfg_test`)
+   - Lines inside `#[cfg(test)]` blocks (configurable via `cfg_test_split`)
 
 4. **Default Escape Patterns**:
    | Pattern | Action | Required Comment |

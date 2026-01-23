@@ -225,7 +225,7 @@ pub fn rust_profile_defaults() -> String {
     let transmute_pattern = format!("mem{}transmute", "::");
     format!(
         r#"[rust]
-split_cfg_test = true
+cfg_test_split = true
 
 [rust.suppress]
 check = "comment"

@@ -118,7 +118,7 @@ Rust language configuration. Auto-detected when `Cargo.toml` exists.
 # tests = ["tests/**", "test/**/*.rs", "*_test.rs", "*_tests.rs"]
 # ignore = ["target/"]
 
-split_cfg_test = true                  # Count #[cfg(test)] as test LOC
+cfg_test_split = true                  # Count #[cfg(test)] as test LOC
 
 # Build targets for coverage + binary size (default: all [[bin]] entries)
 # targets = ["myapp", "myserver"]

@@ -66,8 +66,8 @@ pub struct Config {
 #[derive(Debug, Clone, Deserialize)]
 pub struct RustConfig {
     /// Split #[cfg(test)] blocks from source LOC (default: true).
-    #[serde(default = "RustConfig::default_split_cfg_test")]
-    pub split_cfg_test: bool,
+    #[serde(default = "RustConfig::default_cfg_test_split")]
+    pub cfg_test_split: bool,
 
     /// Lint suppression settings.
     #[serde(default)]
@@ -81,7 +81,7 @@ pub struct RustConfig {
 impl Default for RustConfig {
     fn default() -> Self {
         Self {
-            split_cfg_test: Self::default_split_cfg_test(),
+            cfg_test_split: Self::default_cfg_test_split(),
             suppress: SuppressConfig::default(),
             policy: RustPolicyConfig::default(),
         }
@@ -89,7 +89,7 @@ impl Default for RustConfig {
 }
 
 impl RustConfig {
-    pub(crate) fn default_split_cfg_test() -> bool {
+    pub(crate) fn default_cfg_test_split() -> bool {
         true
     }
 }

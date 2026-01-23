@@ -48,9 +48,9 @@ impl Check for ClocCheck {
         // Uses language-specific adapter when detected (e.g., Rust adapter for Cargo.toml projects)
         let registry = AdapterRegistry::for_project(ctx.root);
 
-        // Get Rust config for split_cfg_test
+        // Get Rust config for cfg_test_split
         let rust_config = &ctx.config.rust;
-        let rust_adapter = if rust_config.split_cfg_test {
+        let rust_adapter = if rust_config.cfg_test_split {
             Some(RustAdapter::new())
         } else {
             None
