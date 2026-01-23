@@ -1,5 +1,7 @@
 # Phase 105: CLOC Check - Basic Implementation
 
+**Root Feature:** `quench-1532`
+
 ## Overview
 
 Implement the core CLOC (Count Lines of Code) check to count non-blank lines, separate source from test files using configurable patterns, calculate source-to-test ratio, and output metrics in JSON format. This phase focuses on accurate line counting and pattern-based file classification.
