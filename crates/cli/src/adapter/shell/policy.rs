@@ -13,9 +13,6 @@ use crate::config::ShellPolicyConfig;
 // Re-export from common
 pub use crate::adapter::common::policy::PolicyCheckResult;
 
-/// Alias for backward compatibility.
-pub type ShellPolicyCheckResult = PolicyCheckResult;
-
 /// Check shell lint policy against changed files.
 ///
 /// Takes a classifier closure to allow testing without a full adapter.

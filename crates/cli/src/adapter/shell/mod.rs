@@ -18,7 +18,7 @@ use globset::GlobSet;
 mod policy;
 mod suppress;
 
-pub use policy::{ShellPolicyCheckResult, check_lint_policy};
+pub use policy::{PolicyCheckResult, check_lint_policy};
 pub use suppress::{ShellcheckSuppress, parse_shellcheck_suppresses};
 
 use super::glob::build_glob_set;
@@ -109,7 +109,7 @@ impl ShellAdapter {
         &self,
         changed_files: &[&Path],
         policy: &ShellPolicyConfig,
-    ) -> ShellPolicyCheckResult {
+    ) -> PolicyCheckResult {
         policy::check_lint_policy(changed_files, policy, |p| self.classify(p))
     }
 }
