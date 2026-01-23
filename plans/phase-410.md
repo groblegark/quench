@@ -1,5 +1,7 @@
 # Phase 410: Shell Adapter - Escapes
 
+**Root Feature:** `quench-1541`
+
 ## Overview
 
 Add default escape pattern detection for Shell projects. When quench detects a Shell project, it should automatically flag `set +e` and `eval ` usages that lack a `# OK:` justification comment. This parallels the Rust adapter's `unsafe { }` pattern which requires `// SAFETY:` comments.
