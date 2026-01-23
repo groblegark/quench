@@ -363,21 +363,36 @@ fn check_sync(
             all_in_sync = false;
 
             for diff in comparison.differences {
+                // Use heading if available, otherwise section name, "(preamble)" for empty
+                let section_display = |heading: Option<&str>, section: &str| -> String {
+                    if let Some(h) = heading {
+                        if h.is_empty() {
+                            "(preamble)".to_string()
+                        } else {
+                            h.to_string()
+                        }
+                    } else if section.is_empty() {
+                        "(preamble)".to_string()
+                    } else {
+                        section.to_string()
+                    }
+                };
+
                 let advice = match diff.diff_type {
                     DiffType::ContentDiffers => format!(
-                        "Section \"{}\" differs. Use --fix to sync from {}, or reconcile manually.",
-                        diff.source_heading.as_deref().unwrap_or(&diff.section),
+                        "{} differs. Use --fix to sync from {}, or reconcile manually.",
+                        section_display(diff.source_heading.as_deref(), &diff.section),
                         source_name
                     ),
                     DiffType::MissingInTarget => format!(
-                        "Section \"{}\" missing in {}. Use --fix to sync from {}.",
-                        diff.source_heading.as_deref().unwrap_or(&diff.section),
+                        "{} missing in {}. Use --fix to sync from {}.",
+                        section_display(diff.source_heading.as_deref(), &diff.section),
                         target_name,
                         source_name
                     ),
                     DiffType::ExtraInTarget => format!(
-                        "Section \"{}\" exists in {} but not in {}. Remove or add to source.",
-                        diff.target_heading.as_deref().unwrap_or(&diff.section),
+                        "{} exists in {} but not in {}. Remove or add to source.",
+                        section_display(diff.target_heading.as_deref(), &diff.section),
                         target_name,
                         source_name
                     ),

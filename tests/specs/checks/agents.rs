@@ -727,6 +727,33 @@ fn agents_out_of_sync_text_output() {
 
 /// Spec: docs/specs/checks/agents.md#output
 ///
+/// > Out of sync with differing preamble shows "(preamble)" not empty string.
+#[test]
+fn agents_out_of_sync_preamble_text_output() {
+    let dir = tempfile::tempdir().unwrap();
+    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
+
+    // Create two files with different preambles (content before ## headings)
+    std::fs::write(
+        dir.path().join("CLAUDE.md"),
+        "# Project A\n\nFirst preamble.\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n",
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join(".cursorrules"),
+        "# Project B\n\nDifferent preamble.\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n",
+    )
+    .unwrap();
+
+    check("agents")
+        .pwd(dir.path())
+        .fails()
+        .stdout_has("(preamble)")
+        .stdout_lacks("Section \"\"");
+}
+
+/// Spec: docs/specs/checks/agents.md#output
+///
 /// > Missing section includes section name and advice.
 #[test]
 fn agents_missing_section_text_output() {
