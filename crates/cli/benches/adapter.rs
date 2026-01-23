@@ -16,6 +16,7 @@ use criterion::{BenchmarkId, Criterion, black_box, criterion_group, criterion_ma
 use std::path::{Path, PathBuf};
 
 use quench::adapter::rust::{CargoWorkspace, CfgTestInfo, RustAdapter, parse_suppress_attrs};
+use quench::adapter::shell::{ShellAdapter, parse_shellcheck_suppresses};
 use quench::adapter::{Adapter, GenericAdapter};
 
 fn fixture_path(name: &str) -> PathBuf {
@@ -40,6 +41,10 @@ fn bench_adapter_creation(c: &mut Criterion) {
         b.iter(|| black_box(GenericAdapter::with_defaults()))
     });
 
+    group.bench_function("ShellAdapter::new", |b| {
+        b.iter(|| black_box(ShellAdapter::new()))
+    });
+
     // GenericAdapter with custom patterns (like a configured project)
     let source_patterns: Vec<String> = vec!["**/*.rs".to_string(), "**/*.py".to_string()];
     let test_patterns: Vec<String> = vec![
@@ -59,6 +64,7 @@ fn bench_adapter_creation(c: &mut Criterion) {
 fn bench_classify(c: &mut Criterion) {
     let rust_adapter = RustAdapter::new();
     let generic_adapter = GenericAdapter::with_defaults();
+    let shell_adapter = ShellAdapter::new();
 
     // Generate test paths
     let source_paths: Vec<PathBuf> = (0..1000)
@@ -69,6 +75,20 @@ fn bench_classify(c: &mut Criterion) {
         .collect();
     let nested_paths: Vec<PathBuf> = (0..1000)
         .map(|i| PathBuf::from(format!("crates/pkg_{}/src/lib.rs", i)))
+        .collect();
+
+    // Shell paths
+    let shell_source_paths: Vec<PathBuf> = (0..1000)
+        .map(|i| PathBuf::from(format!("scripts/script_{}.sh", i)))
+        .collect();
+    let shell_bash_paths: Vec<PathBuf> = (0..1000)
+        .map(|i| PathBuf::from(format!("lib/util_{}.bash", i)))
+        .collect();
+    let shell_test_paths: Vec<PathBuf> = (0..1000)
+        .map(|i| PathBuf::from(format!("tests/test_{}.bats", i)))
+        .collect();
+    let shell_bin_paths: Vec<PathBuf> = (0..1000)
+        .map(|i| PathBuf::from(format!("bin/cmd_{}.sh", i)))
         .collect();
 
     let mut group = c.benchmark_group("classify");
@@ -109,6 +129,38 @@ fn bench_classify(c: &mut Criterion) {
         b.iter(|| {
             for path in &test_paths {
                 black_box(generic_adapter.classify(path));
+            }
+        })
+    });
+
+    group.bench_function("shell_1k_source_scripts", |b| {
+        b.iter(|| {
+            for path in &shell_source_paths {
+                black_box(shell_adapter.classify(path));
+            }
+        })
+    });
+
+    group.bench_function("shell_1k_bash_libs", |b| {
+        b.iter(|| {
+            for path in &shell_bash_paths {
+                black_box(shell_adapter.classify(path));
+            }
+        })
+    });
+
+    group.bench_function("shell_1k_bats_tests", |b| {
+        b.iter(|| {
+            for path in &shell_test_paths {
+                black_box(shell_adapter.classify(path));
+            }
+        })
+    });
+
+    group.bench_function("shell_1k_bin_scripts", |b| {
+        b.iter(|| {
+            for path in &shell_bin_paths {
+                black_box(shell_adapter.classify(path));
             }
         })
     });
@@ -303,6 +355,54 @@ fn bench_suppress_parse(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark shellcheck suppress parsing.
+fn bench_shellcheck_suppress_parse(c: &mut Criterion) {
+    // Content with shellcheck suppresses (~10% of lines)
+    let content_with_suppresses: String = (0..100)
+        .map(|i| {
+            if i % 10 == 0 {
+                "# shellcheck disable=SC2034  # OK: intentional\nUNUSED_VAR=1\n".to_string()
+            } else if i % 15 == 0 {
+                "# shellcheck disable=SC2086,SC2046\n# OK: word splitting needed\necho $var\n"
+                    .to_string()
+            } else {
+                format!("echo \"line {}\"\n", i)
+            }
+        })
+        .collect();
+
+    // Content without suppresses
+    let content_without: String = (0..100).map(|i| format!("echo \"line {}\"\n", i)).collect();
+
+    let mut group = c.benchmark_group("shellcheck_suppress_parse");
+
+    group.bench_function("with_suppresses_100_lines", |b| {
+        b.iter(|| black_box(parse_shellcheck_suppresses(&content_with_suppresses, None)))
+    });
+
+    group.bench_function("without_suppresses_100_lines", |b| {
+        b.iter(|| black_box(parse_shellcheck_suppresses(&content_without, None)))
+    });
+
+    // With comment pattern requirement
+    group.bench_function("with_suppresses_100_lines_pattern", |b| {
+        b.iter(|| {
+            black_box(parse_shellcheck_suppresses(
+                &content_with_suppresses,
+                Some("# OK:"),
+            ))
+        })
+    });
+
+    // Larger file (~1000 lines)
+    let large_with_suppresses: String = content_with_suppresses.repeat(10);
+    group.bench_function("with_suppresses_1000_lines", |b| {
+        b.iter(|| black_box(parse_shellcheck_suppresses(&large_with_suppresses, None)))
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_adapter_creation,
@@ -311,5 +411,6 @@ criterion_group!(
     bench_classify_lines,
     bench_workspace_detection,
     bench_suppress_parse,
+    bench_shellcheck_suppress_parse,
 );
 criterion_main!(benches);

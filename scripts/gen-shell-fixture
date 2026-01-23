@@ -1,0 +1,231 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
+# scripts/gen-shell-fixture - Generate Shell-specific benchmark fixture
+#
+# Creates a Shell project with:
+# - bin/ scripts (entry points)
+# - lib/ utilities with shellcheck suppresses
+# - tests/ with .bats files
+# - Realistic distribution of source vs test files
+#
+# Usage:
+#   ./scripts/gen-shell-fixture [fixture_dir] [script_count] [util_count]
+#   ./scripts/gen-shell-fixture                          # Default: 100 scripts, 400 utils
+#   ./scripts/gen-shell-fixture tests/fixtures/bench-shell 100 400
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+FIXTURE_DIR="${1:-$REPO_ROOT/tests/fixtures/bench-shell}"
+SCRIPT_COUNT="${2:-100}"
+UTIL_COUNT="${3:-400}"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+echo -e "${YELLOW}Generating Shell benchmark fixture...${NC}"
+echo "  Directory: $FIXTURE_DIR"
+echo "  Bin scripts: $SCRIPT_COUNT"
+echo "  Lib utilities: $UTIL_COUNT"
+echo "  Test files: 50"
+
+# Clean and create fixture directory
+rm -rf "$FIXTURE_DIR"
+mkdir -p "$FIXTURE_DIR"/{bin,scripts,lib,tests}
+
+# Generate bin/ scripts (entry points)
+echo "  Generating bin/ scripts..."
+for i in $(seq 1 "$SCRIPT_COUNT"); do
+    cat > "$FIXTURE_DIR/bin/cmd_$i.sh" << 'SHELL'
+#!/usr/bin/env bash
+# Auto-generated script for Shell adapter benchmarking.
+set -euo pipefail
+
+# shellcheck source=../lib/utils.sh
+source "$(dirname "$0")/../lib/utils.sh"
+
+main() {
+    local input="${1:-}"
+    if [[ -z "$input" ]]; then
+        echo "Usage: $0 <input>" >&2
+        exit 1
+    fi
+    process_input "$input"
+}
+
+main "$@"
+SHELL
+    # Pad to ~50 lines
+    for _ in $(seq 1 30); do
+        echo "# padding line for benchmark - bin/cmd_$i" >> "$FIXTURE_DIR/bin/cmd_$i.sh"
+    done
+done
+
+# Generate lib/ utilities with shellcheck suppresses
+echo "  Generating lib/ utilities..."
+for i in $(seq 1 "$UTIL_COUNT"); do
+    # Vary shellcheck suppresses across files for realistic distribution
+    # ~80% have shellcheck disable directives
+    # Comments go on line above directive per quench convention
+    suppress_block=""
+    if (( i % 5 != 0 )); then
+        # 4 out of 5 files have suppresses
+        if (( i % 3 == 0 )); then
+            suppress_block="# OK: intentionally unused
+# shellcheck disable=SC2034"
+        elif (( i % 4 == 0 )); then
+            suppress_block="# OK: word splitting needed
+# shellcheck disable=SC2086,SC2046"
+        else
+            suppress_block="# OK: module version
+# shellcheck disable=SC2034"
+        fi
+    fi
+
+    cat > "$FIXTURE_DIR/lib/util_$i.sh" << SHELL
+#!/usr/bin/env bash
+# Utility module $i for benchmarking.
+
+${suppress_block}
+UTIL_VERSION="1.0.$i"
+
+process_input() {
+    local input="\$1"
+    echo "Processing: \$input"
+}
+
+# More utility functions
+format_output() {
+    local data="\$1"
+    printf "%s\\n" "\$data"
+}
+
+validate_input() {
+    local input="\$1"
+    if [[ -z "\$input" ]]; then
+        return 1
+    fi
+    return 0
+}
+SHELL
+    # Pad to ~50 lines
+    for _ in $(seq 1 25); do
+        echo "# padding line for benchmark - lib/util_$i" >> "$FIXTURE_DIR/lib/util_$i.sh"
+    done
+done
+
+# Generate test files (.bats)
+echo "  Generating tests/ ..."
+for i in $(seq 1 50); do
+    cat > "$FIXTURE_DIR/tests/test_util_$i.bats" << 'BATS'
+#!/usr/bin/env bats
+# Test suite for utility module.
+
+setup() {
+    load '../lib/utils'
+}
+
+@test "process_input handles empty string" {
+    run process_input ""
+    [ "$status" -eq 0 ]
+}
+
+@test "process_input handles special chars" {
+    run process_input "hello world"
+    [ "$status" -eq 0 ]
+}
+
+@test "validate_input returns error for empty" {
+    run validate_input ""
+    [ "$status" -eq 1 ]
+}
+
+@test "format_output displays data" {
+    run format_output "test data"
+    [ "$output" = "test data" ]
+}
+BATS
+    # Pad to ~40 lines
+    for _ in $(seq 1 15); do
+        echo "# padding line for benchmark - tests/test_$i" >> "$FIXTURE_DIR/tests/test_util_$i.bats"
+    done
+done
+
+# Create main lib/utils.sh that other scripts source
+cat > "$FIXTURE_DIR/lib/utils.sh" << 'SHELL'
+#!/usr/bin/env bash
+# Main utilities library.
+
+# OK: library exports
+# shellcheck disable=SC2034
+LIB_VERSION="1.0.0"
+
+log_info() {
+    echo "[INFO] $*"
+}
+
+log_error() {
+    echo "[ERROR] $*" >&2
+}
+
+process_input() {
+    local input="$1"
+    log_info "Processing: $input"
+    echo "$input"
+}
+SHELL
+
+# Create quench.toml
+cat > "$FIXTURE_DIR/quench.toml" << 'TOML'
+# Benchmark fixture configuration for Shell adapter performance testing
+version = 1
+
+[check.cloc]
+check = "error"
+max_lines = 200
+max_lines_test = 500
+
+[check.escapes]
+check = "warn"
+
+[shell]
+lint_changes = "standalone"
+
+[shell.suppress]
+check = "comment"
+comment = "# OK:"
+TOML
+
+# Create .shellcheckrc
+cat > "$FIXTURE_DIR/.shellcheckrc" << 'RC'
+# Shellcheck configuration for benchmark fixture
+disable=SC1091
+RC
+
+# Create .gitignore
+cat > "$FIXTURE_DIR/.gitignore" << 'EOF'
+*.swp
+*.swo
+.quench/
+EOF
+
+# Summary
+total_files=$((SCRIPT_COUNT + UTIL_COUNT + 50 + 1))
+echo ""
+echo -e "${GREEN}Generated Shell benchmark fixture at $FIXTURE_DIR${NC}"
+echo "  Bin scripts: $SCRIPT_COUNT"
+echo "  Lib utilities: $UTIL_COUNT"
+echo "  Test files: 50"
+echo "  Total files: $total_files"
+echo "  Features exercised:"
+echo "    - bin/ entry point scripts"
+echo "    - lib/ utilities with shellcheck suppresses"
+echo "    - tests/*.bats test files"
+echo "    - quench.toml with shell config"
+echo "    - .shellcheckrc"
