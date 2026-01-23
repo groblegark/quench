@@ -272,6 +272,16 @@ fn rust_adapter_unwrap_in_cfg_test_block_allowed() {
 
 /// Spec: docs/specs/langs/rust.md#escapes-in-test-code
 ///
+/// > Inline test blocks: Lines inside #[cfg(test)] blocks with nested braces
+#[test]
+fn rust_adapter_unwrap_in_cfg_test_with_nested_braces_allowed() {
+    // This fixture has #[cfg(test)] with vec![] containing struct literals
+    // which creates deeply nested braces - tests the brace counting logic
+    check("escapes").on("rust/unwrap-cfg-test-nested").passes();
+}
+
+/// Spec: docs/specs/langs/rust.md#escapes-in-test-code
+///
 /// > Escape patterns in #[cfg(test)] blocks are tracked as test metrics
 #[test]
 fn rust_adapter_escape_in_cfg_test_tracked_as_test_metric() {
