@@ -57,10 +57,10 @@ if [ $source_size_failed -eq 0 ] && [ $test_size_failed -eq 0 ]; then
     echo -e "${GREEN}File sizes OK${NC}"
 else
     if [ $source_size_failed -eq 1 ]; then
-        echo -e "Split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable"
+        echo -e "Can the code be made more concise? If not, split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable"
     fi
     if [ $test_size_failed -eq 1 ]; then
-        echo -e "Split large test files into a {module}_tests/ folder"
+        echo -e "Can tests use parameterization (e.g., yare) to be more concise? If not, split large test files into a {module}_tests/ folder"
     fi
     failed=1
 fi
