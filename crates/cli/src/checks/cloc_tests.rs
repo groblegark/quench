@@ -55,21 +55,22 @@ fn cloc_check_default_enabled() {
 }
 
 // =============================================================================
-// NON-BLANK LINE COUNTING TESTS
+// FILE METRICS TESTS (NON-BLANK LINE COUNTING)
 // =============================================================================
 
 #[test]
-fn count_nonblank_lines_empty_file() {
+fn file_metrics_empty_file() {
     let mut file = NamedTempFile::new().unwrap();
     // Write nothing
     file.flush().unwrap();
 
-    let count = count_nonblank_lines(file.path()).unwrap();
-    assert_eq!(count, 0);
+    let metrics = count_file_metrics(file.path()).unwrap();
+    assert_eq!(metrics.nonblank_lines, 0);
+    assert_eq!(metrics.tokens, 0);
 }
 
 #[test]
-fn count_nonblank_lines_whitespace_only() {
+fn file_metrics_whitespace_only() {
     let mut file = NamedTempFile::new().unwrap();
     writeln!(file, "   ").unwrap();
     writeln!(file, "\t\t").unwrap();
@@ -77,12 +78,12 @@ fn count_nonblank_lines_whitespace_only() {
     writeln!(file, "    \t  ").unwrap();
     file.flush().unwrap();
 
-    let count = count_nonblank_lines(file.path()).unwrap();
-    assert_eq!(count, 0);
+    let metrics = count_file_metrics(file.path()).unwrap();
+    assert_eq!(metrics.nonblank_lines, 0);
 }
 
 #[test]
-fn count_nonblank_lines_mixed_content() {
+fn file_metrics_mixed_content() {
     let mut file = NamedTempFile::new().unwrap();
     writeln!(file, "fn main() {{").unwrap();
     writeln!(file).unwrap();
@@ -91,56 +92,56 @@ fn count_nonblank_lines_mixed_content() {
     writeln!(file, "}}").unwrap();
     file.flush().unwrap();
 
-    let count = count_nonblank_lines(file.path()).unwrap();
-    assert_eq!(count, 3); // fn main, let x, closing brace
+    let metrics = count_file_metrics(file.path()).unwrap();
+    assert_eq!(metrics.nonblank_lines, 3); // fn main, let x, closing brace
 }
 
 #[test]
-fn count_nonblank_lines_no_trailing_newline() {
+fn file_metrics_no_trailing_newline() {
     let mut file = NamedTempFile::new().unwrap();
     write!(file, "line1\nline2\nline3").unwrap();
     file.flush().unwrap();
 
-    let count = count_nonblank_lines(file.path()).unwrap();
-    assert_eq!(count, 3);
+    let metrics = count_file_metrics(file.path()).unwrap();
+    assert_eq!(metrics.nonblank_lines, 3);
 }
 
 #[test]
-fn count_nonblank_lines_with_trailing_newline() {
+fn file_metrics_with_trailing_newline() {
     let mut file = NamedTempFile::new().unwrap();
     writeln!(file, "line1").unwrap();
     writeln!(file, "line2").unwrap();
     writeln!(file, "line3").unwrap();
     file.flush().unwrap();
 
-    let count = count_nonblank_lines(file.path()).unwrap();
-    assert_eq!(count, 3);
+    let metrics = count_file_metrics(file.path()).unwrap();
+    assert_eq!(metrics.nonblank_lines, 3);
 }
 
 #[test]
-fn count_nonblank_lines_crlf_endings() {
+fn file_metrics_crlf_endings() {
     // Windows-style line endings
     let mut file = NamedTempFile::new().unwrap();
     write!(file, "line1\r\nline2\r\n\r\nline3").unwrap();
     file.flush().unwrap();
 
-    let count = count_nonblank_lines(file.path()).unwrap();
-    assert_eq!(count, 3); // Should handle CRLF correctly
+    let metrics = count_file_metrics(file.path()).unwrap();
+    assert_eq!(metrics.nonblank_lines, 3); // Should handle CRLF correctly
 }
 
 #[test]
-fn count_nonblank_lines_mixed_endings() {
+fn file_metrics_mixed_endings() {
     // Mixed LF and CRLF
     let mut file = NamedTempFile::new().unwrap();
     write!(file, "line1\nline2\r\nline3\n").unwrap();
     file.flush().unwrap();
 
-    let count = count_nonblank_lines(file.path()).unwrap();
-    assert_eq!(count, 3);
+    let metrics = count_file_metrics(file.path()).unwrap();
+    assert_eq!(metrics.nonblank_lines, 3);
 }
 
 #[test]
-fn count_nonblank_lines_unicode_whitespace() {
+fn file_metrics_unicode_whitespace() {
     // Non-breaking space (U+00A0) should still be whitespace
     let mut file = NamedTempFile::new().unwrap();
     writeln!(file, "content").unwrap();
@@ -148,9 +149,9 @@ fn count_nonblank_lines_unicode_whitespace() {
     writeln!(file, "more").unwrap();
     file.flush().unwrap();
 
-    let count = count_nonblank_lines(file.path()).unwrap();
+    let metrics = count_file_metrics(file.path()).unwrap();
     // Note: Rust's trim() handles unicode whitespace
-    assert_eq!(count, 2);
+    assert_eq!(metrics.nonblank_lines, 2);
 }
 
 // =============================================================================
@@ -231,48 +232,39 @@ fn pattern_matcher_identifies_test_prefix() {
 }
 
 // =============================================================================
-// TOKEN COUNTING TESTS
+// FILE METRICS TESTS (TOKEN COUNTING)
 // =============================================================================
 
 #[test]
-fn count_tokens_empty_file() {
-    let mut file = NamedTempFile::new().unwrap();
-    file.flush().unwrap();
-
-    let count = count_tokens(file.path()).unwrap();
-    assert_eq!(count, 0);
-}
-
-#[test]
-fn count_tokens_short_content() {
+fn file_metrics_tokens_short_content() {
     let mut file = NamedTempFile::new().unwrap();
     write!(file, "abc").unwrap(); // 3 chars < 4
     file.flush().unwrap();
 
-    let count = count_tokens(file.path()).unwrap();
-    assert_eq!(count, 0); // 3 / 4 = 0
+    let metrics = count_file_metrics(file.path()).unwrap();
+    assert_eq!(metrics.tokens, 0); // 3 / 4 = 0
 }
 
 #[test]
-fn count_tokens_exact_math() {
+fn file_metrics_tokens_exact_math() {
     let mut file = NamedTempFile::new().unwrap();
     // Write exactly 100 characters
     write!(file, "{}", "a".repeat(100)).unwrap();
     file.flush().unwrap();
 
-    let count = count_tokens(file.path()).unwrap();
-    assert_eq!(count, 25); // 100 / 4 = 25
+    let metrics = count_file_metrics(file.path()).unwrap();
+    assert_eq!(metrics.tokens, 25); // 100 / 4 = 25
 }
 
 #[test]
-fn count_tokens_unicode() {
+fn file_metrics_tokens_unicode() {
     let mut file = NamedTempFile::new().unwrap();
     // Unicode chars: 4 chars (not 4 bytes)
     write!(file, "日本語の").unwrap(); // 4 Unicode chars
     file.flush().unwrap();
 
-    let count = count_tokens(file.path()).unwrap();
-    assert_eq!(count, 1); // 4 chars / 4 = 1 token
+    let metrics = count_file_metrics(file.path()).unwrap();
+    assert_eq!(metrics.tokens, 1); // 4 chars / 4 = 1 token
 }
 
 // =============================================================================
