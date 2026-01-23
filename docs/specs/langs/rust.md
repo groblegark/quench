@@ -33,18 +33,6 @@ comment = "// SAFETY:"
 advice = "Add a // SAFETY: comment explaining the invariants."
 
 [[check.escapes.patterns]]
-pattern = ".unwrap()"
-action = "forbid"
-in_tests = "allow"
-advice = "Use ? operator or handle the error explicitly."
-
-[[check.escapes.patterns]]
-pattern = ".expect("
-action = "forbid"
-in_tests = "allow"
-advice = "Use ? operator or handle the error explicitly."
-
-[[check.escapes.patterns]]
 pattern = "mem::transmute"
 action = "comment"
 comment = "// SAFETY:"
@@ -157,9 +145,9 @@ make_tests!();  // #[cfg(test)] inside macro not detected
 | Pattern | Action | Comment Required |
 |---------|--------|------------------|
 | `unsafe { }` | comment | `// SAFETY:` |
-| `.unwrap()` | forbid | - |
-| `.expect(` | forbid | - |
 | `mem::transmute` | comment | `// SAFETY:` |
+
+Quench does not forbid usage directly, and assumes you are already running Clippy. Instead it ensures escapes and suppressions are commented.
 
 ## Suppress
 

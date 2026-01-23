@@ -30,6 +30,9 @@ use super::{Adapter, EscapeAction, EscapePattern, FileKind};
 use crate::config::RustPolicyConfig;
 
 /// Default escape patterns for Rust.
+///
+/// Note: Does not include `.unwrap()` or `.expect()` - use Clippy's `unwrap_used`
+/// and `expect_used` lints for that. Quench ensures escapes are commented, not forbidden.
 const RUST_ESCAPE_PATTERNS: &[EscapePattern] = &[
     EscapePattern {
         name: "unsafe",
@@ -37,20 +40,6 @@ const RUST_ESCAPE_PATTERNS: &[EscapePattern] = &[
         action: EscapeAction::Comment,
         comment: Some("// SAFETY:"),
         advice: "Add a // SAFETY: comment explaining the invariants.",
-    },
-    EscapePattern {
-        name: "unwrap",
-        pattern: r"\.unwrap\(\)",
-        action: EscapeAction::Forbid,
-        comment: None,
-        advice: "Use ? operator or handle the error explicitly.",
-    },
-    EscapePattern {
-        name: "expect",
-        pattern: r"\.expect\(",
-        action: EscapeAction::Forbid,
-        comment: None,
-        advice: "Use ? operator or handle the error explicitly.",
     },
     EscapePattern {
         name: "transmute",

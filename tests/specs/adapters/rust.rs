@@ -176,8 +176,8 @@ mod tests {
 /// > `tests/*.rs` → matched by `tests/**` pattern
 #[test]
 fn rust_adapter_external_test_modules_detected_via_file_patterns() {
-    // unwrap-test fixture has tests/test.rs (external test module)
-    let cloc = check("cloc").on("rust/unwrap-test").json().passes();
+    // external-tests fixture has tests/integration.rs (external test module)
+    let cloc = check("cloc").on("rust/external-tests").json().passes();
     let metrics = cloc.require("metrics");
 
     let test_lines = metrics
@@ -237,97 +237,9 @@ fn rust_adapter_unsafe_with_safety_comment_passes() {
     check("escapes").on("rust/unsafe-ok").passes();
 }
 
-/// Spec: docs/specs/langs/rust.md#default-escape-patterns
-///
-/// > .unwrap() | forbid | -
-#[test]
-fn rust_adapter_unwrap_in_source_code_fails() {
-    let escapes = check("escapes").on("rust/unwrap-source").json().fails();
-    let violations = escapes.require("violations").as_array().unwrap();
-
-    assert!(
-        violations
-            .iter()
-            .any(|v| { v.get("pattern").and_then(|p| p.as_str()) == Some("unwrap") }),
-        "should have unwrap violation"
-    );
-}
-
-/// Spec: docs/specs/checks/escape-hatches.md#forbid
-///
-/// > Always allowed in test code.
-#[test]
-fn rust_adapter_unwrap_in_test_code_allowed() {
-    // .unwrap() only appears in test files or #[cfg(test)] blocks
-    check("escapes").on("rust/unwrap-test").passes();
-}
-
-/// Spec: docs/specs/langs/rust.md#escapes-in-test-code
-///
-/// > Inline test blocks: Lines inside #[cfg(test)] blocks in source files
-#[test]
-fn rust_adapter_unwrap_in_cfg_test_block_allowed() {
-    check("escapes").on("rust/unwrap-cfg-test").passes();
-}
-
-/// Spec: docs/specs/langs/rust.md#escapes-in-test-code
-///
-/// > Inline test blocks: Lines inside #[cfg(test)] blocks with nested braces
-#[test]
-fn rust_adapter_unwrap_in_cfg_test_with_nested_braces_allowed() {
-    // This fixture has #[cfg(test)] with vec![] containing struct literals
-    // which creates deeply nested braces - tests the brace counting logic
-    check("escapes").on("rust/unwrap-cfg-test-nested").passes();
-}
-
-/// Spec: docs/specs/langs/rust.md#escapes-in-test-code
-///
-/// > Escape patterns in #[cfg(test)] blocks are tracked as test metrics
-#[test]
-fn rust_adapter_escape_in_cfg_test_tracked_as_test_metric() {
-    let result = check("escapes").on("rust/unwrap-cfg-test").json().passes();
-    let metrics = result.require("metrics");
-
-    let test_unwrap = metrics
-        .get("test")
-        .and_then(|t| t.get("unwrap"))
-        .and_then(|v| v.as_u64());
-    let source_unwrap = metrics
-        .get("source")
-        .and_then(|s| s.get("unwrap"))
-        .and_then(|v| v.as_u64());
-
-    assert!(
-        test_unwrap.unwrap_or(0) > 0,
-        "unwrap in #[cfg(test)] should be tracked as test"
-    );
-    assert_eq!(
-        source_unwrap.unwrap_or(0),
-        0,
-        "should not be tracked as source"
-    );
-}
-
-/// Spec: docs/specs/langs/rust.md#default-escape-patterns
-///
-/// > .expect( | forbid | -
-#[test]
-fn rust_adapter_expect_in_source_code_fails() {
-    let dir = temp_project();
-    std::fs::write(
-        dir.path().join("Cargo.toml"),
-        "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
-    )
-    .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
-    std::fs::write(
-        dir.path().join("src/lib.rs"),
-        "pub fn f() { Some(1).expect(\"should have value\"); }",
-    )
-    .unwrap();
-
-    check("escapes").pwd(dir.path()).fails();
-}
+// Note: .unwrap() and .expect() are not checked by quench.
+// Use Clippy's unwrap_used and expect_used lints for that.
+// Quench ensures escapes and suppressions are commented.
 
 /// Spec: docs/specs/langs/rust.md#default-escape-patterns
 ///

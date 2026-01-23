@@ -124,11 +124,11 @@ pub fn multiply(a: i32, b: i32) -> i32 {
     }
 }
 
+// Note: .unwrap() and .expect() are not checked by quench.
+// Use Clippy's unwrap_used and expect_used lints for that.
 #[parameterized(
     unsafe_requires_comment = { "unsafe", EscapeAction::Comment, Some("// SAFETY:") },
     transmute_requires_comment = { "transmute", EscapeAction::Comment, Some("// SAFETY:") },
-    unwrap_forbidden = { "unwrap", EscapeAction::Forbid, None },
-    expect_forbidden = { "expect", EscapeAction::Forbid, None },
 )]
 fn default_escape_pattern(
     name: &str,
@@ -151,9 +151,9 @@ fn default_escape_pattern(
 }
 
 #[test]
-fn returns_four_default_patterns() {
+fn returns_two_default_patterns() {
     let adapter = RustAdapter::new();
-    assert_eq!(adapter.default_escapes().len(), 4);
+    assert_eq!(adapter.default_escapes().len(), 2);
 }
 
 #[test]

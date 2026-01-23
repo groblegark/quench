@@ -1,13 +1,14 @@
 # Escape Hatches Specification
 
-The `escapes` check detects patterns that bypass type safety or error handling.
+The `escapes` check ensures escape hatches are documented.
 
 ## Purpose
 
-Track and control "escape hatches" - code patterns that:
-- Bypass compile-time safety (`unsafe`, type casts)
-- Skip error handling (`.unwrap()`, `.expect()`)
-- Silence warnings (`#[allow(...)]`)
+Ensure "escape hatches" have justification comments:
+- Bypassing compile-time safety (`unsafe`, type casts)
+- Silencing warnings (`#[allow(...)]`)
+
+Quench does not forbid usage directly, and assumes you are already running language-specific linters (Clippy, ShellCheck). Instead it ensures escapes and suppressions are commented.
 
 ## Actions
 
@@ -40,13 +41,12 @@ Use for: Patterns that should not appear in production code.
 
 ### Rust
 
-| Pattern | Default Mode | Comment Required | Threshold |
-|---------|--------------|------------------|-----------|
-| `unsafe { }` | comment | `// SAFETY:` | 0 |
-| `.unwrap()` | forbid | - | 0 |
-| `.expect(` | forbid | - | 0 |
-| `mem::transmute` | comment | `// SAFETY:` | 0 |
-| `#[allow(` | comment | `// JUSTIFIED:` | 0 |
+| Pattern | Default Mode | Comment Required |
+|---------|--------------|------------------|
+| `unsafe { }` | comment | `// SAFETY:` |
+| `mem::transmute` | comment | `// SAFETY:` |
+
+Lint suppressions (`#[allow(...)]`, `#[expect(...)]`) are configured separately via `[rust.suppress]`. See [langs/rust.md](../langs/rust.md#suppress).
 
 ### Shell
 
