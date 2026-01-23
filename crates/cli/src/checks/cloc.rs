@@ -53,11 +53,12 @@ impl Check for ClocCheck {
                 continue;
             }
 
-            match count_nonblank_lines(&file.path) {
-                Ok(line_count) => {
+            match count_file_metrics(&file.path) {
+                Ok(metrics) => {
+                    let line_count = metrics.nonblank_lines;
+                    let token_count = metrics.tokens;
                     let is_test = matcher.is_test_file(&file.path, ctx.root);
                     let is_excluded = matcher.is_excluded(&file.path, ctx.root);
-                    let token_count = count_tokens(&file.path).unwrap_or(0);
 
                     // Accumulate global metrics
                     if is_test {
@@ -308,26 +309,28 @@ fn is_text_file(path: &Path) -> bool {
     )
 }
 
-/// Count non-blank lines in a file.
+/// Metrics computed from a single file read.
+struct FileMetrics {
+    nonblank_lines: usize,
+    tokens: usize,
+}
+
+/// Count non-blank lines and tokens from a single file read.
 /// A line is counted if it contains at least one non-whitespace character.
-fn count_nonblank_lines(path: &Path) -> std::io::Result<usize> {
+/// Tokens use chars/4 approximation (standard LLM heuristic).
+fn count_file_metrics(path: &Path) -> std::io::Result<FileMetrics> {
     let content = std::fs::read(path)?;
     // Try UTF-8, fall back to lossy conversion for encoding issues
     let text = String::from_utf8(content)
         .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
 
-    Ok(text.lines().filter(|l| !l.trim().is_empty()).count())
-}
+    let nonblank_lines = text.lines().filter(|l| !l.trim().is_empty()).count();
+    let tokens = text.chars().count() / 4;
 
-/// Count tokens in a file using chars/4 approximation.
-/// This matches typical LLM tokenization behavior.
-fn count_tokens(path: &Path) -> std::io::Result<usize> {
-    let content = std::fs::read(path)?;
-    let text = String::from_utf8(content)
-        .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
-
-    // chars / 4 approximation (standard LLM heuristic)
-    Ok(text.chars().count() / 4)
+    Ok(FileMetrics {
+        nonblank_lines,
+        tokens,
+    })
 }
 
 #[cfg(test)]
