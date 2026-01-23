@@ -1,6 +1,6 @@
 # Checkpoint 5B: Shell Adapter Complete - Validation
 
-**Root Feature:** `quench-a8e2`
+**Root Feature:** `quench-ab40`
 
 ## Overview
 

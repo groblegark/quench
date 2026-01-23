@@ -1,6 +1,6 @@
 # Checkpoint 5H: Tech Debt - Shell Adapter
 
-**Root Feature:** `quench-68fa`
+**Root Feature:** `quench-dc99`
 
 ## Overview
 
