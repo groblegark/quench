@@ -11,6 +11,7 @@
 
 pub mod config;
 mod detection;
+mod sections;
 mod sync;
 
 use serde_json::json;
@@ -20,6 +21,7 @@ use crate::config::CheckLevel;
 
 pub use config::AgentsConfig;
 use detection::{DetectedFile, Scope, detect_agent_files, file_exists_at_root};
+use sections::validate_sections;
 use sync::{DiffType, compare_files};
 
 /// The agents check validates AI agent context files.
@@ -62,6 +64,9 @@ impl Check for AgentsCheck {
         } else {
             true
         };
+
+        // Check sections in each detected file
+        check_sections(ctx, config, &detected, &mut violations);
 
         // Build metrics
         let files_found: Vec<String> = detected
@@ -270,6 +275,61 @@ fn check_sync(
     }
 
     all_in_sync
+}
+
+/// Check section requirements in agent files.
+fn check_sections(
+    _ctx: &CheckContext,
+    config: &AgentsConfig,
+    detected: &[DetectedFile],
+    violations: &mut Vec<Violation>,
+) {
+    // Skip if no section requirements configured
+    if config.sections.required.is_empty() && config.sections.forbid.is_empty() {
+        return;
+    }
+
+    // Only check files at root scope for now
+    let root_files: Vec<_> = detected.iter().filter(|f| f.scope == Scope::Root).collect();
+
+    for file in root_files {
+        let Ok(content) = std::fs::read_to_string(&file.path) else {
+            continue;
+        };
+
+        let validation = validate_sections(&content, &config.sections);
+        let filename = file
+            .path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+
+        // Generate violations for missing required sections
+        for missing in validation.missing {
+            let advice = if let Some(ref section_advice) = missing.advice {
+                format!("Add a \"## {}\" section: {}", missing.name, section_advice)
+            } else {
+                format!("Add a \"## {}\" section", missing.name)
+            };
+
+            violations.push(Violation::file_only(&filename, "missing_section", advice));
+        }
+
+        // Generate violations for forbidden sections
+        for forbidden in validation.forbidden {
+            let advice = format!(
+                "Remove or rename the \"{}\" section (matches forbidden pattern \"{}\")",
+                forbidden.heading, forbidden.matched_pattern
+            );
+
+            violations.push(Violation::file(
+                &filename,
+                forbidden.line,
+                "forbidden_section",
+                advice,
+            ));
+        }
+    }
 }
 
 #[cfg(test)]

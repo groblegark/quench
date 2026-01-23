@@ -4,6 +4,7 @@
 //! Configuration for the agents check.
 
 use serde::Deserialize;
+use serde::de::Deserializer;
 
 use crate::config::CheckLevel;
 
@@ -38,6 +39,10 @@ pub struct AgentsConfig {
     #[serde(default)]
     pub sync_source: Option<String>,
 
+    /// Section validation configuration.
+    #[serde(default)]
+    pub sections: SectionsConfig,
+
     /// Root scope settings (overrides flat config).
     #[serde(default)]
     pub root: Option<AgentsScopeConfig>,
@@ -61,6 +66,7 @@ impl Default for AgentsConfig {
             forbid: Vec::new(),
             sync: false,
             sync_source: None,
+            sections: SectionsConfig::default(),
             root: None,
             package: None,
             module: None,
@@ -104,6 +110,49 @@ pub struct AgentsScopeConfig {
     /// Maximum tokens per file at this scope.
     #[serde(default)]
     pub max_tokens: Option<usize>,
+}
+
+/// Section validation configuration.
+#[derive(Debug, Default, Clone, Deserialize)]
+pub struct SectionsConfig {
+    /// Required sections (simple form: names only, or extended form with advice).
+    #[serde(default)]
+    pub required: Vec<RequiredSection>,
+
+    /// Forbidden sections (supports globs like "Test*").
+    #[serde(default)]
+    pub forbid: Vec<String>,
+}
+
+/// A required section with optional advice.
+#[derive(Debug, Clone)]
+pub struct RequiredSection {
+    /// Section name (case-insensitive matching).
+    pub name: String,
+    /// Advice shown when section is missing.
+    pub advice: Option<String>,
+}
+
+impl<'de> Deserialize<'de> for RequiredSection {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum RequiredSectionRepr {
+            Simple(String),
+            Extended {
+                name: String,
+                advice: Option<String>,
+            },
+        }
+
+        match RequiredSectionRepr::deserialize(deserializer)? {
+            RequiredSectionRepr::Simple(name) => Ok(RequiredSection { name, advice: None }),
+            RequiredSectionRepr::Extended { name, advice } => Ok(RequiredSection { name, advice }),
+        }
+    }
 }
 
 #[cfg(test)]
