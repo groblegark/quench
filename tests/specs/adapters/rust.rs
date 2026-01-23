@@ -426,6 +426,40 @@ forbid = ["unsafe_code"]
     check("escapes").pwd(dir.path()).fails();
 }
 
+/// Spec: docs/specs/langs/rust.md#suppress
+///
+/// > Source scope override should apply even when base level is "allow"
+/// > Regression test for: source.check override ignored in early return
+#[test]
+fn rust_adapter_source_check_override_applied_when_base_is_allow() {
+    let dir = temp_project();
+    std::fs::write(
+        dir.path().join("quench.toml"),
+        r#"
+version = 1
+[rust.suppress]
+check = "allow"
+[rust.suppress.source]
+check = "comment"
+"#,
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+    )
+    .unwrap();
+    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::write(
+        dir.path().join("src/lib.rs"),
+        "#[allow(dead_code)]\nfn unused() {}", // No comment - should fail with source.check = "comment"
+    )
+    .unwrap();
+
+    // Should fail because source files require comments, even though base is "allow"
+    check("escapes").pwd(dir.path()).fails();
+}
+
 /// Spec: docs/specs/langs/rust.md#supported-patterns
 ///
 /// > Multi-line #[allow(...)] attributes should be detected

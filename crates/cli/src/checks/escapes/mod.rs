@@ -576,7 +576,7 @@ fn check_suppress_violations(
     let effective_check = if is_test_file {
         config.test.check.unwrap_or(SuppressLevel::Allow)
     } else {
-        config.check
+        config.source.check.unwrap_or(config.check)
     };
 
     // If allow, no checking needed
