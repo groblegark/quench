@@ -1,5 +1,7 @@
 # Module-Level Suppression Support
 
+**Root Feature:** `quench-0125`
+
 ## Overview
 
 Add support for Rust module-level lint suppressions using `#![allow(...)]` and `#![expect(...)]` inner attribute syntax. Currently, quench only recognizes outer attributes (`#[allow(...)]`) on items, but Rust also allows inner attributes that apply to the enclosing module or crate.
