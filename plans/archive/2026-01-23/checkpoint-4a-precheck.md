@@ -1,5 +1,7 @@
 # Checkpoint 4A: Pre-Checkpoint Fix - Rust Adapter Complete
 
+**Root Feature:** `quench-1ec0`
+
 ## Overview
 
 This checkpoint verifies that the Rust language adapter is fully implemented and passing all behavioral specifications. The Rust adapter (Phases 301-325) provides auto-detection via `Cargo.toml`, default patterns for Rust source files, inline test detection via `#[cfg(test)]` blocks, Rust-specific escape patterns, and lint config policy enforcement.

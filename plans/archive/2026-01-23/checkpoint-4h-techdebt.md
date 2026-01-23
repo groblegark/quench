@@ -1,6 +1,6 @@
 # Checkpoint 4H: Tech Debt - Rust Adapter
 
-**Root Feature:** `quench-4h8d`
+**Root Feature:** `quench-8f88`
 
 ## Overview
 

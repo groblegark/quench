@@ -1,6 +1,6 @@
 # Checkpoint 4F: Quick Wins - Rust Adapter
 
-**Root Feature:** `quench-4f7e`
+**Root Feature:** `quench-4ca2`
 
 ## Overview
 

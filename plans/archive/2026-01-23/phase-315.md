@@ -1,6 +1,6 @@
 # Phase 315: Rust Adapter - Escapes
 
-**Root Feature:** `quench-a0ea`
+**Root Feature:** `quench-686f`
 
 ## Overview
 

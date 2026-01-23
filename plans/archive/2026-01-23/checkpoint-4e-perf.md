@@ -1,6 +1,6 @@
 # Checkpoint 4E: Performance - Rust Adapter
 
-**Root Feature:** `quench-4e5f`
+**Root Feature:** `quench-02ff`
 
 ## Overview
 

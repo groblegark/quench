@@ -1,6 +1,6 @@
 # Phase 320: Rust Adapter - Suppress
 
-**Root Feature:** `quench-a0ea`
+**Root Feature:** `quench-2705`
 
 ## Overview
 

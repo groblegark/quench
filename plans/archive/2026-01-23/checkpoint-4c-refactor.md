@@ -1,6 +1,6 @@
 # Checkpoint 4C: Post-Checkpoint Refactor - Rust Adapter
 
-**Root Feature:** `quench-4d66`
+**Root Feature:** `quench-046c`
 
 ## Overview
 

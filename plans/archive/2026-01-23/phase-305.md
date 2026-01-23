@@ -1,6 +1,6 @@
 # Phase 305: Rust Adapter - Detection
 
-**Root Feature:** `quench-a0ea`
+**Root Feature:** `quench-044e`
 
 ## Overview
 
