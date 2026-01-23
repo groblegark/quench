@@ -1,6 +1,6 @@
 # Phase 201: Generic Language Adapter
 
-**Root Feature:** `quench-lang-adapters`
+**Root Feature:** `quench-920b`
 
 ## Overview
 
