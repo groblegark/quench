@@ -76,7 +76,7 @@ add_bash_header() {
     local content
     content=$(tail -n +$start_line "$file" | sed '/^# SPDX-License-Identifier/d; /^# Copyright/d' | sed '1{/^$/d;}')
 
-    # Reconstruct file
+    # Reconstruct file (preserve permissions)
     {
         if [[ -n "$shebang" ]]; then
             echo "$shebang"
@@ -84,6 +84,7 @@ add_bash_header() {
         echo "$BASH_HEADER"
         echo "$content"
     } > "$file.tmp"
+    chmod --reference="$file" "$file.tmp" 2>/dev/null || chmod "$(stat -f %Lp "$file")" "$file.tmp"
     mv "$file.tmp" "$file"
     echo "Updated header: $file"
 }
