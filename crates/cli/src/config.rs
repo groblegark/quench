@@ -65,12 +65,17 @@ pub struct RustConfig {
     /// Split #[cfg(test)] blocks from source LOC (default: true).
     #[serde(default = "RustConfig::default_split_cfg_test")]
     pub split_cfg_test: bool,
+
+    /// Lint suppression settings.
+    #[serde(default)]
+    pub suppress: SuppressConfig,
 }
 
 impl Default for RustConfig {
     fn default() -> Self {
         Self {
             split_cfg_test: Self::default_split_cfg_test(),
+            suppress: SuppressConfig::default(),
         }
     }
 }
@@ -79,6 +84,83 @@ impl RustConfig {
     fn default_split_cfg_test() -> bool {
         true
     }
+}
+
+/// Lint suppression configuration for #[allow(...)] and #[expect(...)].
+#[derive(Debug, Clone, Deserialize)]
+pub struct SuppressConfig {
+    /// Check level: forbid, comment, or allow (default: "comment").
+    #[serde(default = "SuppressConfig::default_check")]
+    pub check: SuppressLevel,
+
+    /// Optional comment pattern required (default: any comment).
+    /// Example: "// JUSTIFIED:" or "// REASON:"
+    #[serde(default)]
+    pub comment: Option<String>,
+
+    /// Source-specific settings.
+    #[serde(default)]
+    pub source: SuppressScopeConfig,
+
+    /// Test-specific settings (overrides base settings for test code).
+    #[serde(default)]
+    pub test: SuppressScopeConfig,
+}
+
+impl Default for SuppressConfig {
+    fn default() -> Self {
+        Self {
+            check: Self::default_check(),
+            comment: None,
+            source: SuppressScopeConfig::default(),
+            test: SuppressScopeConfig::default_for_test(),
+        }
+    }
+}
+
+impl SuppressConfig {
+    fn default_check() -> SuppressLevel {
+        SuppressLevel::Comment
+    }
+}
+
+/// Scope-specific suppress configuration.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct SuppressScopeConfig {
+    /// Override check level for this scope.
+    #[serde(default)]
+    pub check: Option<SuppressLevel>,
+
+    /// Lint codes that don't require comments (per-code allow list).
+    #[serde(default)]
+    pub allow: Vec<String>,
+
+    /// Lint codes that are never allowed to be suppressed (per-code forbid list).
+    #[serde(default)]
+    pub forbid: Vec<String>,
+}
+
+impl SuppressScopeConfig {
+    fn default_for_test() -> Self {
+        Self {
+            check: Some(SuppressLevel::Allow),
+            allow: Vec::new(),
+            forbid: Vec::new(),
+        }
+    }
+}
+
+/// Suppress check level.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SuppressLevel {
+    /// Never allowed - any suppression fails.
+    Forbid,
+    /// Requires justification comment (default).
+    #[default]
+    Comment,
+    /// Always allowed - no check.
+    Allow,
 }
 
 /// Workspace configuration for monorepos.
@@ -602,7 +684,83 @@ fn parse_rust_config(value: Option<&toml::Value>) -> RustConfig {
         .and_then(|v| v.as_bool())
         .unwrap_or_else(RustConfig::default_split_cfg_test);
 
-    RustConfig { split_cfg_test }
+    let suppress = parse_suppress_config(t.get("suppress"));
+
+    RustConfig {
+        split_cfg_test,
+        suppress,
+    }
+}
+
+/// Parse suppress configuration from TOML value.
+fn parse_suppress_config(value: Option<&toml::Value>) -> SuppressConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return SuppressConfig::default();
+    };
+
+    let check = match t.get("check").and_then(|v| v.as_str()) {
+        Some("forbid") => SuppressLevel::Forbid,
+        Some("comment") => SuppressLevel::Comment,
+        Some("allow") => SuppressLevel::Allow,
+        _ => SuppressConfig::default_check(),
+    };
+
+    let comment = t.get("comment").and_then(|v| v.as_str()).map(String::from);
+
+    let source = parse_suppress_scope_config(t.get("source"), false);
+    let test = parse_suppress_scope_config(t.get("test"), true);
+
+    SuppressConfig {
+        check,
+        comment,
+        source,
+        test,
+    }
+}
+
+/// Parse scope-specific suppress configuration.
+fn parse_suppress_scope_config(value: Option<&toml::Value>, is_test: bool) -> SuppressScopeConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return if is_test {
+            SuppressScopeConfig::default_for_test()
+        } else {
+            SuppressScopeConfig::default()
+        };
+    };
+
+    let check = match t.get("check").and_then(|v| v.as_str()) {
+        Some("forbid") => Some(SuppressLevel::Forbid),
+        Some("comment") => Some(SuppressLevel::Comment),
+        Some("allow") => Some(SuppressLevel::Allow),
+        _ if is_test => Some(SuppressLevel::Allow),
+        _ => None,
+    };
+
+    let allow = t
+        .get("allow")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let forbid = t
+        .get("forbid")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    SuppressScopeConfig {
+        check,
+        allow,
+        forbid,
+    }
 }
 
 /// Parse escapes configuration from TOML value.

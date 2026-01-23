@@ -1,0 +1,3 @@
+version = 1
+[rust.suppress.source]
+forbid = ["unsafe_code"]

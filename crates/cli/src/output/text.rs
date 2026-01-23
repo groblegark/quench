@@ -113,11 +113,18 @@ impl TextFormatter {
 
     fn format_violation_desc(&self, v: &Violation) -> String {
         // Format based on violation type and available fields
-        match (v.value, v.threshold) {
+        let base = match (v.value, v.threshold) {
             (Some(val), Some(thresh)) => {
                 format!("{} ({} vs {})", v.violation_type, val, thresh)
             }
             _ => v.violation_type.clone(),
+        };
+
+        // Append pattern if present (for escape/suppress violations)
+        if let Some(ref pattern) = v.pattern {
+            format!("{}: {}", base, pattern)
+        } else {
+            base
         }
     }
 

@@ -10,7 +10,7 @@ pub mod generic;
 pub mod rust;
 
 pub use generic::GenericAdapter;
-pub use rust::RustAdapter;
+pub use rust::{CfgTestInfo, RustAdapter, parse_suppress_attrs};
 
 /// File classification result.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
