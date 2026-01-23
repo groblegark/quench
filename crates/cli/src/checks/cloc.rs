@@ -359,7 +359,7 @@ fn is_text_file(path: &Path) -> bool {
         // .NET
         | "cs"
         // Shell scripts
-        | "sh" | "bash" | "zsh" | "fish" | "ps1" | "bat" | "cmd"
+        | "sh" | "bash" | "zsh" | "fish" | "bats" | "ps1" | "bat" | "cmd"
         // Web (code only)
         | "vue" | "svelte"
         // SQL

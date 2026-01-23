@@ -183,6 +183,9 @@ fn run_check(cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
                 }
             }
         }
+        ProjectLanguage::Shell => {
+            // No special ignore patterns for Shell projects
+        }
         ProjectLanguage::Generic => {}
     }
 

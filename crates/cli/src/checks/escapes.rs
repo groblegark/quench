@@ -586,6 +586,9 @@ fn get_adapter_escape_patterns(root: &Path) -> Vec<ConfigEscapePattern> {
             let rust_adapter = RustAdapter::new();
             patterns.extend(convert_adapter_patterns(rust_adapter.default_escapes()));
         }
+        ProjectLanguage::Shell => {
+            // Shell escape patterns will be added in Phase 406
+        }
         ProjectLanguage::Generic => {
             // No default patterns for generic projects
         }
