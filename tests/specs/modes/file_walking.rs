@@ -22,15 +22,13 @@ use crate::prelude::*;
 #[test]
 fn file_walking_respects_gitignore() {
     // Files in target/ should not appear in scan results
-    // src/lib.rs should be scanned
-    // target/debug.rs should be ignored
-    quench_cmd()
-        .args(["check", "--debug-files"]) // hypothetical flag to list scanned files
-        .current_dir(fixture("gitignore-test"))
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("src/lib.rs"))
-        .stdout(predicates::str::contains("target/").not());
+    // src/lib.rs should be scanned, target/debug.rs should be ignored
+    cli()
+        .on("gitignore-test")
+        .args(&["--debug-files"])
+        .passes()
+        .stdout_has("src/lib.rs")
+        .stdout_lacks("target/");
 }
 
 /// Spec: docs/specs/20-performance.md#parallel-gitignore-aware-file-walking
@@ -39,12 +37,11 @@ fn file_walking_respects_gitignore() {
 #[test]
 fn file_walking_ignores_gitignore_glob_patterns() {
     // Files matching *.generated.rs should be ignored
-    quench_cmd()
-        .args(["check", "--debug-files"])
-        .current_dir(fixture("gitignore-test"))
-        .assert()
-        .success()
-        .stdout(predicates::str::contains(".generated.rs").not());
+    cli()
+        .on("gitignore-test")
+        .args(&["--debug-files"])
+        .passes()
+        .stdout_lacks(".generated.rs");
 }
 
 /// Spec: docs/specs/20-performance.md#parallel-gitignore-aware-file-walking
@@ -53,13 +50,11 @@ fn file_walking_ignores_gitignore_glob_patterns() {
 #[test]
 fn file_walking_respects_nested_gitignore() {
     // Nested .gitignore files should also be respected
-    // This tests that the walker properly inherits gitignore rules
-    quench_cmd()
-        .args(["check", "--debug-files"])
-        .current_dir(fixture("gitignore-test"))
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("vendor/").not());
+    cli()
+        .on("gitignore-test")
+        .args(&["--debug-files"])
+        .passes()
+        .stdout_lacks("vendor/");
 }
 
 // =============================================================================
@@ -72,13 +67,12 @@ fn file_walking_respects_nested_gitignore() {
 #[test]
 fn file_walking_respects_custom_ignore_patterns() {
     // Files matching patterns in [project.ignore] should be ignored
-    quench_cmd()
-        .args(["check", "--debug-files"])
-        .current_dir(fixture("custom-ignore"))
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("src/lib.rs"))
-        .stdout(predicates::str::contains(".snapshot").not());
+    cli()
+        .on("custom-ignore")
+        .args(&["--debug-files"])
+        .passes()
+        .stdout_has("src/lib.rs")
+        .stdout_lacks(".snapshot");
 }
 
 /// Spec: docs/specs/20-performance.md (custom ignore patterns)
@@ -87,12 +81,11 @@ fn file_walking_respects_custom_ignore_patterns() {
 #[test]
 fn file_walking_respects_custom_directory_patterns() {
     // testdata/ directory should be completely ignored
-    quench_cmd()
-        .args(["check", "--debug-files"])
-        .current_dir(fixture("custom-ignore"))
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("testdata/").not());
+    cli()
+        .on("custom-ignore")
+        .args(&["--debug-files"])
+        .passes()
+        .stdout_lacks("testdata/");
 }
 
 /// Spec: docs/specs/20-performance.md (custom ignore patterns)
@@ -101,12 +94,11 @@ fn file_walking_respects_custom_directory_patterns() {
 #[test]
 fn file_walking_respects_double_star_patterns() {
     // **/fixtures/** should match fixtures at any depth
-    quench_cmd()
-        .args(["check", "--debug-files"])
-        .current_dir(fixture("custom-ignore"))
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("fixtures/").not());
+    cli()
+        .on("custom-ignore")
+        .args(&["--debug-files"])
+        .passes()
+        .stdout_lacks("fixtures/");
 }
 
 // =============================================================================
@@ -120,11 +112,7 @@ fn file_walking_respects_double_star_patterns() {
 fn file_walking_detects_symlink_loops() {
     // A symlink pointing to itself or parent should not cause infinite recursion
     // The test should complete without hanging (timeout enforced by test runner)
-    quench_cmd()
-        .args(["check"])
-        .current_dir(fixture("symlink-loop"))
-        .assert()
-        .success(); // Should complete, not hang
+    cli().on("symlink-loop").passes();
 }
 
 /// Spec: docs/specs/20-performance.md#deep-directory-trees
@@ -133,12 +121,11 @@ fn file_walking_detects_symlink_loops() {
 #[test]
 fn file_walking_reports_symlink_loops_in_verbose_mode() {
     // With --verbose, symlink loops should be mentioned
-    quench_cmd()
-        .args(["check", "--verbose"])
-        .current_dir(fixture("symlink-loop"))
-        .assert()
-        .success()
-        .stderr(predicates::str::contains("symlink").or(predicates::str::contains("loop")));
+    cli()
+        .on("symlink-loop")
+        .args(&["--verbose"])
+        .passes()
+        .stderr_has(predicates::str::contains("symlink").or(predicates::str::contains("loop")));
 }
 
 /// Spec: docs/specs/20-performance.md#deep-directory-trees
@@ -147,12 +134,11 @@ fn file_walking_reports_symlink_loops_in_verbose_mode() {
 #[test]
 fn file_walking_scans_normal_files_despite_symlink_loops() {
     // src/lib.rs should still be scanned even though a loop exists
-    quench_cmd()
-        .args(["check", "--debug-files"])
-        .current_dir(fixture("symlink-loop"))
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("src/lib.rs"));
+    cli()
+        .on("symlink-loop")
+        .args(&["--debug-files"])
+        .passes()
+        .stdout_has("src/lib.rs");
 }
 
 // =============================================================================
@@ -167,13 +153,12 @@ fn file_walking_scans_normal_files_despite_symlink_loops() {
 fn file_walking_respects_default_depth_limit() {
     // Files beyond depth 100 should not be scanned
     // bench-deep has files at level 50 (within limit) and 120 (beyond)
-    quench_cmd()
-        .args(["check", "--debug-files"])
-        .current_dir(fixture("bench-deep"))
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("mid.rs")) // level 50, within limit
-        .stdout(predicates::str::contains("deep.rs").not()); // level 120, beyond limit
+    cli()
+        .on("bench-deep")
+        .args(&["--debug-files"])
+        .passes()
+        .stdout_has("mid.rs") // level 50, within limit
+        .stdout_lacks("deep.rs"); // level 120, beyond limit
 }
 
 /// Spec: docs/specs/20-performance.md#deep-directory-trees
@@ -183,13 +168,11 @@ fn file_walking_respects_default_depth_limit() {
 #[ignore = "TODO: Create bench-deep fixture"]
 fn file_walking_respects_custom_depth_limit() {
     // With a lower depth limit, fewer files should be scanned
-    // This tests the --max-depth flag or config option
-    quench_cmd()
-        .args(["check", "--debug-files", "--max-depth", "25"])
-        .current_dir(fixture("bench-deep"))
-        .assert()
-        .success()
-        .stdout(predicates::str::contains("mid.rs").not()); // level 50, now beyond limit
+    cli()
+        .on("bench-deep")
+        .args(&["--debug-files", "--max-depth", "25"])
+        .passes()
+        .stdout_lacks("mid.rs"); // level 50, now beyond limit
 }
 
 /// Spec: docs/specs/20-performance.md#deep-directory-trees
@@ -199,12 +182,11 @@ fn file_walking_respects_custom_depth_limit() {
 #[ignore = "TODO: Create bench-deep fixture"]
 fn file_walking_warns_on_depth_limit_in_verbose() {
     // When files are skipped due to depth, verbose mode should mention it
-    quench_cmd()
-        .args(["check", "--verbose"])
-        .current_dir(fixture("bench-deep"))
-        .assert()
-        .success()
-        .stderr(predicates::str::contains("depth").or(predicates::str::contains("limit")));
+    cli()
+        .on("bench-deep")
+        .args(&["--verbose"])
+        .passes()
+        .stderr_has(predicates::str::contains("depth").or(predicates::str::contains("limit")));
 }
 
 // =============================================================================
@@ -217,11 +199,7 @@ fn file_walking_warns_on_depth_limit_in_verbose() {
 #[test]
 fn file_walking_handles_empty_directory() {
     // Empty directories should not cause errors
-    quench_cmd()
-        .args(["check"])
-        .current_dir(fixture("minimal"))
-        .assert()
-        .success();
+    cli().on("minimal").passes();
 }
 
 /// Spec: docs/specs/20-performance.md#parallel-gitignore-aware-file-walking
@@ -232,9 +210,5 @@ fn file_walking_handles_empty_directory() {
 fn file_walking_uses_iterative_traversal() {
     // This is tested implicitly by bench-deep - recursive traversal
     // would cause stack overflow at 120 levels on most systems
-    quench_cmd()
-        .args(["check"])
-        .current_dir(fixture("bench-deep"))
-        .assert()
-        .success(); // Should complete without stack overflow
+    cli().on("bench-deep").passes();
 }

@@ -23,17 +23,9 @@ use yare::parameterized;
 /// > Built-in checks: cloc, escapes, agents, docs, tests, git, build, license
 #[test]
 fn check_names_are_exactly_8_known_checks() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-
-    let output = quench_cmd()
-        .args(["check", "-o", "json"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
-
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    let checks = json.get("checks").and_then(|v| v.as_array()).unwrap();
+    let dir = temp_project();
+    let result = cli().pwd(dir.path()).json().passes();
+    let checks = result.checks();
 
     let names: Vec<&str> = checks
         .iter()
@@ -59,6 +51,7 @@ fn check_names_are_exactly_8_known_checks() {
 /// > Check toggles appear in help: --[no-]cloc, --[no-]escapes, etc.
 #[test]
 fn check_toggles_shown_in_help() {
+    // Uses quench_cmd() directly since this tests --help, not check execution
     quench_cmd()
         .args(["check", "--help"])
         .assert()
@@ -92,8 +85,12 @@ fn check_toggles_shown_in_help() {
 )]
 fn enable_flag_runs_only_that_check(check_name: &str) {
     let dir = temp_project();
-    let json = check_json_with_args(dir.path(), &[&format!("--{}", check_name)]);
-    let names = check_names(&json);
+    let result = cli()
+        .pwd(dir.path())
+        .args(&[&format!("--{}", check_name)])
+        .json()
+        .passes();
+    let names = check_names(result.value());
 
     assert_eq!(names.len(), 1, "only one check should run");
     assert_eq!(names[0], check_name);
@@ -118,8 +115,12 @@ fn enable_flag_runs_only_that_check(check_name: &str) {
 )]
 fn disable_flag_skips_that_check(check_name: &str) {
     let dir = temp_project();
-    let json = check_json_with_args(dir.path(), &[&format!("--no-{}", check_name)]);
-    let names = check_names(&json);
+    let result = cli()
+        .pwd(dir.path())
+        .args(&[&format!("--no-{}", check_name)])
+        .json()
+        .passes();
+    let names = check_names(result.value());
 
     assert!(
         !names.contains(&check_name),
@@ -143,22 +144,13 @@ fn disable_flag_skips_that_check(check_name: &str) {
 /// > Multiple enable flags combine: --cloc --escapes runs both checks
 #[test]
 fn multiple_enable_flags_run_multiple_checks() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-
-    let output = quench_cmd()
-        .args(["check", "--cloc", "--escapes", "-o", "json"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
-
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    let checks = json.get("checks").and_then(|v| v.as_array()).unwrap();
-
-    let names: Vec<&str> = checks
-        .iter()
-        .filter_map(|c| c.get("name").and_then(|n| n.as_str()))
-        .collect();
+    let dir = temp_project();
+    let result = cli()
+        .pwd(dir.path())
+        .args(&["--cloc", "--escapes"])
+        .json()
+        .passes();
+    let names = check_names(result.value());
 
     assert_eq!(names.len(), 2, "two checks should run");
     assert!(names.contains(&"cloc"), "cloc should be present");
@@ -170,22 +162,13 @@ fn multiple_enable_flags_run_multiple_checks() {
 /// > Multiple disable flags combine: --no-docs --no-tests skips both
 #[test]
 fn multiple_disable_flags_skip_multiple_checks() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-
-    let output = quench_cmd()
-        .args(["check", "--no-docs", "--no-tests", "-o", "json"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
-
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    let checks = json.get("checks").and_then(|v| v.as_array()).unwrap();
-
-    let names: Vec<&str> = checks
-        .iter()
-        .filter_map(|c| c.get("name").and_then(|n| n.as_str()))
-        .collect();
+    let dir = temp_project();
+    let result = cli()
+        .pwd(dir.path())
+        .args(&["--no-docs", "--no-tests"])
+        .json()
+        .passes();
+    let names = check_names(result.value());
 
     assert!(!names.contains(&"docs"), "docs should not be present");
     assert!(!names.contains(&"tests"), "tests should not be present");
@@ -197,22 +180,13 @@ fn multiple_disable_flags_skip_multiple_checks() {
 /// > quench check --no-cloc --no-escapes: Skip multiple checks
 #[test]
 fn no_cloc_no_escapes_skips_both() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-
-    let output = quench_cmd()
-        .args(["check", "--no-cloc", "--no-escapes", "-o", "json"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
-
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    let checks = json.get("checks").and_then(|v| v.as_array()).unwrap();
-
-    let names: Vec<&str> = checks
-        .iter()
-        .filter_map(|c| c.get("name").and_then(|n| n.as_str()))
-        .collect();
+    let dir = temp_project();
+    let result = cli()
+        .pwd(dir.path())
+        .args(&["--no-cloc", "--no-escapes"])
+        .json()
+        .passes();
+    let names = check_names(result.value());
 
     assert!(!names.contains(&"cloc"), "cloc should not be present");
     assert!(!names.contains(&"escapes"), "escapes should not be present");
@@ -223,12 +197,10 @@ fn no_cloc_no_escapes_skips_both() {
 /// > All checks can be disabled except one
 #[test]
 fn all_checks_disabled_except_one() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-
-    let output = quench_cmd()
-        .args([
-            "check",
+    let dir = temp_project();
+    let result = cli()
+        .pwd(dir.path())
+        .args(&[
             "--no-cloc",
             "--no-escapes",
             "--no-agents",
@@ -237,19 +209,13 @@ fn all_checks_disabled_except_one() {
             "--no-git",
             "--no-build",
             // license is the only one NOT disabled
-            "-o",
-            "json",
         ])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
+        .json()
+        .passes();
 
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    let checks = json.get("checks").and_then(|v| v.as_array()).unwrap();
-
-    assert_eq!(checks.len(), 1, "only one check should run");
+    assert_eq!(result.checks().len(), 1, "only one check should run");
     assert_eq!(
-        checks[0].get("name").and_then(|n| n.as_str()),
+        result.checks()[0].get("name").and_then(|n| n.as_str()),
         Some("license"),
         "only license check should run"
     );
@@ -265,14 +231,8 @@ fn all_checks_disabled_except_one() {
 #[test]
 fn check_failure_doesnt_block_other_checks() {
     // Use fixture that triggers cloc failure (oversized file)
-    let output = quench_cmd()
-        .args(["check", "-o", "json"])
-        .current_dir(fixture("check-framework"))
-        .output()
-        .unwrap();
-
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    let checks = json.get("checks").and_then(|v| v.as_array()).unwrap();
+    let result = cli().on("check-framework").json().fails();
+    let checks = result.checks();
 
     // All 8 checks should have run, even though cloc failed
     assert_eq!(checks.len(), 8, "all checks should have run");
@@ -281,7 +241,7 @@ fn check_failure_doesnt_block_other_checks() {
     let cloc = checks
         .iter()
         .find(|c| c.get("name").and_then(|n| n.as_str()) == Some("cloc"))
-        .unwrap();
+        .expect("cloc check should exist");
     assert_eq!(
         cloc.get("passed").and_then(|p| p.as_bool()),
         Some(false),
@@ -315,20 +275,10 @@ fn check_failure_doesnt_block_other_checks() {
 /// > Skipped check shows error message but continues with other checks
 #[test]
 fn skipped_check_shows_error_but_continues() {
-    // This test uses a fixture that causes a specific check to skip
-    // (e.g., git check in a non-git directory)
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
     // Don't initialize git - git check should skip
-
-    let output = quench_cmd()
-        .args(["check", "-o", "json"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
-
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    let checks = json.get("checks").and_then(|v| v.as_array()).unwrap();
+    let dir = temp_project();
+    let result = cli().pwd(dir.path()).json().passes();
+    let checks = result.checks();
 
     // Find git check
     let git = checks
@@ -358,22 +308,16 @@ fn skipped_check_shows_error_but_continues() {
 /// Spec: docs/specs/03-output.md#text-format (implied)
 ///
 /// > Skipped check shows in text output with reason
+/// > Format: `<check>: SKIP` followed by reason on next line
 #[test]
 fn skipped_check_text_output_shows_reason() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
     // Don't initialize git - git check should skip
-
-    quench_cmd()
-        .args(["check"])
-        .current_dir(dir.path())
-        .assert()
-        // Look for skip indicator in output
-        .stdout(
-            predicates::str::contains("SKIP")
-                .or(predicates::str::contains("skip"))
-                .or(predicates::str::contains("git")),
-        );
+    let dir = temp_project();
+    // Format: "git: SKIP" on its own line (matching FAIL format)
+    cli()
+        .pwd(dir.path())
+        .passes()
+        .stdout_has(predicates::str::is_match(r"(?m)^git: SKIP$").unwrap());
 }
 
 /// Spec: docs/specs/output.schema.json
@@ -381,20 +325,12 @@ fn skipped_check_text_output_shows_reason() {
 /// > Skipped check has `skipped: true` and `error` field in JSON
 #[test]
 fn skipped_check_json_has_required_fields() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-
-    let output = quench_cmd()
-        .args(["check", "-o", "json"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
-
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    let checks = json.get("checks").and_then(|v| v.as_array()).unwrap();
+    let dir = temp_project();
+    let result = cli().pwd(dir.path()).json().passes();
 
     // Find any skipped check
-    let skipped: Vec<_> = checks
+    let skipped: Vec<_> = result
+        .checks()
         .iter()
         .filter(|c| c.get("skipped").and_then(|s| s.as_bool()) == Some(true))
         .collect();

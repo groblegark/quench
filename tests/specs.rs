@@ -8,20 +8,24 @@
 #[path = "specs/prelude.rs"]
 mod prelude;
 
-#[path = "specs/cache.rs"]
-mod cache;
+// cli/
+#[path = "specs/cli/toggles.rs"]
+mod cli_toggles;
 
-#[path = "specs/file_walking.rs"]
-mod file_walking;
+// checks/
+#[path = "specs/checks/cloc.rs"]
+mod checks_cloc;
 
-#[path = "specs/output.rs"]
-mod output;
+// output/
+#[path = "specs/output/format.rs"]
+mod output_format;
 
-#[path = "specs/checks.rs"]
-mod checks;
+// modes/
+#[path = "specs/modes/cache.rs"]
+mod modes_cache;
 
-#[path = "specs/cloc.rs"]
-mod cloc;
+#[path = "specs/modes/file_walking.rs"]
+mod modes_file_walking;
 
 use prelude::*;
 
@@ -416,22 +420,25 @@ fn env_unknown_vars_ignored() {
 
 /// Spec: docs/specs/03-output.md#text-output
 ///
-/// > Text output format snapshot
+/// > Text output format exact match
 #[test]
-fn check_output_format_snapshot() {
+fn check_output_format_exact() {
     let output = quench_cmd()
         .args(["check"])
         .current_dir(prelude::fixture("output-test"))
         .output()
         .expect("command should run");
 
-    insta::assert_snapshot!(
-        String::from_utf8_lossy(&output.stdout),
-        @r#"
+    let expected = "\
 cloc: FAIL
   src/oversized.rs: file_too_large (14 vs 10)
-    Split into smaller modules. 14 lines exceeds 10 line limit.
+    Can the code be made more concise? If not, split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable.
 7 checks passed, 1 failed
-"#
+";
+
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        expected,
+        "output format must match exactly"
     );
 }

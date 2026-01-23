@@ -12,13 +12,13 @@ Write specs by reading `docs/specs/`, not by reading `src/`.
 
 ## DO
 
-- Use `check("name").on("fixture").passes()` for simple cases
-- Use `quench()` for complex multi-check scenarios
+- Use `check("name").on("fixture").passes()` for single-check tests
+- Use `cli()` for multi-check scenarios
 - Check stdout, stderr, and exit codes
 - Use fixtures from `tests/fixtures/`
 - Reference the spec doc section in a doc comment
 - Use `#[ignore = "TODO: Phase N - description"]` for unimplemented specs
-- Use `insta::assert_snapshot!` for output format tests
+- Use `assert_eq!` with exact expected strings for output format tests
 - Create temp dirs for config-only tests
 
 ## DO NOT
@@ -35,13 +35,14 @@ Write specs by reading `docs/specs/`, not by reading `src/`.
 ```rust
 /// Spec: docs/specs/checks/cloc.md#file-size-limits
 ///
-/// > File size limit checking (max_lines, default 750)
+/// > max_lines = 750 (default for source files)
 #[test]
-fn cloc_fails_on_oversized_file() {
-    check("cloc")
-        .on("violations")
-        .fails()
-        .with_output("lines (max: 750)");
+fn cloc_fails_on_source_file_over_max_lines() {
+    let cloc = check("cloc").on("cloc/oversized-source").json().fails();
+    let violations = cloc.require("violations").as_array().unwrap();
+    assert!(violations.iter().any(|v| {
+        v.get("file").and_then(|f| f.as_str()).unwrap().ends_with("big.rs")
+    }));
 }
 ```
 
@@ -55,7 +56,7 @@ fn escapes_requires_safety_comment() {
     check("escapes")
         .on("violations")
         .fails()
-        .with_output("// SAFETY:");
+        .stdout_has("// SAFETY:");
 }
 ```
 
@@ -64,22 +65,22 @@ fn escapes_requires_safety_comment() {
 ```rust
 use crate::prelude::*;
 
-// High-level (preferred)
-check("cloc").on("rust-simple").passes();
-check("cloc").on("violations").fails().with_violation("oversized.rs");
-check("cloc").json().on("rust-simple").passes().json(|v| { ... });
+// Single check -> CheckJson
+check("cloc").on("cloc/basic").passes();
+check("cloc").on("cloc/oversized-source").fails().stdout_has("big.rs");
+let cloc = check("cloc").on("cloc/basic").json().passes();
+assert!(cloc.require("metrics").get("ratio").is_some());
 
-// Low-level (for complex cases)
-quench()
-    .args(["check", "--cloc", "--escapes"])
-    .current_dir(fixture("rust-simple"))
-    .assert()
-    .success();
+// All checks -> ChecksJson
+cli().on("output-test").exits(1);
+cli().pwd(dir.path()).args(&["--no-git"]).passes();
+cli().on("output-test").env("CLAUDE_CODE", "1").exits(1).stdout_lacks("\x1b[");
+let result = cli().on("output-test").json().fails();
+assert!(result.checks().len() > 0);
 
 // Temp directories
-let dir = tempdir().unwrap();
-std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-check("cloc").in_dir(dir.path()).passes();
+let dir = temp_project();
+check("cloc").pwd(dir.path()).passes();
 ```
 
 ## Running Specs
@@ -87,8 +88,6 @@ check("cloc").in_dir(dir.path()).passes();
 ```bash
 cargo test --test specs              # Fast specs only
 cargo test --test specs -- --ignored # Show unimplemented count
-cargo insta test                     # Update snapshots
-cargo insta review                   # Review snapshot changes
 ```
 
 ## When Adding a New Spec

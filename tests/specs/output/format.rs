@@ -21,51 +21,46 @@ use crate::prelude::*;
 /// > `    <advice>`
 #[test]
 fn text_output_format_check_name_fail() {
-    quench_cmd()
-        .args(["check"])
-        .current_dir(fixture("output-test"))
-        .assert()
-        .code(1)
-        .stdout(predicates::str::is_match(r"^\w+: FAIL").unwrap());
+    // "<check-name>: FAIL" at start of line
+    cli()
+        .on("output-test")
+        .exits(1)
+        .stdout_has(predicates::str::is_match(r"(?m)^[a-z][a-z0-9_-]*: FAIL$").unwrap());
 }
 
 /// Spec: docs/specs/03-output.md#text-format
 ///
-/// > File path and line number format: `<file>:<line>:`
+/// > File path and line number format: `  <file>:<line>: <description>` or `  <file>: <description>`
 #[test]
 fn text_output_format_file_line() {
-    quench_cmd()
-        .args(["check"])
-        .current_dir(fixture("output-test"))
-        .assert()
-        .code(1)
-        .stdout(predicates::str::is_match(r"  \S+:").unwrap());
+    // 2-space indent, file path, colon, optional line number, colon, description
+    cli()
+        .on("output-test")
+        .exits(1)
+        .stdout_has(predicates::str::is_match(r"(?m)^  [a-zA-Z0-9_./-]+(:\d+)?: .+$").unwrap());
 }
 
 /// Spec: docs/specs/03-output.md#text-format
 ///
-/// > Advice is indented under violation
+/// > Advice is indented under violation (4-space indent)
 #[test]
 fn text_output_format_advice_indented() {
-    quench_cmd()
-        .args(["check"])
-        .current_dir(fixture("output-test"))
-        .assert()
-        .code(1)
-        .stdout(predicates::str::is_match(r"\n    \S").unwrap()); // 4-space indent for advice
+    // 4-space indent followed by advice
+    cli()
+        .on("output-test")
+        .exits(1)
+        .stdout_has(predicates::str::is_match(r#"(?m)^    [A-Z"].+$"#).unwrap());
 }
 
 /// Spec: docs/specs/03-output.md#verbosity
 ///
-/// > Summary line: `N checks passed, M failed`
+/// > Summary line: `N checks passed, M failed` or `N checks passed`
 #[test]
 fn text_output_summary_line() {
-    quench_cmd()
-        .args(["check"])
-        .current_dir(fixture("output-test"))
-        .assert()
-        .code(1)
-        .stdout(predicates::str::is_match(r"\d+ checks? (passed|failed)").unwrap());
+    cli()
+        .on("output-test")
+        .exits(1)
+        .stdout_has(predicates::str::is_match(r"(?m)^\d+ checks? passed, \d+ failed$").unwrap());
 }
 
 /// Spec: docs/specs/03-output.md#verbosity
@@ -73,16 +68,12 @@ fn text_output_summary_line() {
 /// > When all checks pass, only summary: `N checks passed`
 #[test]
 fn text_output_passing_summary_only() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-
-    // Use --no-git to avoid skip message in non-git directory
-    quench_cmd()
-        .args(["check", "--no-git"])
-        .current_dir(dir.path())
-        .assert()
-        .success()
-        .stdout(predicates::str::is_match(r"^\d+ checks? passed\n?$").unwrap());
+    let dir = temp_project();
+    cli()
+        .pwd(dir.path())
+        .args(&["--no-git"])
+        .passes()
+        .stdout_has(predicates::str::is_match(r"^\d+ checks? passed\n?$").unwrap());
 }
 
 // =============================================================================
@@ -94,14 +85,8 @@ fn text_output_passing_summary_only() {
 /// > JSON output validates against output.schema.json
 #[test]
 fn json_output_validates_against_schema() {
-    let output = quench_cmd()
-        .args(["check", "-o", "json"])
-        .current_dir(fixture("output-test"))
-        .output()
-        .unwrap();
-
-    let json: serde_json::Value =
-        serde_json::from_slice(&output.stdout).expect("output should be valid JSON");
+    let result = cli().on("output-test").json().fails();
+    let json = result.value();
 
     // Load schema from docs/specs/output.schema.json
     let schema_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -114,9 +99,8 @@ fn json_output_validates_against_schema() {
     let schema: serde_json::Value = serde_json::from_str(&schema_str).unwrap();
 
     let compiled = jsonschema::validator_for(&schema).expect("schema should be valid");
-
     assert!(
-        compiled.is_valid(&json),
+        compiled.is_valid(json),
         "output should validate against schema"
     );
 }
@@ -126,16 +110,9 @@ fn json_output_validates_against_schema() {
 /// > JSON has required fields: passed, checks
 #[test]
 fn json_output_has_required_fields() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-
-    let output = quench_cmd()
-        .args(["check", "-o", "json"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
-
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    let dir = temp_project();
+    let result = cli().pwd(dir.path()).args(&["--no-git"]).json().passes();
+    let json = result.value();
     assert!(json.get("passed").is_some(), "should have 'passed' field");
     assert!(json.get("checks").is_some(), "should have 'checks' array");
 }
@@ -145,24 +122,22 @@ fn json_output_has_required_fields() {
 /// > JSON timestamp is ISO 8601 format
 #[test]
 fn json_output_timestamp_iso8601() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
+    let dir = temp_project();
+    let result = cli().pwd(dir.path()).args(&["--no-git"]).json().passes();
+    let json = result.value();
 
-    let output = quench_cmd()
-        .args(["check", "-o", "json"])
-        .current_dir(dir.path())
-        .output()
-        .unwrap();
+    let ts = json
+        .get("timestamp")
+        .and_then(|v| v.as_str())
+        .expect("should have timestamp");
 
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    let timestamp = json.get("timestamp").and_then(|v| v.as_str());
-    assert!(timestamp.is_some(), "should have timestamp");
-
-    // ISO 8601 format: 2026-01-21T10:30:00Z
-    let ts = timestamp.unwrap();
+    // ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ (e.g., 2026-01-21T10:30:00Z)
+    assert_eq!(ts.len(), 20, "timestamp should be exactly 20 chars: {}", ts);
     assert!(
-        ts.contains('T') && ts.ends_with('Z'),
-        "timestamp should be ISO 8601: {}",
+        predicates::str::is_match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
+            .unwrap()
+            .eval(ts),
+        "timestamp should match ISO 8601: {}",
         ts
     );
 }
@@ -172,16 +147,8 @@ fn json_output_timestamp_iso8601() {
 /// > Check objects have required fields: name, passed
 #[test]
 fn json_output_check_has_required_fields() {
-    let output = quench_cmd()
-        .args(["check", "-o", "json"])
-        .current_dir(fixture("output-test"))
-        .output()
-        .unwrap();
-
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    let checks = json.get("checks").and_then(|v| v.as_array()).unwrap();
-
-    for check in checks {
+    let result = cli().on("output-test").json().fails();
+    for check in result.checks() {
         assert!(check.get("name").is_some(), "check should have 'name'");
         assert!(check.get("passed").is_some(), "check should have 'passed'");
     }
@@ -192,16 +159,8 @@ fn json_output_check_has_required_fields() {
 /// > Violation objects have required fields: type, advice
 #[test]
 fn json_output_violation_has_required_fields() {
-    let output = quench_cmd()
-        .args(["check", "-o", "json"])
-        .current_dir(fixture("output-test"))
-        .output()
-        .unwrap();
-
-    let json: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-    let checks = json.get("checks").and_then(|v| v.as_array()).unwrap();
-
-    for check in checks {
+    let result = cli().on("output-test").json().fails();
+    for check in result.checks() {
         if let Some(violations) = check.get("violations").and_then(|v| v.as_array()) {
             for violation in violations {
                 assert!(
@@ -226,15 +185,9 @@ fn json_output_violation_has_required_fields() {
 /// > Exit code 0 when all checks pass
 #[test]
 fn exit_code_0_all_checks_pass() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-
+    let dir = temp_project();
     // Use --no-git to avoid skip in non-git directory
-    quench_cmd()
-        .args(["check", "--no-git"])
-        .current_dir(dir.path())
-        .assert()
-        .code(0);
+    cli().pwd(dir.path()).args(&["--no-git"]).passes();
 }
 
 /// Spec: docs/specs/03-output.md#exit-codes
@@ -242,11 +195,7 @@ fn exit_code_0_all_checks_pass() {
 /// > Exit code 1 when any check fails
 #[test]
 fn exit_code_1_check_fails() {
-    quench_cmd()
-        .args(["check"])
-        .current_dir(fixture("output-test"))
-        .assert()
-        .code(1);
+    cli().on("output-test").exits(1);
 }
 
 /// Spec: docs/specs/03-output.md#exit-codes
@@ -254,11 +203,7 @@ fn exit_code_1_check_fails() {
 /// > Exit code 2 on configuration error
 #[test]
 fn exit_code_2_config_error() {
-    quench_cmd()
-        .args(["check"])
-        .current_dir(fixture("config-error"))
-        .assert()
-        .code(2);
+    cli().on("config-error").exits(2);
 }
 
 /// Spec: docs/specs/03-output.md#exit-codes
@@ -287,18 +232,12 @@ fn exit_codes_are_exactly_0_1_2_3() {
 /// > Color disabled when CLAUDE_CODE env var is set
 #[test]
 fn color_disabled_when_claude_code_env_set() {
-    let output = quench_cmd()
-        .args(["check"])
-        .current_dir(fixture("output-test"))
+    // No ANSI escape codes in output
+    cli()
+        .on("output-test")
         .env("CLAUDE_CODE", "1")
-        .output()
-        .unwrap();
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        !stdout.contains("\x1b["),
-        "output should not contain ANSI escape codes when CLAUDE_CODE is set"
-    );
+        .exits(1)
+        .stdout_lacks("\x1b[");
 }
 
 /// Spec: docs/specs/03-output.md#colorization
@@ -307,17 +246,8 @@ fn color_disabled_when_claude_code_env_set() {
 #[test]
 fn color_disabled_when_not_tty() {
     // When run via assert_cmd, stdout is piped (not a TTY)
-    let output = quench_cmd()
-        .args(["check"])
-        .current_dir(fixture("output-test"))
-        .output()
-        .unwrap();
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        !stdout.contains("\x1b["),
-        "output should not contain ANSI escape codes when not a TTY"
-    );
+    // No ANSI escape codes in output
+    cli().on("output-test").exits(1).stdout_lacks("\x1b[");
 }
 
 /// Spec: docs/specs/03-output.md#colorization
@@ -325,17 +255,12 @@ fn color_disabled_when_not_tty() {
 /// > --no-color flag disables color output
 #[test]
 fn no_color_flag_disables_color() {
-    let output = quench_cmd()
-        .args(["check", "--no-color"])
-        .current_dir(fixture("output-test"))
-        .output()
-        .unwrap();
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        !stdout.contains("\x1b["),
-        "output should not contain ANSI escape codes with --no-color"
-    );
+    // No ANSI escape codes in output
+    cli()
+        .on("output-test")
+        .args(&["--no-color"])
+        .exits(1)
+        .stdout_lacks("\x1b[");
 }
 
 /// Spec: docs/specs/03-output.md#colorization
@@ -343,17 +268,12 @@ fn no_color_flag_disables_color() {
 /// > --color=never disables color output
 #[test]
 fn color_never_disables_color() {
-    let output = quench_cmd()
-        .args(["check", "--color=never"])
-        .current_dir(fixture("output-test"))
-        .output()
-        .unwrap();
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        !stdout.contains("\x1b["),
-        "output should not contain ANSI escape codes with --color=never"
-    );
+    // No ANSI escape codes in output
+    cli()
+        .on("output-test")
+        .args(&["--color=never"])
+        .exits(1)
+        .stdout_lacks("\x1b[");
 }
 
 // =============================================================================
@@ -365,8 +285,8 @@ fn color_never_disables_color() {
 /// > Default limit: 15 violations shown
 #[test]
 fn violation_limit_defaults_to_15() {
-    // This spec requires a fixture with >15 violations
-    // For now, just verify the flag is accepted
+    // TODO: requires fixture with >15 violations
+    // For now, just verify --help mentions limit
     quench_cmd()
         .args(["check", "--help"])
         .assert()
@@ -379,10 +299,8 @@ fn violation_limit_defaults_to_15() {
 /// > --no-limit shows all violations
 #[test]
 fn no_limit_shows_all_violations() {
-    let _ = quench_cmd()
-        .args(["check", "--no-limit"])
-        .current_dir(fixture("output-test"))
-        .assert(); // Just verify flag is accepted
+    // Verify flag is accepted
+    cli().on("output-test").args(&["--no-limit"]).exits(1);
 }
 
 /// Spec: docs/specs/03-output.md#violation-limits
@@ -390,24 +308,24 @@ fn no_limit_shows_all_violations() {
 /// > --limit N shows N violations
 #[test]
 fn limit_n_shows_n_violations() {
-    let _ = quench_cmd()
-        .args(["check", "--limit", "5"])
-        .current_dir(fixture("output-test"))
-        .assert(); // Just verify flag is accepted
+    // Verify flag is accepted
+    cli().on("output-test").args(&["--limit", "5"]).exits(1);
 }
 
 /// Spec: docs/specs/03-output.md#violation-limits
 ///
-/// > Message shown when limit reached: "Stopped after N violations"
+/// > Message shown when limit reached: "Stopped after N violations. Use --no-limit to see all."
 #[test]
 fn limit_message_when_truncated() {
-    // Requires fixture with many violations
-    quench_cmd()
-        .args(["check", "--limit", "1"])
-        .current_dir(fixture("violations"))
-        .assert()
-        .stdout(
-            predicates::str::contains("Stopped after").or(predicates::str::contains("--no-limit")),
+    cli()
+        .on("violations")
+        .args(&["--limit", "1"])
+        .exits(1)
+        .stdout_has(
+            predicates::str::is_match(
+                r"Stopped after \d+ violations?\. Use --no-limit to see all\.",
+            )
+            .unwrap(),
         );
 }
 
@@ -420,15 +338,8 @@ fn limit_message_when_truncated() {
 /// > --config-only validates config and exits without running checks
 #[test]
 fn config_flag_validates_and_exits() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-
-    quench_cmd()
-        .args(["check", "--config-only"])
-        .current_dir(dir.path())
-        .assert()
-        .success()
-        .stdout(predicates::str::is_empty().or(predicates::str::contains("valid")));
+    let dir = temp_project();
+    cli().pwd(dir.path()).args(&["--config-only"]).passes();
 }
 
 /// Spec: docs/specs/01-cli.md#commands (implied)
@@ -436,11 +347,7 @@ fn config_flag_validates_and_exits() {
 /// > --config-only with invalid config returns exit code 2
 #[test]
 fn config_flag_invalid_returns_code_2() {
-    quench_cmd()
-        .args(["check", "--config-only"])
-        .current_dir(fixture("config-error"))
-        .assert()
-        .code(2);
+    cli().on("config-error").args(&["--config-only"]).exits(2);
 }
 
 // =============================================================================
@@ -452,15 +359,12 @@ fn config_flag_invalid_returns_code_2() {
 /// > QUENCH_LOG=debug emits diagnostics to stderr
 #[test]
 fn quench_log_debug_emits_diagnostics() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-
-    // Use --no-git to avoid skip in non-git directory
-    quench_cmd()
-        .args(["check", "--no-git"])
-        .current_dir(dir.path())
+    let dir = temp_project();
+    // stderr should not be empty when debug logging is enabled
+    cli()
+        .pwd(dir.path())
+        .args(&["--no-git"])
         .env("QUENCH_LOG", "debug")
-        .assert()
-        .success()
-        .stderr(predicates::str::is_empty().not());
+        .passes()
+        .stderr_has(predicates::str::is_empty().not());
 }

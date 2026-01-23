@@ -30,7 +30,7 @@ fn escapes_fails_on_unwrap() {
     check("escapes")
         .on("violations")
         .fails()
-        .with_violation("escapes.rs");
+        .stdout_has("escapes.rs");
 }
 ```
 
@@ -113,7 +113,7 @@ Project with agent context files at multiple scopes.
 - All required sections present
 - No tables (forbidden)
 
-## New Fixtures for File Walking (Phase 015)
+## New Fixtures for File Walking
 
 ### bench-deep/
 

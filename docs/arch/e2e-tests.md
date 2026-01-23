@@ -23,16 +23,14 @@ tests/
 │   ├── docs-project/      # docs/, TOC, links
 │   └── agents-project/    # CLAUDE.md, .cursorrules
 │
-├── specs/                 # Behavioral specifications
-│   ├── mod.rs             # Harness, helpers, re-exports
-│   ├── cli/               # CLI behavior
-│   ├── config/            # Configuration
-│   ├── checks/            # Per-check specs
-│   ├── adapters/          # Language adapters
-│   ├── output/            # Output formats
-│   └── modes/             # Operating modes
-│
-└── snapshots/             # insta snapshot files
+└── specs/                 # Behavioral specifications
+    ├── prelude.rs         # Harness, helpers, re-exports
+    ├── cli/               # CLI behavior (flags, toggles)
+    ├── config/            # Configuration parsing
+    ├── checks/            # Per-check specs (cloc, escapes, etc.)
+    ├── adapters/          # Language adapters
+    ├── output/            # Output formats
+    └── modes/             # Operating modes (cache, file walking)
 ```
 
 ## Black-Box Constraint
@@ -62,10 +60,16 @@ use crate::prelude::*;
 fn fixture(name: &str) -> PathBuf;
 
 /// Create a quench command (low-level)
-fn quench() -> Command;
+fn quench_cmd() -> Command;
 
-/// Start a check spec (high-level, preferred)
-fn check(name: &str) -> CheckBuilder;
+/// Single-check builder (high-level, preferred)
+fn check(name: &str) -> CheckBuilder<Text, Single>;
+
+/// All-checks builder
+fn cli() -> CheckBuilder<Text, All>;
+
+/// Create temp project with minimal quench.toml
+fn temp_project() -> TempDir;
 ```
 
 ### CheckBuilder
@@ -76,119 +80,162 @@ The `CheckBuilder` provides a fluent interface for the common case: running a si
 /// Spec: docs/specs/checks/cloc.md#counting-rules
 #[test]
 fn counts_non_blank_lines() {
-    check("cloc")
-        .on("rust-simple")
-        .passes();
+    check("cloc").on("rust-simple").passes();
 }
 
 /// Spec: docs/specs/checks/cloc.md#file-size-limits
 #[test]
 fn fails_on_oversized_file() {
-    check("cloc")
-        .on("violations")
-        .fails()
-        .with_violation("oversized.rs");
+    check("cloc").on("violations").fails().stdout_has("oversized.rs");
 }
 ```
 
 ### Builder Methods
 
+The builder uses typestate for both output mode (Text/Json) and scope (Single/All).
+
 ```rust
-impl CheckBuilder {
-    /// Set fixture directory
+// Common methods for all builders
+impl<Mode, Scope> CheckBuilder<Mode, Scope> {
     fn on(self, fixture: &str) -> Self;
-
-    /// Set working directory (alternative to fixture)
-    fn in_dir(self, path: impl AsRef<Path>) -> Self;
-
-    /// Add CLI arguments
+    fn pwd(self, path: impl AsRef<Path>) -> Self;
     fn args(self, args: &[&str]) -> Self;
-
-    /// Request JSON output
-    fn json(self) -> Self;
-
-    /// Assert success (exit 0)
-    fn passes(self) -> AssertResult;
-
-    /// Assert failure (exit non-zero)
-    fn fails(self) -> FailureAssert;
-
-    /// Get raw command for complex cases
-    fn command(self) -> Command;
+    fn env(self, key: &str, value: &str) -> Self;
 }
 
-impl FailureAssert {
-    /// Assert stdout contains violation for file
-    fn with_violation(self, file: &str) -> Self;
-
-    /// Assert stdout contains text
-    fn with_output(self, text: &str) -> Self;
-
-    /// Assert stderr contains text
-    fn with_error(self, text: &str) -> Self;
-
-    /// Get underlying assertion for custom checks
-    fn assert(self) -> Assert;
+// Text mode -> RunAssert
+impl CheckBuilder<Text, Single> {
+    fn json(self) -> CheckBuilder<Json, Single>;
+    fn passes(self) -> RunAssert;
+    fn fails(self) -> RunAssert;
+    fn exits(self, code: i32) -> RunAssert;
 }
 
-impl AssertResult {
-    /// Parse JSON output and run assertions
-    fn json<F>(self, f: F) where F: FnOnce(&serde_json::Value);
+impl CheckBuilder<Text, All> {
+    fn json(self) -> CheckBuilder<Json, All>;
+    fn passes(self) -> RunAssert;
+    fn fails(self) -> RunAssert;
+    fn exits(self, code: i32) -> RunAssert;
+}
 
-    /// Snapshot test the output
-    fn snapshot(self);
+// JSON + Single -> CheckJson
+impl CheckBuilder<Json, Single> {
+    fn passes(self) -> CheckJson;
+    fn fails(self) -> CheckJson;
+}
+
+// JSON + All -> ChecksJson
+impl CheckBuilder<Json, All> {
+    fn passes(self) -> ChecksJson;
+    fn fails(self) -> ChecksJson;
+}
+
+// Single check JSON wrapper
+impl CheckJson {
+    fn value(&self) -> &Value;      // root JSON
+    fn check(&self) -> &Value;      // the check object
+    fn get(&self, key: &str) -> Option<&Value>;
+    fn require(&self, key: &str) -> &Value;
+}
+
+// All checks JSON wrapper
+impl ChecksJson {
+    fn value(&self) -> &Value;      // root JSON
+    fn checks(&self) -> &Vec<Value>; // all check objects
+}
+
+// Run result for chaining assertions
+impl RunAssert {
+    fn stdout(&self) -> String;
+    fn stderr(&self) -> String;
+    fn stdout_has(self, pred: impl IntoStrPredicate) -> Self;
+    fn stdout_lacks(self, pred: impl IntoStrPredicate) -> Self;
+    fn stderr_has(self, pred: impl IntoStrPredicate) -> Self;
+    fn stderr_lacks(self, pred: impl IntoStrPredicate) -> Self;
+    fn stdout_eq(self, expected: &str) -> Self;
+    fn stderr_eq(self, expected: &str) -> Self;
 }
 ```
 
 ### JSON Assertions
 
-For specs that need to verify structured output:
+For single-check specs, `.json()` returns `CheckJson`:
 
 ```rust
 /// Spec: docs/specs/checks/cloc.md#json-output
 #[test]
 fn json_includes_ratio() {
-    check("cloc")
-        .json()
-        .on("rust-simple")
-        .passes()
-        .json(|output| {
-            let ratio = output["checks"][0]["metrics"]["ratio"].as_f64();
-            assert!(ratio.is_some(), "ratio should be a number");
-        });
+    let cloc = check("cloc").on("cloc/basic").json().passes();
+    let metrics = cloc.require("metrics");
+    assert!(metrics.get("ratio").is_some());
+}
+
+/// Spec: docs/specs/checks/cloc.md#file-size-limits
+#[test]
+fn violations_have_file_path() {
+    let cloc = check("cloc").on("cloc/oversized-source").json().fails();
+    let violations = cloc.require("violations").as_array().unwrap();
+    assert!(violations.iter().any(|v| {
+        v.get("file").and_then(|f| f.as_str()).unwrap().ends_with("big.rs")
+    }));
 }
 ```
 
-### Snapshot Testing
+### All-Checks Mode
 
-For verifying exact output format:
+For all-checks specs, `.json()` returns `ChecksJson`:
+
+```rust
+/// Spec: docs/specs/03-output.md#exit-codes
+#[test]
+fn exit_code_0_all_checks_pass() {
+    let dir = temp_project();
+    cli().pwd(dir.path()).args(&["--no-git"]).passes();
+}
+
+/// Spec: docs/specs/03-output.md#json-format
+#[test]
+fn json_has_all_checks() {
+    let result = cli().on("output-test").json().fails();
+    assert!(result.checks().len() > 0);
+}
+```
+
+### Exact Match Testing
+
+For verifying exact output format, use `assert_eq!` with raw strings.
+This ensures any output change requires explicit test update (no auto-accept):
 
 ```rust
 /// Spec: docs/specs/03-output.md#text-format
 #[test]
 fn cloc_text_output_format() {
-    check("cloc")
-        .on("violations")
-        .fails()
-        .snapshot();
+    assert_eq!(
+        check("cloc").on("violations").fails().stdout(),
+        r#"cloc: FAIL
+  src/oversized.rs: file_too_large (14 vs 10)
+    Split into smaller modules.
+7 checks passed, 1 failed
+"#,
+        "output format must match exactly"
+    );
 }
 ```
 
-Snapshots use insta and require explicit `cargo insta review` to change.
+Prefer exact matching over snapshots - it prevents regressions from slipping through.
 
-### Multi-Check Specs
+### Multi-Check JSON Specs
 
-For specs testing multiple checks or complex scenarios, use the low-level `quench()` helper:
+For specs testing multiple checks with JSON output:
 
 ```rust
 /// Spec: docs/specs/01-cli.md#check-selection
 #[test]
-fn can_run_multiple_checks() {
-    quench()
-        .args(["check", "--cloc", "--escapes"])
-        .current_dir(fixture("rust-simple"))
-        .assert()
-        .success();
+fn enable_flag_runs_only_that_check() {
+    let dir = temp_project();
+    let result = cli().pwd(dir.path()).args(&["--cloc"]).json().passes();
+    assert_eq!(result.checks().len(), 1);
+    assert_eq!(result.checks()[0]["name"], "cloc");
 }
 ```
 
@@ -200,14 +247,14 @@ For config parsing or error case specs:
 /// Spec: docs/specs/02-config.md#validation
 #[test]
 fn rejects_invalid_version() {
-    let dir = tempdir().unwrap();
+    let dir = temp_project();
     std::fs::write(
         dir.path().join("quench.toml"),
         "version = 999\n"
     ).unwrap();
 
     check("cloc")
-        .in_dir(dir.path())
+        .pwd(dir.path())
         .fails()
         .with_error("unsupported config version");
 }
@@ -291,196 +338,6 @@ Each fixture is minimal while exercising specific features:
 
 The `violations` fixture contains subdirectories for each check type, ensuring predictable failure scenarios.
 
-## Implementation
-
-### Module Structure
-
-```rust
-// tests/specs/mod.rs (harness entry point)
-mod prelude;
-mod helpers;
-mod builders;
-
-pub use prelude::*;
-
-mod cli;
-mod config;
-mod checks;
-mod adapters;
-mod output;
-mod modes;
-```
-
-### Prelude
-
-```rust
-// tests/specs/prelude.rs
-pub use crate::helpers::{fixture, quench};
-pub use crate::builders::{check, CheckBuilder};
-pub use assert_cmd::prelude::*;
-pub use predicates::prelude::*;
-pub use tempfile::tempdir;
-```
-
-### Helpers
-
-```rust
-// tests/specs/helpers.rs
-use assert_cmd::Command;
-use std::path::PathBuf;
-use std::sync::LazyLock;
-
-static FIXTURES: LazyLock<PathBuf> = LazyLock::new(|| {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures")
-});
-
-pub fn fixture(name: &str) -> PathBuf {
-    let path = FIXTURES.join(name);
-    assert!(path.exists(), "Fixture not found: {}", path.display());
-    path
-}
-
-pub fn quench() -> Command {
-    Command::cargo_bin("quench").unwrap()
-}
-```
-
-### CheckBuilder Implementation
-
-```rust
-// tests/specs/builders.rs
-use crate::helpers::{fixture, quench};
-use assert_cmd::assert::Assert;
-use assert_cmd::Command;
-use std::path::PathBuf;
-
-pub fn check(name: &str) -> CheckBuilder {
-    CheckBuilder::new(name)
-}
-
-pub struct CheckBuilder {
-    check_name: String,
-    dir: Option<PathBuf>,
-    args: Vec<String>,
-    json: bool,
-}
-
-impl CheckBuilder {
-    fn new(name: &str) -> Self {
-        Self {
-            check_name: name.to_string(),
-            dir: None,
-            args: Vec::new(),
-            json: false,
-        }
-    }
-
-    pub fn on(mut self, fixture_name: &str) -> Self {
-        self.dir = Some(fixture(fixture_name));
-        self
-    }
-
-    pub fn in_dir(mut self, path: impl Into<PathBuf>) -> Self {
-        self.dir = Some(path.into());
-        self
-    }
-
-    pub fn args(mut self, args: &[&str]) -> Self {
-        self.args.extend(args.iter().map(|s| s.to_string()));
-        self
-    }
-
-    pub fn json(mut self) -> Self {
-        self.json = true;
-        self
-    }
-
-    pub fn command(self) -> Command {
-        let mut cmd = quench();
-        cmd.arg("check");
-        cmd.arg(format!("--{}", self.check_name));
-
-        if self.json {
-            cmd.args(["-o", "json"]);
-        }
-
-        cmd.args(&self.args);
-
-        if let Some(dir) = self.dir {
-            cmd.current_dir(dir);
-        }
-
-        cmd
-    }
-
-    pub fn passes(self) -> AssertResult {
-        let assert = self.command().assert().success();
-        AssertResult { assert }
-    }
-
-    pub fn fails(self) -> FailureAssert {
-        let assert = self.command().assert().failure();
-        FailureAssert { assert }
-    }
-}
-
-pub struct AssertResult {
-    assert: Assert,
-}
-
-impl AssertResult {
-    pub fn json<F>(self, f: F)
-    where
-        F: FnOnce(&serde_json::Value),
-    {
-        let output = self.assert.get_output();
-        let value: serde_json::Value =
-            serde_json::from_slice(&output.stdout).unwrap();
-        f(&value);
-    }
-
-    pub fn snapshot(self) {
-        let output = self.assert.get_output();
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        insta::assert_snapshot!(stdout);
-    }
-}
-
-pub struct FailureAssert {
-    assert: Assert,
-}
-
-impl FailureAssert {
-    pub fn with_violation(self, file: &str) -> Self {
-        Self {
-            assert: self.assert.stdout(predicates::str::contains(file)),
-        }
-    }
-
-    pub fn with_output(self, text: &str) -> Self {
-        Self {
-            assert: self.assert.stdout(predicates::str::contains(text)),
-        }
-    }
-
-    pub fn with_error(self, text: &str) -> Self {
-        Self {
-            assert: self.assert.stderr(predicates::str::contains(text)),
-        }
-    }
-
-    pub fn assert(self) -> Assert {
-        self.assert
-    }
-
-    pub fn snapshot(self) {
-        let output = self.assert.get_output();
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        insta::assert_snapshot!(stdout);
-    }
-}
-```
-
 ## CI Integration
 
 ```yaml
@@ -488,14 +345,8 @@ jobs:
   specs:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Fast specs
+      - name: Specs
         run: cargo test --test specs
-
-      - name: Slow specs
-        run: cargo test --test specs --features slow-specs
-
-      - name: Check snapshots
-        run: cargo insta test --check
 ```

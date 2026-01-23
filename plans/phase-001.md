@@ -53,7 +53,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 ```toml
 [dev-dependencies]
 assert_cmd = "2"           # (exists) CLI testing
-insta = { version = "1", features = ["filters", "redactions"] }  # (update) Snapshots
 predicates = "3"           # (exists) Assertions
 serde_json = "1"           # (exists) JSON testing
 tempfile = "3"             # (exists) Temp dirs

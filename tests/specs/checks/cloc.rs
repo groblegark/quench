@@ -22,9 +22,8 @@ use crate::prelude::*;
 /// > A line is counted if it contains at least one non-whitespace character.
 #[test]
 fn cloc_counts_nonblank_lines_as_loc() {
-    let json = check_json(&fixture("cloc/basic"));
-    let cloc = find_check(&json, "cloc");
-    let metrics = cloc.get("metrics").unwrap();
+    let cloc = check("cloc").on("cloc/basic").json().passes();
+    let metrics = cloc.require("metrics");
 
     // src/counted.rs has exactly 10 non-blank lines
     assert_eq!(
@@ -38,9 +37,8 @@ fn cloc_counts_nonblank_lines_as_loc() {
 /// > Blank lines (whitespace-only) are not counted.
 #[test]
 fn cloc_does_not_count_blank_lines() {
-    let json = check_json(&fixture("cloc/basic"));
-    let cloc = find_check(&json, "cloc");
-    let metrics = cloc.get("metrics").unwrap();
+    let cloc = check("cloc").on("cloc/basic").json().passes();
+    let metrics = cloc.require("metrics");
 
     // File has 15 total lines but only 10 non-blank
     // If blank lines were counted, we'd see 15
@@ -60,9 +58,8 @@ fn cloc_does_not_count_blank_lines() {
 /// > All other files matching source patterns are counted as source code.
 #[test]
 fn cloc_separates_source_and_test_by_pattern() {
-    let json = check_json(&fixture("cloc/source-test"));
-    let cloc = find_check(&json, "cloc");
-    let metrics = cloc.get("metrics").unwrap();
+    let cloc = check("cloc").on("cloc/source-test").json().passes();
+    let metrics = cloc.require("metrics");
 
     assert_eq!(
         metrics.get("source_lines").and_then(|v| v.as_u64()),
@@ -81,9 +78,8 @@ fn cloc_separates_source_and_test_by_pattern() {
 /// > Ratio is test LOC / source LOC.
 #[test]
 fn cloc_calculates_source_to_test_ratio() {
-    let json = check_json(&fixture("cloc/source-test"));
-    let cloc = find_check(&json, "cloc");
-    let metrics = cloc.get("metrics").unwrap();
+    let cloc = check("cloc").on("cloc/source-test").json().passes();
+    let metrics = cloc.require("metrics");
 
     // 8 test lines / 10 source lines = 0.8
     let ratio = metrics.get("ratio").and_then(|v| v.as_f64()).unwrap();
@@ -103,9 +99,8 @@ fn cloc_calculates_source_to_test_ratio() {
 /// > JSON metrics always include: source_lines, source_files, test_lines, test_files, ratio
 #[test]
 fn cloc_json_includes_required_metrics() {
-    let json = check_json(&fixture("cloc/basic"));
-    let cloc = find_check(&json, "cloc");
-    let metrics = cloc.get("metrics").expect("cloc should have metrics");
+    let cloc = check("cloc").on("cloc/basic").json().passes();
+    let metrics = cloc.require("metrics");
 
     assert!(
         metrics.get("source_lines").is_some(),
@@ -125,8 +120,7 @@ fn cloc_json_includes_required_metrics() {
 /// > violations only present when file size limits exceeded
 #[test]
 fn cloc_json_omits_violations_when_none() {
-    let json = check_json(&fixture("cloc/basic"));
-    let cloc = find_check(&json, "cloc");
+    let cloc = check("cloc").on("cloc/basic").json().passes();
 
     // No oversized files in basic fixture
     assert!(
@@ -146,9 +140,8 @@ fn cloc_json_omits_violations_when_none() {
 /// > violation.type is always "file_too_large"
 #[test]
 fn cloc_violation_type_is_file_too_large() {
-    let json = check_json(&fixture("cloc/oversized-source"));
-    let cloc = find_check(&json, "cloc");
-    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+    let cloc = check("cloc").on("cloc/oversized-source").json().fails();
+    let violations = cloc.require("violations").as_array().unwrap();
 
     for violation in violations {
         assert_eq!(
@@ -164,12 +157,11 @@ fn cloc_violation_type_is_file_too_large() {
 /// > max_lines = 750 (default for source files)
 #[test]
 fn cloc_fails_on_source_file_over_max_lines() {
-    let json = check_json(&fixture("cloc/oversized-source"));
-    let cloc = find_check(&json, "cloc");
+    let cloc = check("cloc").on("cloc/oversized-source").json().fails();
 
-    assert_eq!(cloc.get("passed").and_then(|v| v.as_bool()), Some(false));
+    assert_eq!(cloc.require("passed").as_bool(), Some(false));
 
-    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+    let violations = cloc.require("violations").as_array().unwrap();
     assert!(!violations.is_empty(), "should have violations");
     assert!(
         violations.iter().any(|v| {
@@ -187,12 +179,11 @@ fn cloc_fails_on_source_file_over_max_lines() {
 /// > max_lines_test = 1100 (default for test files)
 #[test]
 fn cloc_fails_on_test_file_over_max_lines_test() {
-    let json = check_json(&fixture("cloc/oversized-test"));
-    let cloc = find_check(&json, "cloc");
+    let cloc = check("cloc").on("cloc/oversized-test").json().fails();
 
-    assert_eq!(cloc.get("passed").and_then(|v| v.as_bool()), Some(false));
+    assert_eq!(cloc.require("passed").as_bool(), Some(false));
 
-    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+    let violations = cloc.require("violations").as_array().unwrap();
     assert!(
         violations.iter().any(|v| {
             v.get("file")
@@ -209,17 +200,16 @@ fn cloc_fails_on_test_file_over_max_lines_test() {
 /// > max_tokens = 20000 (default)
 #[test]
 fn cloc_fails_on_file_over_max_tokens() {
-    let json = check_json(&fixture("cloc/high-tokens"));
-    let cloc = find_check(&json, "cloc");
+    let cloc = check("cloc").on("cloc/high-tokens").json().fails();
 
-    assert_eq!(cloc.get("passed").and_then(|v| v.as_bool()), Some(false));
+    assert_eq!(cloc.require("passed").as_bool(), Some(false));
 
     // Fixture has max_tokens = 100, verify a violation with that threshold exists
-    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+    let violations = cloc.require("violations").as_array().unwrap();
     assert!(
-        violations.iter().any(|v| {
-            v.get("threshold").and_then(|t| t.as_i64()) == Some(100)
-        }),
+        violations
+            .iter()
+            .any(|v| { v.get("threshold").and_then(|t| t.as_i64()) == Some(100) }),
         "should have violation with token threshold (100)"
     );
 }
@@ -235,9 +225,8 @@ fn cloc_fails_on_file_over_max_tokens() {
 /// > unit testable." (default for source files)
 #[test]
 fn cloc_source_violation_has_default_advice() {
-    let json = check_json(&fixture("cloc/oversized-source"));
-    let cloc = find_check(&json, "cloc");
-    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+    let cloc = check("cloc").on("cloc/oversized-source").json().fails();
+    let violations = cloc.require("violations").as_array().unwrap();
 
     let source_violation = violations
         .iter()
@@ -265,9 +254,8 @@ fn cloc_source_violation_has_default_advice() {
 /// > concise? If not, split large test files into a folder." (default for test files)
 #[test]
 fn cloc_test_violation_has_default_advice() {
-    let json = check_json(&fixture("cloc/oversized-test"));
-    let cloc = find_check(&json, "cloc");
-    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+    let cloc = check("cloc").on("cloc/oversized-test").json().fails();
+    let violations = cloc.require("violations").as_array().unwrap();
 
     let test_violation = violations
         .iter()
@@ -312,11 +300,13 @@ advice = "Custom source advice here."
     )
     .unwrap();
 
-    let json = check_json(dir.path());
-    let cloc = find_check(&json, "cloc");
-    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+    let cloc = check("cloc").pwd(dir.path()).json().fails();
+    let violations = cloc.require("violations").as_array().unwrap();
 
-    let advice = violations[0].get("advice").and_then(|a| a.as_str()).unwrap();
+    let advice = violations[0]
+        .get("advice")
+        .and_then(|a| a.as_str())
+        .unwrap();
     assert_eq!(advice, "Custom source advice here.");
 }
 
@@ -343,11 +333,13 @@ advice_test = "Custom test advice here."
     )
     .unwrap();
 
-    let json = check_json(dir.path());
-    let cloc = find_check(&json, "cloc");
-    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+    let cloc = check("cloc").pwd(dir.path()).json().fails();
+    let violations = cloc.require("violations").as_array().unwrap();
 
-    let advice = violations[0].get("advice").and_then(|a| a.as_str()).unwrap();
+    let advice = violations[0]
+        .get("advice")
+        .and_then(|a| a.as_str())
+        .unwrap();
     assert_eq!(advice, "Custom test advice here.");
 }
 
@@ -360,11 +352,10 @@ advice_test = "Custom test advice here."
 /// > exclude = [...] - patterns don't generate violations
 #[test]
 fn cloc_excluded_patterns_dont_generate_violations() {
-    let json = check_json(&fixture("cloc/with-excludes"));
-    let cloc = find_check(&json, "cloc");
+    let cloc = check("cloc").on("cloc/with-excludes").json().passes();
 
     // Should pass because huge.rs is in excluded generated/ directory
-    assert_eq!(cloc.get("passed").and_then(|v| v.as_bool()), Some(true));
+    assert_eq!(cloc.require("passed").as_bool(), Some(true));
 
     // Violations should be empty or not mention excluded files
     if let Some(violations) = cloc.get("violations").and_then(|v| v.as_array()) {
@@ -383,8 +374,7 @@ fn cloc_excluded_patterns_dont_generate_violations() {
 /// > by_package omitted if no packages configured
 #[test]
 fn cloc_omits_by_package_when_not_configured() {
-    let json = check_json(&fixture("cloc/basic"));
-    let cloc = find_check(&json, "cloc");
+    let cloc = check("cloc").on("cloc/basic").json().passes();
 
     assert!(
         cloc.get("by_package").is_none(),
@@ -397,11 +387,8 @@ fn cloc_omits_by_package_when_not_configured() {
 /// > by_package present with per-package metrics when packages configured
 #[test]
 fn cloc_includes_by_package_when_configured() {
-    let json = check_json(&fixture("cloc/with-packages"));
-    let cloc = find_check(&json, "cloc");
-    let by_package = cloc
-        .get("by_package")
-        .expect("by_package should be present");
+    let cloc = check("cloc").on("cloc/with-packages").json().passes();
+    let by_package = cloc.require("by_package");
 
     assert!(by_package.get("cli").is_some(), "should have cli package");
     assert!(by_package.get("core").is_some(), "should have core package");
@@ -418,9 +405,8 @@ fn cloc_includes_by_package_when_configured() {
 /// > JSON metrics include: source_tokens, test_tokens
 #[test]
 fn cloc_json_includes_token_metrics() {
-    let json = check_json(&fixture("cloc/basic"));
-    let cloc = find_check(&json, "cloc");
-    let metrics = cloc.get("metrics").expect("cloc should have metrics");
+    let cloc = check("cloc").on("cloc/basic").json().passes();
+    let metrics = cloc.require("metrics");
 
     assert!(
         metrics.get("source_tokens").is_some(),
