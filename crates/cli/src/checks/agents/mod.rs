@@ -10,6 +10,7 @@
 //! - Basic metrics output
 
 pub mod config;
+mod content;
 mod detection;
 mod sections;
 mod sync;
@@ -20,6 +21,10 @@ use crate::check::{Check, CheckContext, CheckResult, Violation};
 use crate::config::CheckLevel;
 
 pub use config::AgentsConfig;
+use config::ContentRule;
+use content::{
+    check_line_count, check_token_count, detect_box_diagrams, detect_mermaid_blocks, detect_tables,
+};
 use detection::{DetectedFile, Scope, detect_agent_files, file_exists_at_root};
 use sections::validate_sections;
 use sync::{DiffType, compare_files};
@@ -67,6 +72,9 @@ impl Check for AgentsCheck {
 
         // Check sections in each detected file
         check_sections(ctx, config, &detected, &mut violations);
+
+        // Check content rules (tables, diagrams, size limits)
+        check_content(config, &detected, &mut violations);
 
         // Build metrics
         let files_found: Vec<String> = detected
@@ -330,6 +338,111 @@ fn check_sections(
             ));
         }
     }
+}
+
+/// Check content rules in agent files.
+fn check_content(
+    config: &AgentsConfig,
+    detected: &[DetectedFile],
+    violations: &mut Vec<Violation>,
+) {
+    for file in detected {
+        let Ok(content) = std::fs::read_to_string(&file.path) else {
+            continue;
+        };
+
+        let filename = file
+            .path
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_default();
+
+        // Get effective limits for this scope
+        let (max_lines, max_tokens) = get_scope_limits(config, &file.scope);
+
+        // Check content rules
+        if config.tables == ContentRule::Forbid {
+            for issue in detect_tables(&content) {
+                violations.push(Violation::file(
+                    &filename,
+                    issue.line,
+                    issue.content_type.violation_type(),
+                    issue.content_type.advice(),
+                ));
+            }
+        }
+
+        if config.box_diagrams == ContentRule::Forbid {
+            for issue in detect_box_diagrams(&content) {
+                violations.push(Violation::file(
+                    &filename,
+                    issue.line,
+                    issue.content_type.violation_type(),
+                    issue.content_type.advice(),
+                ));
+            }
+        }
+
+        if config.mermaid == ContentRule::Forbid {
+            for issue in detect_mermaid_blocks(&content) {
+                violations.push(Violation::file(
+                    &filename,
+                    issue.line,
+                    issue.content_type.violation_type(),
+                    issue.content_type.advice(),
+                ));
+            }
+        }
+
+        // Check size limits
+        if let Some(limit) = max_lines
+            && let Some(violation) = check_line_count(&content, limit)
+        {
+            violations.push(
+                Violation::file_only(
+                    &filename,
+                    "file_too_large",
+                    violation
+                        .limit_type
+                        .advice(violation.value, violation.threshold),
+                )
+                .with_threshold(violation.value as i64, violation.threshold as i64),
+            );
+        }
+
+        if let Some(limit) = max_tokens
+            && let Some(violation) = check_token_count(&content, limit)
+        {
+            violations.push(
+                Violation::file_only(
+                    &filename,
+                    "file_too_large",
+                    violation
+                        .limit_type
+                        .advice(violation.value, violation.threshold),
+                )
+                .with_threshold(violation.value as i64, violation.threshold as i64),
+            );
+        }
+    }
+}
+
+/// Get effective size limits for a scope, with inheritance.
+fn get_scope_limits(config: &AgentsConfig, scope: &Scope) -> (Option<usize>, Option<usize>) {
+    let scope_config = match scope {
+        Scope::Root => config.root.as_ref(),
+        Scope::Package(_) => config.package.as_ref(),
+        Scope::Module => config.module.as_ref(),
+    };
+
+    // Scope config overrides top-level, top-level provides defaults
+    let max_lines = scope_config.and_then(|s| s.max_lines).or(config.max_lines);
+
+    let max_tokens = scope_config
+        .and_then(|s| s.max_tokens)
+        .or(config.max_tokens);
+
+    (max_lines, max_tokens)
 }
 
 #[cfg(test)]

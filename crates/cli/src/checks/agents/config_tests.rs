@@ -35,3 +35,54 @@ fn default_sync_is_disabled() {
     assert!(!config.sync);
     assert!(config.sync_source.is_none());
 }
+
+#[test]
+fn default_tables_is_forbid() {
+    let config = AgentsConfig::default();
+    assert_eq!(config.tables, ContentRule::Forbid);
+}
+
+#[test]
+fn default_box_diagrams_is_allow() {
+    let config = AgentsConfig::default();
+    assert_eq!(config.box_diagrams, ContentRule::Allow);
+}
+
+#[test]
+fn default_mermaid_is_allow() {
+    let config = AgentsConfig::default();
+    assert_eq!(config.mermaid, ContentRule::Allow);
+}
+
+#[test]
+fn default_max_lines_is_none() {
+    let config = AgentsConfig::default();
+    assert!(config.max_lines.is_none());
+}
+
+#[test]
+fn default_max_tokens_is_none() {
+    let config = AgentsConfig::default();
+    assert!(config.max_tokens.is_none());
+}
+
+#[test]
+fn content_rule_deserialize_allow() {
+    let json = r#""allow""#;
+    let rule: ContentRule = serde_json::from_str(json).unwrap();
+    assert_eq!(rule, ContentRule::Allow);
+}
+
+#[test]
+fn content_rule_deserialize_forbid() {
+    let json = r#""forbid""#;
+    let rule: ContentRule = serde_json::from_str(json).unwrap();
+    assert_eq!(rule, ContentRule::Forbid);
+}
+
+#[test]
+fn content_rule_deserialize_invalid() {
+    let json = r#""invalid""#;
+    let result: Result<ContentRule, _> = serde_json::from_str(json);
+    assert!(result.is_err());
+}

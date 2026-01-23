@@ -10,7 +10,7 @@ use super::{
     EscapesConfig, LineMetric, LintChangesPolicy, RustConfig, RustPolicyConfig, ShellConfig,
     ShellPolicyConfig, ShellSuppressConfig, SuppressConfig, SuppressLevel, SuppressScopeConfig,
 };
-use crate::checks::agents::config::{RequiredSection, SectionsConfig};
+use crate::checks::agents::config::{ContentRule, RequiredSection, SectionsConfig};
 
 /// Parse Rust-specific configuration from TOML value.
 pub(super) fn parse_rust_config(value: Option<&toml::Value>) -> RustConfig {
@@ -444,6 +444,20 @@ pub(super) fn parse_agents_config(value: Option<&toml::Value>) -> AgentsConfig {
 
     let sections = parse_sections_config(t.get("sections"));
 
+    let tables = parse_content_rule(t.get("tables")).unwrap_or_default();
+    let box_diagrams = parse_content_rule(t.get("box_diagrams")).unwrap_or_else(ContentRule::allow);
+    let mermaid = parse_content_rule(t.get("mermaid")).unwrap_or_else(ContentRule::allow);
+
+    let max_lines = t
+        .get("max_lines")
+        .and_then(|v| v.as_integer())
+        .map(|v| v as usize);
+
+    let max_tokens = t
+        .get("max_tokens")
+        .and_then(|v| v.as_integer())
+        .map(|v| v as usize);
+
     let root = t.get("root").map(parse_agents_scope_config);
     let package = t.get("package").map(parse_agents_scope_config);
     let module = t.get("module").map(parse_agents_scope_config);
@@ -457,9 +471,24 @@ pub(super) fn parse_agents_config(value: Option<&toml::Value>) -> AgentsConfig {
         sync,
         sync_source,
         sections,
+        tables,
+        box_diagrams,
+        mermaid,
+        max_lines,
+        max_tokens,
         root,
         package,
         module,
+    }
+}
+
+/// Parse a content rule from TOML value.
+fn parse_content_rule(value: Option<&toml::Value>) -> Option<ContentRule> {
+    let s = value?.as_str()?;
+    match s {
+        "allow" => Some(ContentRule::Allow),
+        "forbid" => Some(ContentRule::Forbid),
+        _ => None,
     }
 }
 
