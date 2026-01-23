@@ -1,0 +1,5 @@
+version = 1
+
+[rust.policy]
+lint_changes = "standalone"
+lint_config = ["rustfmt.toml", ".rustfmt.toml", "clippy.toml", ".clippy.toml"]

@@ -30,6 +30,10 @@ mod modes_cache;
 #[path = "specs/modes/file_walking.rs"]
 mod modes_file_walking;
 
+// adapters/
+#[path = "specs/adapters/mod.rs"]
+mod adapters;
+
 use prelude::*;
 
 // =============================================================================
