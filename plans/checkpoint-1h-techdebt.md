@@ -1,5 +1,7 @@
 # Checkpoint 1H: Tech Debt - DRY Test Patterns
 
+**Root Feature:** `quench-9ef6`
+
 ## Overview
 
 Reduce test boilerplate and improve maintainability by extracting common test utilities and converting repetitive tests to `yare` parameterized tests. The `yare` crate is already a dev-dependency but currently unused.
