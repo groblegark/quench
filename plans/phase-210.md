@@ -1,5 +1,7 @@
 # Phase 210: Escapes Check - Pattern Matching
 
+**Root Feature:** `quench-6c9b`
+
 ## Overview
 
 Implement the core pattern matching infrastructure for the `escapes` check. This phase focuses on:
