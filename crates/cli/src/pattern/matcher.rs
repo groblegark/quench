@@ -48,6 +48,8 @@ pub struct LineMatch {
     pub text: String,
     /// Byte offset in file.
     pub offset: usize,
+    /// The full line containing the match.
+    pub line_content: String,
 }
 
 /// Error during pattern compilation.
@@ -95,10 +97,12 @@ impl CompiledPattern {
             .map(|m| {
                 let line = byte_offset_to_line(content, m.start);
                 let text = content[m.start..m.end].to_string();
+                let line_content = get_line_at_offset(content, m.start).to_string();
                 LineMatch {
                     line,
                     text,
                     offset: m.start,
+                    line_content,
                 }
             })
             .collect()
@@ -202,6 +206,25 @@ impl RegexMatcher {
 pub fn byte_offset_to_line(content: &str, offset: usize) -> u32 {
     // Count newlines before offset
     content[..offset].bytes().filter(|&b| b == b'\n').count() as u32 + 1
+}
+
+/// Get the full line containing a byte offset.
+pub fn get_line_at_offset(content: &str, offset: usize) -> &str {
+    let start = content[..offset].rfind('\n').map(|i| i + 1).unwrap_or(0);
+    let end = content[offset..]
+        .find('\n')
+        .map(|i| offset + i)
+        .unwrap_or(content.len());
+    &content[start..end]
+}
+
+/// Get the line number and content for all lines in content.
+/// Returns iterator of (1-based line number, line content).
+pub fn lines_with_numbers(content: &str) -> impl Iterator<Item = (u32, &str)> {
+    content
+        .lines()
+        .enumerate()
+        .map(|(i, line)| (i as u32 + 1, line))
 }
 
 #[cfg(test)]

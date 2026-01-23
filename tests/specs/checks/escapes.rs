@@ -52,7 +52,7 @@ fn escapes_reports_line_number_of_match() {
 ///
 /// > Just count occurrences.
 #[test]
-#[ignore = "TODO: Phase 215 - Escapes Actions"]
+#[ignore = "TODO: Phase 220 - Escapes Metrics"]
 fn escapes_count_action_counts_occurrences() {
     let escapes = check("escapes").on("escapes/count-ok").json().passes();
     let metrics = escapes.require("metrics");
@@ -68,7 +68,6 @@ fn escapes_count_action_counts_occurrences() {
 ///
 /// > Fail if count exceeds per-pattern threshold (default: 0).
 #[test]
-#[ignore = "TODO: Phase 215 - Escapes Actions"]
 fn escapes_count_action_fails_when_threshold_exceeded() {
     let escapes = check("escapes").on("escapes/count-fail").json().fails();
     let violations = escapes.require("violations").as_array().unwrap();
@@ -89,7 +88,6 @@ fn escapes_count_action_fails_when_threshold_exceeded() {
 ///
 /// > Pattern is allowed if accompanied by a justification comment.
 #[test]
-#[ignore = "TODO: Phase 215 - Escapes Actions"]
 fn escapes_comment_action_passes_when_comment_on_same_line() {
     check("escapes").on("escapes/comment-ok").passes();
 }
@@ -98,7 +96,6 @@ fn escapes_comment_action_passes_when_comment_on_same_line() {
 ///
 /// > On preceding lines, searching upward until a non-blank, non-comment line is found
 #[test]
-#[ignore = "TODO: Phase 215 - Escapes Actions"]
 fn escapes_comment_action_passes_when_comment_on_preceding_line() {
     let dir = temp_project();
     std::fs::write(
@@ -130,7 +127,6 @@ unsafe { *ptr }
 ///
 /// > Require a justification comment.
 #[test]
-#[ignore = "TODO: Phase 215 - Escapes Actions"]
 fn escapes_comment_action_fails_when_no_comment_found() {
     let escapes = check("escapes").on("escapes/comment-fail").json().fails();
     let violations = escapes.require("violations").as_array().unwrap();
@@ -151,7 +147,6 @@ fn escapes_comment_action_fails_when_no_comment_found() {
 ///
 /// > Pattern is never allowed in source code.
 #[test]
-#[ignore = "TODO: Phase 215 - Escapes Actions"]
 fn escapes_forbid_action_always_fails_in_source_code() {
     let escapes = check("escapes").on("escapes/forbid-source").json().fails();
     let violations = escapes.require("violations").as_array().unwrap();
@@ -168,7 +163,6 @@ fn escapes_forbid_action_always_fails_in_source_code() {
 ///
 /// > Always allowed in test code.
 #[test]
-#[ignore = "TODO: Phase 215 - Escapes Actions"]
 fn escapes_forbid_action_allowed_in_test_code() {
     check("escapes").on("escapes/forbid-test").passes();
 }
@@ -198,7 +192,6 @@ fn escapes_test_code_counted_separately_in_metrics() {
 ///
 /// > Each pattern can have custom advice
 #[test]
-#[ignore = "TODO: Phase 215 - Escapes Actions"]
 fn escapes_per_pattern_advice_shown_in_violation() {
     let dir = temp_project();
     std::fs::write(
@@ -259,7 +252,6 @@ fn escapes_json_includes_source_test_breakdown_per_pattern() {
 ///
 /// > Violation types: missing_comment, forbidden, threshold_exceeded
 #[test]
-#[ignore = "TODO: Phase 215 - Escapes Actions"]
 fn escapes_violation_type_is_one_of_expected_values() {
     let escapes = check("escapes").on("violations").json().fails();
     let violations = escapes.require("violations").as_array().unwrap();

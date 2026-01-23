@@ -100,3 +100,38 @@ fn byte_offset_to_line_handles_multiple_newlines() {
     assert_eq!(byte_offset_to_line(content, 4), 3); // 'c'
     assert_eq!(byte_offset_to_line(content, 6), 4); // 'd'
 }
+
+#[test]
+fn get_line_at_offset_returns_full_line() {
+    let content = "first line\nsecond line\nthird line";
+    assert_eq!(get_line_at_offset(content, 0), "first line");
+    assert_eq!(get_line_at_offset(content, 5), "first line");
+    assert_eq!(get_line_at_offset(content, 11), "second line");
+    assert_eq!(get_line_at_offset(content, 15), "second line");
+    assert_eq!(get_line_at_offset(content, 23), "third line");
+}
+
+#[test]
+fn get_line_at_offset_handles_single_line() {
+    let content = "single line content";
+    assert_eq!(get_line_at_offset(content, 0), "single line content");
+    assert_eq!(get_line_at_offset(content, 10), "single line content");
+}
+
+#[test]
+fn lines_with_numbers_iterates_correctly() {
+    let content = "first\nsecond\nthird";
+    let lines: Vec<_> = lines_with_numbers(content).collect();
+    assert_eq!(lines, vec![(1, "first"), (2, "second"), (3, "third")]);
+}
+
+#[test]
+fn find_all_with_lines_includes_line_content() {
+    let pattern = CompiledPattern::compile("target").unwrap();
+    let content = "before\ntarget here\nafter";
+    let matches = pattern.find_all_with_lines(content);
+    assert_eq!(matches.len(), 1);
+    assert_eq!(matches[0].line, 2);
+    assert_eq!(matches[0].text, "target");
+    assert_eq!(matches[0].line_content, "target here");
+}
