@@ -1,5 +1,8 @@
 version = 1
 
+[check.agents]
+required = ["CLAUDE.md"]
+
 [[check.agents.sections.required]]
 name = "Landing the Plane"
-advice = "Checklist before completing work"
+advice = "Checklist for AI agents before finishing work"

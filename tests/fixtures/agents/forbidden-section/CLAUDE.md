@@ -6,6 +6,6 @@ This file contains a forbidden section.
 
 Follow coding standards.
 
-## Secrets
+## Testing Plan
 
-DO NOT put secrets here!
+This section should be flagged (matches Test*).

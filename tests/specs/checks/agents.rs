@@ -112,7 +112,6 @@ fn agents_out_of_sync_generates_violation() {
 ///
 /// > Missing a required section generates a violation with advice.
 #[test]
-#[ignore = "TODO: Phase 515 - Agents Section Validation"]
 fn agents_missing_section_generates_violation_with_advice() {
     let agents = check("agents").on("agents/missing-section").json().fails();
     let violations = agents.require("violations").as_array().unwrap();
@@ -134,13 +133,23 @@ fn agents_missing_section_generates_violation_with_advice() {
         advice.is_some() && !advice.unwrap().is_empty(),
         "missing_section violation should have advice"
     );
+
+    // Verify advice includes section name and configured advice
+    let advice_text = advice.unwrap();
+    assert!(
+        advice_text.contains("Landing the Plane"),
+        "advice should include section name"
+    );
+    assert!(
+        advice_text.contains("Checklist"),
+        "advice should include configured advice text"
+    );
 }
 
 /// Spec: docs/specs/checks/agents.md#forbidden-sections
 ///
 /// > Having a forbidden section generates a violation.
 #[test]
-#[ignore = "TODO: Phase 515 - Agents Section Validation"]
 fn agents_forbidden_section_generates_violation() {
     let agents = check("agents")
         .on("agents/forbidden-section")
@@ -154,6 +163,28 @@ fn agents_forbidden_section_generates_violation() {
             .any(|v| { v.get("type").and_then(|t| t.as_str()) == Some("forbidden_section") }),
         "should have forbidden_section violation"
     );
+}
+
+/// Spec: docs/specs/checks/agents.md#glob-patterns
+///
+/// > Glob patterns match multiple section names.
+#[test]
+fn agents_forbidden_section_glob_matches() {
+    let agents = check("agents")
+        .on("agents/forbidden-section")
+        .json()
+        .fails();
+    let violations = agents.require("violations").as_array().unwrap();
+
+    let matches_test = violations.iter().any(|v| {
+        v.get("type").and_then(|t| t.as_str()) == Some("forbidden_section")
+            && v.get("advice")
+                .and_then(|a| a.as_str())
+                .map(|a| a.contains("Test*"))
+                .unwrap_or(false)
+    });
+
+    assert!(matches_test, "should match Test* glob pattern");
 }
 
 // =============================================================================

@@ -10,6 +10,7 @@ use super::{
     EscapesConfig, LineMetric, LintChangesPolicy, RustConfig, RustPolicyConfig, ShellConfig,
     ShellPolicyConfig, ShellSuppressConfig, SuppressConfig, SuppressLevel, SuppressScopeConfig,
 };
+use crate::checks::agents::config::{RequiredSection, SectionsConfig};
 
 /// Parse Rust-specific configuration from TOML value.
 pub(super) fn parse_rust_config(value: Option<&toml::Value>) -> RustConfig {
@@ -441,6 +442,8 @@ pub(super) fn parse_agents_config(value: Option<&toml::Value>) -> AgentsConfig {
         .and_then(|v| v.as_str())
         .map(String::from);
 
+    let sections = parse_sections_config(t.get("sections"));
+
     let root = t.get("root").map(parse_agents_scope_config);
     let package = t.get("package").map(parse_agents_scope_config);
     let module = t.get("module").map(parse_agents_scope_config);
@@ -453,6 +456,7 @@ pub(super) fn parse_agents_config(value: Option<&toml::Value>) -> AgentsConfig {
         forbid,
         sync,
         sync_source,
+        sections,
         root,
         package,
         module,
@@ -511,5 +515,48 @@ fn parse_agents_scope_config(value: &toml::Value) -> AgentsScopeConfig {
         forbid,
         max_lines,
         max_tokens,
+    }
+}
+
+/// Parse sections configuration from TOML value.
+fn parse_sections_config(value: Option<&toml::Value>) -> SectionsConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return SectionsConfig::default();
+    };
+
+    let required = t
+        .get("required")
+        .and_then(|v| v.as_array())
+        .map(|arr| arr.iter().filter_map(parse_required_section).collect())
+        .unwrap_or_default();
+
+    let forbid = t
+        .get("forbid")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    SectionsConfig { required, forbid }
+}
+
+/// Parse a single required section from TOML value.
+fn parse_required_section(value: &toml::Value) -> Option<RequiredSection> {
+    match value {
+        // Simple form: just a string name
+        toml::Value::String(name) => Some(RequiredSection {
+            name: name.clone(),
+            advice: None,
+        }),
+        // Extended form: table with name and advice
+        toml::Value::Table(t) => {
+            let name = t.get("name")?.as_str()?.to_string();
+            let advice = t.get("advice").and_then(|v| v.as_str()).map(String::from);
+            Some(RequiredSection { name, advice })
+        }
+        _ => None,
     }
 }
