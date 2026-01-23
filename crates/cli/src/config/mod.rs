@@ -6,14 +6,20 @@
 //! Handles quench.toml parsing with version validation and unknown key warnings.
 
 mod parse;
+mod shell;
 
 use std::collections::BTreeSet;
 use std::path::Path;
 
 use serde::Deserialize;
 
+pub use shell::{ShellConfig, ShellPolicyConfig, ShellSuppressConfig};
+
 use crate::error::{Error, Result};
-use parse::{parse_cloc_config, parse_escapes_config, parse_rust_config, warn_unknown_key};
+use parse::{
+    parse_cloc_config, parse_escapes_config, parse_rust_config, parse_shell_config,
+    warn_unknown_key,
+};
 
 /// Minimum config structure for version checking.
 #[derive(Deserialize)]
@@ -37,6 +43,9 @@ struct FlexibleConfig {
 
     #[serde(default)]
     rust: Option<toml::Value>,
+
+    #[serde(default)]
+    shell: Option<toml::Value>,
 
     #[serde(flatten)]
     unknown: std::collections::BTreeMap<String, toml::Value>,
@@ -63,6 +72,10 @@ pub struct Config {
     /// Rust-specific configuration.
     #[serde(default)]
     pub rust: RustConfig,
+
+    /// Shell-specific configuration.
+    #[serde(default)]
+    pub shell: ShellConfig,
 }
 
 /// Rust language-specific configuration.
@@ -450,7 +463,7 @@ pub struct IgnoreConfig {
 pub const SUPPORTED_VERSION: i64 = 1;
 
 /// Known top-level keys in the config.
-const KNOWN_KEYS: &[&str] = &["version", "project", "workspace", "check", "rust"];
+const KNOWN_KEYS: &[&str] = &["version", "project", "workspace", "check", "rust", "shell"];
 
 /// Known project keys in the config.
 const KNOWN_PROJECT_KEYS: &[&str] = &["name", "source", "tests", "ignore"];
@@ -660,12 +673,16 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
     // Parse rust config
     let rust = parse_rust_config(flexible.rust.as_ref());
 
+    // Parse shell config
+    let shell = parse_shell_config(flexible.shell.as_ref());
+
     Ok(Config {
         version: flexible.version,
         project,
         workspace,
         check,
         rust,
+        shell,
     })
 }
 

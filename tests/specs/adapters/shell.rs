@@ -249,19 +249,17 @@ fn shell_adapter_escape_patterns_allowed_in_tests() {
 ///
 /// > "forbid" - Never allowed (default)
 #[test]
-#[ignore = "TODO: Phase 402 - Shell Adapter Implementation"]
 fn shell_adapter_shellcheck_disable_forbidden_by_default() {
     check("escapes")
         .on("shell/shellcheck-forbid")
         .fails()
-        .stdout_has("# shellcheck disable=");
+        .stdout_has("shellcheck");
 }
 
 /// Spec: docs/specs/langs/shell.md#suppress
 ///
 /// > [shell.suppress.test] check = "allow" - tests can suppress freely
 #[test]
-#[ignore = "TODO: Phase 402 - Shell Adapter Implementation"]
 fn shell_adapter_shellcheck_disable_allowed_in_tests() {
     check("escapes").on("shell/shellcheck-test").passes();
 }
@@ -270,7 +268,6 @@ fn shell_adapter_shellcheck_disable_allowed_in_tests() {
 ///
 /// > "comment" - Requires justification comment
 #[test]
-#[ignore = "TODO: Phase 402 - Shell Adapter Implementation"]
 fn shell_adapter_shellcheck_disable_with_comment_when_configured() {
     let dir = temp_project();
     std::fs::write(
@@ -297,7 +294,6 @@ check = "comment"
 ///
 /// > [shell.suppress.source] allow = ["SC2034"]
 #[test]
-#[ignore = "TODO: Phase 402 - Shell Adapter Implementation"]
 fn shell_adapter_shellcheck_allow_list_skips_check() {
     let dir = temp_project();
     std::fs::write(

@@ -230,3 +230,114 @@ lint_changes = "none"
     let config = parse_with_warnings(content, &path).unwrap();
     assert_eq!(config.rust.policy.lint_changes, LintChangesPolicy::None);
 }
+
+// Shell config tests
+
+#[test]
+fn shell_suppress_defaults_to_forbid() {
+    let path = PathBuf::from("quench.toml");
+    let content = "version = 1\n";
+    let config = parse_with_warnings(content, &path).unwrap();
+    assert_eq!(config.shell.suppress.check, SuppressLevel::Forbid);
+}
+
+#[test]
+fn shell_suppress_test_defaults_to_allow() {
+    let path = PathBuf::from("quench.toml");
+    let content = "version = 1\n";
+    let config = parse_with_warnings(content, &path).unwrap();
+    assert_eq!(config.shell.suppress.test.check, Some(SuppressLevel::Allow));
+}
+
+#[test]
+fn shell_suppress_can_be_comment() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[shell.suppress]
+check = "comment"
+"#;
+    let config = parse_with_warnings(content, &path).unwrap();
+    assert_eq!(config.shell.suppress.check, SuppressLevel::Comment);
+}
+
+#[test]
+fn shell_suppress_allow_list() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[shell.suppress.source]
+allow = ["SC2034", "SC2086"]
+"#;
+    let config = parse_with_warnings(content, &path).unwrap();
+    assert!(
+        config
+            .shell
+            .suppress
+            .source
+            .allow
+            .contains(&"SC2034".to_string())
+    );
+    assert!(
+        config
+            .shell
+            .suppress
+            .source
+            .allow
+            .contains(&"SC2086".to_string())
+    );
+}
+
+#[test]
+fn shell_suppress_forbid_list() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[shell.suppress.source]
+forbid = ["SC2006"]
+"#;
+    let config = parse_with_warnings(content, &path).unwrap();
+    assert!(
+        config
+            .shell
+            .suppress
+            .source
+            .forbid
+            .contains(&"SC2006".to_string())
+    );
+}
+
+#[test]
+fn shell_suppress_comment_pattern() {
+    let path = PathBuf::from("quench.toml");
+    let content = r##"
+version = 1
+
+[shell.suppress]
+check = "comment"
+comment = "# OK:"
+"##;
+    let config = parse_with_warnings(content, &path).unwrap();
+    assert_eq!(config.shell.suppress.comment, Some("# OK:".to_string()));
+}
+
+#[test]
+fn shell_default_source_patterns() {
+    let path = PathBuf::from("quench.toml");
+    let content = "version = 1\n";
+    let config = parse_with_warnings(content, &path).unwrap();
+    assert!(config.shell.source.contains(&"**/*.sh".to_string()));
+    assert!(config.shell.source.contains(&"**/*.bash".to_string()));
+}
+
+#[test]
+fn shell_default_test_patterns() {
+    let path = PathBuf::from("quench.toml");
+    let content = "version = 1\n";
+    let config = parse_with_warnings(content, &path).unwrap();
+    assert!(config.shell.tests.contains(&"tests/**/*.bats".to_string()));
+    assert!(config.shell.tests.contains(&"*_test.sh".to_string()));
+}

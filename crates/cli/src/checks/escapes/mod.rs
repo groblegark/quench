@@ -8,6 +8,7 @@
 
 mod comment;
 mod patterns;
+mod shell_suppress;
 
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
@@ -23,7 +24,9 @@ use crate::check::{Check, CheckContext, CheckResult, Violation};
 use crate::config::{
     CheckLevel, EscapeAction, LintChangesPolicy, RustConfig, SuppressConfig, SuppressLevel,
 };
+
 use crate::pattern::CompiledPattern;
+use shell_suppress::check_shell_suppress_violations;
 
 use comment::has_justification_comment;
 use patterns::{
@@ -248,6 +251,23 @@ impl Check for EscapesCheck {
                     &mut limit_reached,
                 );
                 violations.extend(suppress_violations);
+
+                if limit_reached {
+                    break;
+                }
+            }
+
+            // Check for Shell shellcheck suppress directive violations
+            if is_shell_file(&file.path) {
+                let shell_violations = check_shell_suppress_violations(
+                    ctx,
+                    relative,
+                    &content,
+                    &ctx.config.shell.suppress,
+                    is_test_file,
+                    &mut limit_reached,
+                );
+                violations.extend(shell_violations);
 
                 if limit_reached {
                     break;
@@ -520,6 +540,14 @@ fn is_rust_file(path: &Path) -> bool {
     path.extension()
         .and_then(|e| e.to_str())
         .map(|e| e.eq_ignore_ascii_case("rs"))
+        .unwrap_or(false)
+}
+
+/// Check if a file is a Shell source file.
+fn is_shell_file(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .map(|e| matches!(e.to_lowercase().as_str(), "sh" | "bash" | "bats"))
         .unwrap_or(false)
 }
 

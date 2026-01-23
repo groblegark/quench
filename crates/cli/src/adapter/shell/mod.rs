@@ -7,12 +7,17 @@
 //! - File classification (source vs test)
 //! - Default patterns for shell scripts
 //! - Default escape patterns (set +e, eval)
+//! - Shellcheck suppress directive parsing
 //!
 //! See docs/specs/langs/shell.md for specification.
 
 use std::path::Path;
 
 use globset::GlobSet;
+
+mod suppress;
+
+pub use suppress::{ShellcheckSuppress, parse_shellcheck_suppresses};
 
 use super::glob::build_glob_set;
 use super::{Adapter, EscapeAction, EscapePattern, FileKind};
