@@ -8,6 +8,40 @@ use serde::de::Deserializer;
 
 use crate::config::CheckLevel;
 
+/// Content rule enforcement level.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ContentRule {
+    /// Allow this content type.
+    Allow,
+    /// Forbid this content type (generate violation).
+    #[default]
+    Forbid,
+}
+
+impl ContentRule {
+    /// Returns ContentRule::Allow (for serde defaults).
+    pub fn allow() -> Self {
+        ContentRule::Allow
+    }
+}
+
+impl<'de> Deserialize<'de> for ContentRule {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "allow" => Ok(ContentRule::Allow),
+            "forbid" => Ok(ContentRule::Forbid),
+            _ => Err(serde::de::Error::custom(format!(
+                "invalid content rule: {}, expected 'allow' or 'forbid'",
+                s
+            ))),
+        }
+    }
+}
+
 /// Configuration for the agents check.
 #[derive(Debug, Clone, Deserialize)]
 pub struct AgentsConfig {
@@ -43,6 +77,26 @@ pub struct AgentsConfig {
     #[serde(default)]
     pub sections: SectionsConfig,
 
+    /// Markdown table enforcement (default: forbid).
+    #[serde(default)]
+    pub tables: ContentRule,
+
+    /// Box diagram enforcement (default: allow).
+    #[serde(default = "ContentRule::allow")]
+    pub box_diagrams: ContentRule,
+
+    /// Mermaid block enforcement (default: allow).
+    #[serde(default = "ContentRule::allow")]
+    pub mermaid: ContentRule,
+
+    /// Maximum lines per file (root scope, None to disable).
+    #[serde(default)]
+    pub max_lines: Option<usize>,
+
+    /// Maximum tokens per file (root scope, None to disable).
+    #[serde(default)]
+    pub max_tokens: Option<usize>,
+
     /// Root scope settings (overrides flat config).
     #[serde(default)]
     pub root: Option<AgentsScopeConfig>,
@@ -67,6 +121,11 @@ impl Default for AgentsConfig {
             sync: false,
             sync_source: None,
             sections: SectionsConfig::default(),
+            tables: ContentRule::default(),
+            box_diagrams: ContentRule::allow(),
+            mermaid: ContentRule::allow(),
+            max_lines: None,
+            max_tokens: None,
             root: None,
             package: None,
             module: None,
