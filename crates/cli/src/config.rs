@@ -90,6 +90,10 @@ pub struct ClocConfig {
     /// Patterns to exclude from size limit checks.
     #[serde(default)]
     pub exclude: Vec<String>,
+
+    /// Maximum tokens per file (default: 20000, None = disabled).
+    #[serde(default = "ClocConfig::default_max_tokens")]
+    pub max_tokens: Option<usize>,
 }
 
 impl Default for ClocConfig {
@@ -100,6 +104,7 @@ impl Default for ClocConfig {
             check: CheckLevel::default(),
             test_patterns: Self::default_test_patterns(),
             exclude: Vec::new(),
+            max_tokens: Self::default_max_tokens(),
         }
     }
 }
@@ -111,6 +116,10 @@ impl ClocConfig {
 
     fn default_max_lines_test() -> usize {
         1100
+    }
+
+    fn default_max_tokens() -> Option<usize> {
+        Some(20000)
     }
 
     fn default_test_patterns() -> Vec<String> {
@@ -367,12 +376,24 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
                         })
                         .unwrap_or_default();
 
+                    let max_tokens = cloc_table
+                        .get("max_tokens")
+                        .map(|v| {
+                            if v.as_bool() == Some(false) {
+                                None // max_tokens = false disables the check
+                            } else {
+                                v.as_integer().map(|n| n as usize)
+                            }
+                        })
+                        .unwrap_or_else(ClocConfig::default_max_tokens);
+
                     ClocConfig {
                         max_lines,
                         max_lines_test,
                         check,
                         test_patterns,
                         exclude,
+                        max_tokens,
                     }
                 }
                 _ => ClocConfig::default(),

@@ -119,3 +119,39 @@ fn parse_with_warnings_rejects_invalid_version() {
     let result = parse_with_warnings("version = 99\n", &path);
     assert!(result.is_err());
 }
+
+// max_tokens config tests
+
+#[test]
+fn parse_max_tokens_default() {
+    let path = PathBuf::from("quench.toml");
+    let content = "version = 1\n";
+    let config = parse_with_warnings(content, &path).unwrap();
+    assert_eq!(config.check.cloc.max_tokens, Some(20000));
+}
+
+#[test]
+fn parse_max_tokens_custom() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[check.cloc]
+max_tokens = 10000
+"#;
+    let config = parse_with_warnings(content, &path).unwrap();
+    assert_eq!(config.check.cloc.max_tokens, Some(10000));
+}
+
+#[test]
+fn parse_max_tokens_false_disables() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[check.cloc]
+max_tokens = false
+"#;
+    let config = parse_with_warnings(content, &path).unwrap();
+    assert_eq!(config.check.cloc.max_tokens, None);
+}

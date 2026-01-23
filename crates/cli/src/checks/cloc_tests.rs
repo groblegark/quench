@@ -178,3 +178,48 @@ fn pattern_matcher_excludes_patterns() {
     // Regular files should not be excluded
     assert!(!matcher.is_excluded(Path::new("/project/src/lib.rs"), root));
 }
+
+// =============================================================================
+// TOKEN COUNTING TESTS
+// =============================================================================
+
+#[test]
+fn count_tokens_empty_file() {
+    let mut file = NamedTempFile::new().unwrap();
+    file.flush().unwrap();
+
+    let count = count_tokens(file.path()).unwrap();
+    assert_eq!(count, 0);
+}
+
+#[test]
+fn count_tokens_short_content() {
+    let mut file = NamedTempFile::new().unwrap();
+    write!(file, "abc").unwrap(); // 3 chars < 4
+    file.flush().unwrap();
+
+    let count = count_tokens(file.path()).unwrap();
+    assert_eq!(count, 0); // 3 / 4 = 0
+}
+
+#[test]
+fn count_tokens_exact_math() {
+    let mut file = NamedTempFile::new().unwrap();
+    // Write exactly 100 characters
+    write!(file, "{}", "a".repeat(100)).unwrap();
+    file.flush().unwrap();
+
+    let count = count_tokens(file.path()).unwrap();
+    assert_eq!(count, 25); // 100 / 4 = 25
+}
+
+#[test]
+fn count_tokens_unicode() {
+    let mut file = NamedTempFile::new().unwrap();
+    // Unicode chars: 4 chars (not 4 bytes)
+    write!(file, "日本語の").unwrap(); // 4 Unicode chars
+    file.flush().unwrap();
+
+    let count = count_tokens(file.path()).unwrap();
+    assert_eq!(count, 1); // 4 chars / 4 = 1 token
+}

@@ -39,8 +39,10 @@ impl Check for ClocCheck {
         let mut violations = Vec::new();
         let mut source_lines: usize = 0;
         let mut source_files: usize = 0;
+        let mut source_tokens: usize = 0;
         let mut test_lines: usize = 0;
         let mut test_files: usize = 0;
+        let mut test_tokens: usize = 0;
 
         // Per-package metrics (only tracked if packages are configured)
         let mut package_metrics: HashMap<String, PackageMetrics> = HashMap::new();
@@ -55,14 +57,17 @@ impl Check for ClocCheck {
                 Ok(line_count) => {
                     let is_test = matcher.is_test_file(&file.path, ctx.root);
                     let is_excluded = matcher.is_excluded(&file.path, ctx.root);
+                    let token_count = count_tokens(&file.path).unwrap_or(0);
 
                     // Accumulate global metrics
                     if is_test {
                         test_lines += line_count;
                         test_files += 1;
+                        test_tokens += token_count;
                     } else {
                         source_lines += line_count;
                         source_files += 1;
+                        source_tokens += token_count;
                     }
 
                     // Accumulate per-package metrics
@@ -73,9 +78,11 @@ impl Check for ClocCheck {
                         if is_test {
                             pkg.test_lines += line_count;
                             pkg.test_files += 1;
+                            pkg.test_tokens += token_count;
                         } else {
                             pkg.source_lines += line_count;
                             pkg.source_files += 1;
+                            pkg.source_tokens += token_count;
                         }
                     }
 
@@ -110,6 +117,32 @@ impl Check for ClocCheck {
                                 .with_threshold(line_count as i64, max_lines as i64),
                             );
                         }
+
+                        // Token limit check
+                        if let Some(max_tokens) = cloc_config.max_tokens
+                            && token_count > max_tokens
+                        {
+                            let current = ctx.violation_count.fetch_add(1, Ordering::SeqCst);
+                            if let Some(limit) = ctx.limit
+                                && current >= limit
+                            {
+                                break;
+                            }
+
+                            let display_path =
+                                file.path.strip_prefix(ctx.root).unwrap_or(&file.path);
+                            violations.push(
+                                Violation::file_only(
+                                    display_path,
+                                    "file_too_large",
+                                    format!(
+                                        "Split into smaller modules. {} tokens exceeds {} token limit.",
+                                        token_count, max_tokens
+                                    ),
+                                )
+                                .with_threshold(token_count as i64, max_tokens as i64),
+                            );
+                        }
                     }
                 }
                 Err(e) => {
@@ -134,8 +167,10 @@ impl Check for ClocCheck {
         let result = result.with_metrics(json!({
             "source_lines": source_lines,
             "source_files": source_files,
+            "source_tokens": source_tokens,
             "test_lines": test_lines,
             "test_files": test_files,
+            "test_tokens": test_tokens,
             "ratio": (ratio * 100.0).round() / 100.0,
         }));
 
@@ -150,8 +185,10 @@ impl Check for ClocCheck {
                         json!({
                             "source_lines": metrics.source_lines,
                             "source_files": metrics.source_files,
+                            "source_tokens": metrics.source_tokens,
                             "test_lines": metrics.test_lines,
                             "test_files": metrics.test_files,
+                            "test_tokens": metrics.test_tokens,
                             "ratio": (ratio * 100.0).round() / 100.0,
                         }),
                     )
@@ -173,8 +210,10 @@ impl Check for ClocCheck {
 struct PackageMetrics {
     source_lines: usize,
     source_files: usize,
+    source_tokens: usize,
     test_lines: usize,
     test_files: usize,
+    test_tokens: usize,
 }
 
 impl PackageMetrics {
@@ -282,6 +321,17 @@ fn count_nonblank_lines(path: &Path) -> std::io::Result<usize> {
         .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
 
     Ok(text.lines().filter(|l| !l.trim().is_empty()).count())
+}
+
+/// Count tokens in a file using chars/4 approximation.
+/// This matches typical LLM tokenization behavior.
+fn count_tokens(path: &Path) -> std::io::Result<usize> {
+    let content = std::fs::read(path)?;
+    let text = String::from_utf8(content)
+        .unwrap_or_else(|e| String::from_utf8_lossy(e.as_bytes()).into_owned());
+
+    // chars / 4 approximation (standard LLM heuristic)
+    Ok(text.chars().count() / 4)
 }
 
 #[cfg(test)]

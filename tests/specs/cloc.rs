@@ -208,14 +208,22 @@ fn cloc_fails_on_test_file_over_max_lines_test() {
 ///
 /// > max_tokens = 20000 (default)
 #[test]
-#[ignore = "TODO: Phase 110 - CLOC Token Counting"]
 fn cloc_fails_on_file_over_max_tokens() {
-    // Needs fixture with high token count but low line count
-    // Token counting is deferred to Phase 110
     let json = check_json(&fixture("cloc/high-tokens"));
     let cloc = find_check(&json, "cloc");
 
     assert_eq!(cloc.get("passed").and_then(|v| v.as_bool()), Some(false));
+
+    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+    assert!(
+        violations.iter().any(|v| {
+            v.get("advice")
+                .and_then(|a| a.as_str())
+                .unwrap()
+                .contains("token")
+        }),
+        "violation should mention tokens"
+    );
 }
 
 // =============================================================================
@@ -278,4 +286,20 @@ fn cloc_includes_by_package_when_configured() {
     assert!(cli.get("source_lines").is_some());
     assert!(cli.get("test_lines").is_some());
     assert!(cli.get("ratio").is_some());
+}
+
+/// Spec: docs/specs/checks/cloc.md#json-output
+///
+/// > JSON metrics include: source_tokens, test_tokens
+#[test]
+fn cloc_json_includes_token_metrics() {
+    let json = check_json(&fixture("cloc/basic"));
+    let cloc = find_check(&json, "cloc");
+    let metrics = cloc.get("metrics").expect("cloc should have metrics");
+
+    assert!(
+        metrics.get("source_tokens").is_some(),
+        "missing source_tokens"
+    );
+    assert!(metrics.get("test_tokens").is_some(), "missing test_tokens");
 }
