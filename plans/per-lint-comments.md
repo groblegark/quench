@@ -1,5 +1,7 @@
 # Per-Lint Comment Patterns
 
+**Root Feature:** `quench-f164`
+
 ## Overview
 
 Implement per-lint-code comment patterns for suppress configuration. Currently, `[rust.suppress.source.<lint-code>]` and `[shell.suppress.source.<lint-code>]` sections accept a `comment` field, but it is silently ignored. All suppressions use only the global `comment` pattern.
