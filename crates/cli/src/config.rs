@@ -94,6 +94,14 @@ pub struct ClocConfig {
     /// Maximum tokens per file (default: 20000, None = disabled).
     #[serde(default = "ClocConfig::default_max_tokens")]
     pub max_tokens: Option<usize>,
+
+    /// Advice message for source file violations.
+    #[serde(default = "ClocConfig::default_advice")]
+    pub advice: String,
+
+    /// Advice message for test file violations.
+    #[serde(default = "ClocConfig::default_advice_test")]
+    pub advice_test: String,
 }
 
 impl Default for ClocConfig {
@@ -105,6 +113,8 @@ impl Default for ClocConfig {
             test_patterns: Self::default_test_patterns(),
             exclude: Vec::new(),
             max_tokens: Self::default_max_tokens(),
+            advice: Self::default_advice(),
+            advice_test: Self::default_advice_test(),
         }
     }
 }
@@ -132,6 +142,14 @@ impl ClocConfig {
             "**/*.spec.*".to_string(),
             "**/test_*.*".to_string(),
         ]
+    }
+
+    fn default_advice() -> String {
+        "Can the code be made more concise? If not, split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable.".to_string()
+    }
+
+    fn default_advice_test() -> String {
+        "Can tests be parameterized or use shared fixtures to be more concise? If not, split large test files into a folder.".to_string()
     }
 }
 
@@ -387,6 +405,18 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
                         })
                         .unwrap_or_else(ClocConfig::default_max_tokens);
 
+                    let advice = cloc_table
+                        .get("advice")
+                        .and_then(|v| v.as_str())
+                        .map(String::from)
+                        .unwrap_or_else(ClocConfig::default_advice);
+
+                    let advice_test = cloc_table
+                        .get("advice_test")
+                        .and_then(|v| v.as_str())
+                        .map(String::from)
+                        .unwrap_or_else(ClocConfig::default_advice_test);
+
                     ClocConfig {
                         max_lines,
                         max_lines_test,
@@ -394,6 +424,8 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
                         test_patterns,
                         exclude,
                         max_tokens,
+                        advice,
+                        advice_test,
                     }
                 }
                 _ => ClocConfig::default(),

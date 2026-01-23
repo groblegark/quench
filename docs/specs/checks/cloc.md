@@ -89,7 +89,8 @@ Text output only appears when file size limits are exceeded:
 ```
 cloc: FAIL
   src/parser.rs: 923 lines (max: 750)
-    Split into smaller modules.
+    Can the code be made more concise? If not, split large source files into sibling modules
+    or submodules in a folder; consider refactoring to be more unit testable.
 
 5 checks passed, 1 failed
 ```
@@ -118,7 +119,7 @@ Typical healthy ranges: `0.5x` to `2.0x` (project-dependent).
       "type": "file_too_large",
       "value": 923,
       "threshold": 750,
-      "advice": "Split into smaller modules."
+      "advice": "Can the code be made more concise? If not, split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable."
     }
   ],
   "metrics": {
@@ -171,7 +172,8 @@ When limits are set, violations are reported:
 ```
 cloc: FAIL
   src/parser.rs: 923 lines (max: 900)
-    Split into smaller modules.
+    Can the code be made more concise? If not, split large source files into sibling modules
+    or submodules in a folder; consider refactoring to be more unit testable.
 ```
 
 Average lines per file is **reported** in metrics but not enforced.
@@ -193,6 +195,10 @@ max_tokens = 20000               # use false to disable
 
 # Exclude from size limits
 exclude = ["**/generated/**", "**/migrations/**"]
+
+# Custom advice for violations (defaults shown)
+advice = "Can the code be made more concise? If not, split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable."
+advice_test = "Can tests be parameterized or use shared fixtures to be more concise? If not, split large test files into a folder."
 
 # Rust-specific: parse #[cfg(test)] blocks
 # check.rust.split_cfg_test = true  # default

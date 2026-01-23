@@ -189,6 +189,10 @@ max_lines_test = 1100                  # Test file limit
 max_tokens = 20000                     # Use false to disable
 exclude = ["**/generated/**"]
 
+# Custom advice for violations (defaults shown)
+advice = "Can the code be made more concise? If not, split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable."
+advice_test = "Can tests be parameterized or use shared fixtures to be more concise? If not, split large test files into a folder."
+
 # Per-package overrides
 [check.cloc.package.cli]
 max_lines = 500                        # Stricter for CLI

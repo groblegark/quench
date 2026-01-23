@@ -227,6 +227,135 @@ fn cloc_fails_on_file_over_max_tokens() {
 }
 
 // =============================================================================
+// ADVICE SPECS
+// =============================================================================
+
+/// Spec: docs/specs/checks/cloc.md#configuration
+///
+/// > advice = "Can the code be made more concise? If not, split large source files
+/// > into sibling modules or submodules in a folder; consider refactoring to be more
+/// > unit testable." (default for source files)
+#[test]
+fn cloc_source_violation_has_default_advice() {
+    let json = check_json(&fixture("cloc/oversized-source"));
+    let cloc = find_check(&json, "cloc");
+    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+
+    let source_violation = violations
+        .iter()
+        .find(|v| {
+            v.get("file")
+                .and_then(|f| f.as_str())
+                .map(|f| !f.contains("test"))
+                .unwrap_or(false)
+        })
+        .expect("should have source file violation");
+
+    let advice = source_violation
+        .get("advice")
+        .and_then(|a| a.as_str())
+        .unwrap();
+    assert_eq!(
+        advice,
+        "Can the code be made more concise? If not, split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable."
+    );
+}
+
+/// Spec: docs/specs/checks/cloc.md#configuration
+///
+/// > advice_test = "Can tests be parameterized or use shared fixtures to be more
+/// > concise? If not, split large test files into a folder." (default for test files)
+#[test]
+fn cloc_test_violation_has_default_advice() {
+    let json = check_json(&fixture("cloc/oversized-test"));
+    let cloc = find_check(&json, "cloc");
+    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+
+    let test_violation = violations
+        .iter()
+        .find(|v| {
+            v.get("file")
+                .and_then(|f| f.as_str())
+                .map(|f| f.contains("test"))
+                .unwrap_or(false)
+        })
+        .expect("should have test file violation");
+
+    let advice = test_violation
+        .get("advice")
+        .and_then(|a| a.as_str())
+        .unwrap();
+    assert_eq!(
+        advice,
+        "Can tests be parameterized or use shared fixtures to be more concise? If not, split large test files into a folder."
+    );
+}
+
+/// Spec: docs/specs/checks/cloc.md#configuration
+///
+/// > advice = "..." - custom advice for source file violations
+#[test]
+#[ignore = "TODO: Phase 110 - Custom advice configuration"]
+fn cloc_uses_custom_advice_for_source() {
+    let dir = temp_project();
+    std::fs::write(
+        dir.path().join("quench.toml"),
+        r#"
+version = 1
+[check.cloc]
+max_lines = 5
+advice = "Custom source advice here."
+"#,
+    )
+    .unwrap();
+    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::write(
+        dir.path().join("src/big.rs"),
+        "fn a() {}\nfn b() {}\nfn c() {}\nfn d() {}\nfn e() {}\nfn f() {}\n",
+    )
+    .unwrap();
+
+    let json = check_json(dir.path());
+    let cloc = find_check(&json, "cloc");
+    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+
+    let advice = violations[0].get("advice").and_then(|a| a.as_str()).unwrap();
+    assert_eq!(advice, "Custom source advice here.");
+}
+
+/// Spec: docs/specs/checks/cloc.md#configuration
+///
+/// > advice_test = "..." - custom advice for test file violations
+#[test]
+#[ignore = "TODO: Phase 110 - Custom advice configuration"]
+fn cloc_uses_custom_advice_for_test() {
+    let dir = temp_project();
+    std::fs::write(
+        dir.path().join("quench.toml"),
+        r#"
+version = 1
+[check.cloc]
+max_lines_test = 5
+advice_test = "Custom test advice here."
+"#,
+    )
+    .unwrap();
+    std::fs::create_dir_all(dir.path().join("tests")).unwrap();
+    std::fs::write(
+        dir.path().join("tests/big_test.rs"),
+        "fn a() {}\nfn b() {}\nfn c() {}\nfn d() {}\nfn e() {}\nfn f() {}\n",
+    )
+    .unwrap();
+
+    let json = check_json(dir.path());
+    let cloc = find_check(&json, "cloc");
+    let violations = cloc.get("violations").and_then(|v| v.as_array()).unwrap();
+
+    let advice = violations[0].get("advice").and_then(|a| a.as_str()).unwrap();
+    assert_eq!(advice, "Custom test advice here.");
+}
+
+// =============================================================================
 // CONFIGURATION SPECS
 // =============================================================================
 

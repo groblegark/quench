@@ -25,13 +25,11 @@ Advice is:
 - **Specific**: References the actual violation
 - **Concise**: One or two sentences
 - **Technical**: Assumes reader understands the codebase
-- **Not prescriptive**: Says _what_ to fix, not _how_ to approach it
 
-Good: `Add a // SAFETY: comment explaining the invariants.`
-Bad: `You should consider adding a safety comment to explain why this unsafe block is sound.`
-
-Good: `Split into smaller modules. Consider extracting TokenStream logic.`
-Bad: `This file is too long. Please refactor it into smaller pieces.`
+Examples:
+- `Add a // SAFETY: comment explaining the invariants.`
+- `Can the code be made more concise? If not, split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable.`
+- `Can tests be parameterized or use shared fixtures to be more concise? If not, split large test files into a folder.`
 
 ## Output Formats
 
