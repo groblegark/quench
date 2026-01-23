@@ -22,7 +22,6 @@ use crate::prelude::*;
 ///
 /// > The agents check detects CLAUDE.md at the project root.
 #[test]
-#[ignore = "TODO: Phase 501 - Agents Check Implementation"]
 fn agents_detects_claude_md_at_project_root() {
     let agents = check("agents").on("agents/basic").json().passes();
     let metrics = agents.require("metrics");
@@ -37,13 +36,14 @@ fn agents_detects_claude_md_at_project_root() {
 ///
 /// > The agents check detects .cursorrules at the project root.
 #[test]
-#[ignore = "TODO: Phase 501 - Agents Check Implementation"]
 fn agents_detects_cursorrules_at_project_root() {
     let agents = check("agents").on("agents/basic").json().passes();
     let metrics = agents.require("metrics");
     let files_found = metrics.get("files_found").unwrap().as_array().unwrap();
     assert!(
-        files_found.iter().any(|f| f.as_str() == Some(".cursorrules")),
+        files_found
+            .iter()
+            .any(|f| f.as_str() == Some(".cursorrules")),
         "should detect .cursorrules"
     );
 }
@@ -52,7 +52,6 @@ fn agents_detects_cursorrules_at_project_root() {
 ///
 /// > Check passes when all configured files exist and are valid.
 #[test]
-#[ignore = "TODO: Phase 501 - Agents Check Implementation"]
 fn agents_passes_on_valid_project() {
     check("agents").on("agents/basic").passes();
 }
@@ -65,7 +64,6 @@ fn agents_passes_on_valid_project() {
 ///
 /// > Missing a required file generates a violation.
 #[test]
-#[ignore = "TODO: Phase 501 - Agents Check Implementation"]
 fn agents_missing_required_file_generates_violation() {
     let agents = check("agents").on("agents/missing-file").json().fails();
     let violations = agents.require("violations").as_array().unwrap();
@@ -75,6 +73,22 @@ fn agents_missing_required_file_generates_violation() {
             .iter()
             .any(|v| { v.get("type").and_then(|t| t.as_str()) == Some("missing_file") }),
         "should have missing_file violation"
+    );
+}
+
+/// Spec: docs/specs/checks/agents.md#forbidden-files
+///
+/// > Having a forbidden file generates a violation.
+#[test]
+fn agents_forbidden_file_generates_violation() {
+    let agents = check("agents").on("agents/forbidden-file").json().fails();
+    let violations = agents.require("violations").as_array().unwrap();
+
+    assert!(
+        violations
+            .iter()
+            .any(|v| { v.get("type").and_then(|t| t.as_str()) == Some("forbidden_file") }),
+        "should have forbidden_file violation"
     );
 }
 
@@ -108,7 +122,10 @@ fn agents_missing_section_generates_violation_with_advice() {
         .iter()
         .find(|v| v.get("type").and_then(|t| t.as_str()) == Some("missing_section"));
 
-    assert!(missing_section.is_some(), "should have missing_section violation");
+    assert!(
+        missing_section.is_some(),
+        "should have missing_section violation"
+    );
 
     let advice = missing_section
         .unwrap()
@@ -126,7 +143,10 @@ fn agents_missing_section_generates_violation_with_advice() {
 #[test]
 #[ignore = "TODO: Phase 501 - Agents Check Implementation"]
 fn agents_forbidden_section_generates_violation() {
-    let agents = check("agents").on("agents/forbidden-section").json().fails();
+    let agents = check("agents")
+        .on("agents/forbidden-section")
+        .json()
+        .fails();
     let violations = agents.require("violations").as_array().unwrap();
 
     assert!(
@@ -200,26 +220,31 @@ fn agents_file_over_max_tokens_generates_violation() {
 ///
 /// > JSON output includes files_found and in_sync metrics.
 #[test]
-#[ignore = "TODO: Phase 501 - Agents Check Implementation"]
 fn agents_json_includes_files_found_and_in_sync_metrics() {
     let agents = check("agents").on("agents/metrics").json().passes();
     let metrics = agents.require("metrics");
 
-    assert!(metrics.get("files_found").is_some(), "should have files_found metric");
-    assert!(metrics.get("in_sync").is_some(), "should have in_sync metric");
+    assert!(
+        metrics.get("files_found").is_some(),
+        "should have files_found metric"
+    );
+    assert!(
+        metrics.get("in_sync").is_some(),
+        "should have in_sync metric"
+    );
 }
 
 /// Spec: docs/specs/checks/agents.md#json-output
 ///
 /// > Violation types are one of the expected values.
 #[test]
-#[ignore = "TODO: Phase 501 - Agents Check Implementation"]
 fn agents_violation_type_is_valid() {
     let agents = check("agents").on("agents/missing-file").json().fails();
     let violations = agents.require("violations").as_array().unwrap();
 
     let valid_types = [
         "missing_file",
+        "forbidden_file",
         "out_of_sync",
         "missing_section",
         "forbidden_section",

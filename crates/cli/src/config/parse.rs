@@ -6,9 +6,9 @@
 use std::path::Path;
 
 use super::{
-    CheckLevel, ClocConfig, EscapeAction, EscapePattern, EscapesConfig, LineMetric,
-    LintChangesPolicy, RustConfig, RustPolicyConfig, ShellConfig, ShellPolicyConfig,
-    ShellSuppressConfig, SuppressConfig, SuppressLevel, SuppressScopeConfig,
+    AgentsConfig, AgentsScopeConfig, CheckLevel, ClocConfig, EscapeAction, EscapePattern,
+    EscapesConfig, LineMetric, LintChangesPolicy, RustConfig, RustPolicyConfig, ShellConfig,
+    ShellPolicyConfig, ShellSuppressConfig, SuppressConfig, SuppressLevel, SuppressScopeConfig,
 };
 
 /// Parse Rust-specific configuration from TOML value.
@@ -379,4 +379,137 @@ pub(super) fn warn_unknown_key(path: &Path, key: &str) {
         path.display(),
         key
     );
+}
+
+/// Parse agents configuration from TOML value.
+pub(super) fn parse_agents_config(value: Option<&toml::Value>) -> AgentsConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return AgentsConfig::default();
+    };
+
+    let check = match t.get("check").and_then(|v| v.as_str()) {
+        Some("error") => CheckLevel::Error,
+        Some("warn") => CheckLevel::Warn,
+        Some("off") => CheckLevel::Off,
+        _ => CheckLevel::default(),
+    };
+
+    let files = t
+        .get("files")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_else(AgentsConfig::default_files);
+
+    let required = t
+        .get("required")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let optional = t
+        .get("optional")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let forbid = t
+        .get("forbid")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let sync = t.get("sync").and_then(|v| v.as_bool()).unwrap_or(false);
+
+    let sync_source = t
+        .get("sync_source")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+
+    let root = t.get("root").map(parse_agents_scope_config);
+    let package = t.get("package").map(parse_agents_scope_config);
+    let module = t.get("module").map(parse_agents_scope_config);
+
+    AgentsConfig {
+        check,
+        files,
+        required,
+        optional,
+        forbid,
+        sync,
+        sync_source,
+        root,
+        package,
+        module,
+    }
+}
+
+/// Parse a scope-specific agents configuration.
+fn parse_agents_scope_config(value: &toml::Value) -> AgentsScopeConfig {
+    let Some(t) = value.as_table() else {
+        return AgentsScopeConfig::default();
+    };
+
+    let required = t
+        .get("required")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let optional = t
+        .get("optional")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let forbid = t
+        .get("forbid")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let max_lines = t
+        .get("max_lines")
+        .and_then(|v| v.as_integer())
+        .map(|v| v as usize);
+
+    let max_tokens = t
+        .get("max_tokens")
+        .and_then(|v| v.as_integer())
+        .map(|v| v as usize);
+
+    AgentsScopeConfig {
+        required,
+        optional,
+        forbid,
+        max_lines,
+        max_tokens,
+    }
 }

@@ -13,6 +13,7 @@
 //! - build: Binary/bundle size + build time (disabled by default)
 //! - license: License header validation (disabled by default)
 
+pub mod agents;
 pub mod cloc;
 pub mod escapes;
 pub mod git;
@@ -35,11 +36,7 @@ pub fn all_checks() -> Vec<Arc<dyn Check>> {
     vec![
         Arc::new(cloc::ClocCheck),
         Arc::new(escapes::EscapesCheck),
-        Arc::new(stub::StubCheck::new(
-            "agents",
-            "Agent file validation",
-            true,
-        )),
+        Arc::new(agents::AgentsCheck),
         Arc::new(stub::StubCheck::new(
             "docs",
             "Documentation validation",
