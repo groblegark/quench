@@ -1,6 +1,6 @@
 # Checkpoint 4D: Benchmark - Rust Adapter
 
-**Root Feature:** `quench-4d-benchmark`
+**Root Feature:** `quench-68fa`
 
 ## Overview
 
