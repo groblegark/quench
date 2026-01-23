@@ -164,9 +164,12 @@ Default: `"comment"` for source, `"allow"` for test code.
 ### Supported Patterns
 
 ```rust
-// Single-line attribute
+// Outer attribute (item-level)
 #[allow(dead_code)]
 fn unused() {}
+
+// Inner attribute (module-level)
+#![allow(clippy::unwrap_used)]
 
 // Multi-line attribute
 #[allow(
@@ -183,6 +186,8 @@ macro_rules! allow_unused {
     };
 }
 ```
+
+**Note:** Inner attributes (`#![...]`) apply to the module or crate they appear in. They follow the same comment requirement rules as outer attributes.
 
 ```toml
 [rust.suppress]

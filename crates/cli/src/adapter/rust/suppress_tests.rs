@@ -112,3 +112,62 @@ fn line_numbers_are_zero_indexed() {
     assert_eq!(attrs.len(), 1);
     assert_eq!(attrs[0].line, 2); // 0-indexed, third line
 }
+
+// =============================================================================
+// INNER ATTRIBUTE TESTS
+// =============================================================================
+
+#[test]
+fn detects_inner_allow_attribute() {
+    let content = "#![allow(dead_code)]\nfn unused() {}";
+    let attrs = parse_suppress_attrs(content, None);
+
+    assert_eq!(attrs.len(), 1);
+    assert_eq!(attrs[0].kind, "allow");
+    assert_eq!(attrs[0].codes, vec!["dead_code"]);
+}
+
+#[test]
+fn detects_inner_expect_attribute() {
+    let content = "#![expect(unused)]\nlet _x = 42;";
+    let attrs = parse_suppress_attrs(content, None);
+
+    assert_eq!(attrs.len(), 1);
+    assert_eq!(attrs[0].kind, "expect");
+    assert_eq!(attrs[0].codes, vec!["unused"]);
+}
+
+#[test]
+fn detects_inner_attribute_with_comment() {
+    let content = "// Module suppression for FFI compatibility\n#![allow(unsafe_code)]\n";
+    let attrs = parse_suppress_attrs(content, None);
+
+    assert_eq!(attrs.len(), 1);
+    assert!(attrs[0].has_comment);
+    assert_eq!(
+        attrs[0].comment_text,
+        Some("Module suppression for FFI compatibility".to_string())
+    );
+}
+
+#[test]
+fn detects_mixed_inner_and_outer_attributes() {
+    let content = "#![allow(dead_code)]\n\n#[allow(unused)]\nfn f() {}";
+    let attrs = parse_suppress_attrs(content, None);
+
+    assert_eq!(attrs.len(), 2);
+    assert_eq!(attrs[0].codes, vec!["dead_code"]);
+    assert_eq!(attrs[1].codes, vec!["unused"]);
+}
+
+#[test]
+fn inner_attribute_with_multiple_codes() {
+    let content = "#![allow(dead_code, unused_variables, clippy::unwrap_used)]\n";
+    let attrs = parse_suppress_attrs(content, None);
+
+    assert_eq!(attrs.len(), 1);
+    assert_eq!(
+        attrs[0].codes,
+        vec!["dead_code", "unused_variables", "clippy::unwrap_used"]
+    );
+}

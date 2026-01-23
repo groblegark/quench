@@ -471,6 +471,87 @@ fn rust_adapter_multiline_allow_detected() {
     check("escapes").on("rust/multiline-allow").fails();
 }
 
+// =============================================================================
+// INNER ATTRIBUTE SPECS
+// =============================================================================
+
+/// Spec: docs/specs/langs/rust.md#supported-patterns
+///
+/// > Inner attributes (#![...]) apply to the module or crate they appear in.
+#[test]
+fn rust_adapter_inner_allow_without_comment_fails_when_configured() {
+    // Fixture has #![allow(dead_code)] - inner attribute
+    // Violation output normalizes to #[allow(...)] format
+    check("escapes")
+        .on("rust/module-suppress")
+        .fails()
+        .stdout_has("#[allow(dead_code)");
+}
+
+/// Spec: docs/specs/langs/rust.md#supported-patterns
+///
+/// > They follow the same comment requirement rules as outer attributes.
+#[test]
+fn rust_adapter_inner_allow_with_comment_passes() {
+    let dir = temp_project();
+    std::fs::write(
+        dir.path().join("quench.toml"),
+        r#"
+version = 1
+[rust.suppress]
+check = "comment"
+"#,
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+    )
+    .unwrap();
+    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::write(
+        dir.path().join("src/lib.rs"),
+        "// Module-wide suppression for test utilities\n#![allow(dead_code)]\n\nfn helper() {}",
+    )
+    .unwrap();
+
+    check("escapes").pwd(dir.path()).passes();
+}
+
+/// Spec: docs/specs/langs/rust.md#supported-patterns
+///
+/// > Inner expect attributes are also supported
+#[test]
+fn rust_adapter_inner_expect_without_comment_fails() {
+    let dir = temp_project();
+    std::fs::write(
+        dir.path().join("quench.toml"),
+        r#"
+version = 1
+[rust.suppress]
+check = "comment"
+"#,
+    )
+    .unwrap();
+    std::fs::write(
+        dir.path().join("Cargo.toml"),
+        "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
+    )
+    .unwrap();
+    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::write(
+        dir.path().join("src/lib.rs"),
+        "#![expect(unused)]\n\nfn f() {}",
+    )
+    .unwrap();
+
+    // Violation output normalizes to #[expect(...)] format
+    check("escapes")
+        .pwd(dir.path())
+        .fails()
+        .stdout_has("#[expect(unused)");
+}
+
 /// Spec: docs/specs/langs/rust.md#supported-patterns
 ///
 /// > #[allow(...)] inside macro_rules! definitions should be detected

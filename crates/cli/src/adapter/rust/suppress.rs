@@ -57,10 +57,10 @@ struct ParsedAttr {
 
 /// Parse a single line for suppress attribute.
 fn parse_suppress_line(line: &str) -> Option<ParsedAttr> {
-    // Match #[allow(code1, code2)] or #[expect(code1, code2)]
-    let kind = if line.starts_with("#[allow(") {
+    // Match both outer (#[...]) and inner (#![...]) attributes
+    let kind = if line.starts_with("#[allow(") || line.starts_with("#![allow(") {
         "allow"
-    } else if line.starts_with("#[expect(") {
+    } else if line.starts_with("#[expect(") || line.starts_with("#![expect(") {
         "expect"
     } else {
         return None;
