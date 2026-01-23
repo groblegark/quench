@@ -86,6 +86,7 @@ impl GoSuppressConfig {
             check: Some(SuppressLevel::Allow),
             allow: Vec::new(),
             forbid: Vec::new(),
+            patterns: std::collections::HashMap::new(),
         }
     }
 }
