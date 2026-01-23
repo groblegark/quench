@@ -72,12 +72,12 @@ fn text_output_summary_lists_checks_by_status() {
 #[test]
 fn text_output_passing_summary_only() {
     let dir = temp_project();
-    // Only non-stub checks appear; currently cloc and escapes are implemented
+    // Only non-stub checks appear; currently cloc, escapes, and agents are implemented
     cli()
         .pwd(dir.path())
         .args(&["--no-git"])
         .passes()
-        .stdout_has("PASS: cloc, escapes\n");
+        .stdout_has("PASS: cloc, escapes, agents\n");
 }
 
 // =============================================================================

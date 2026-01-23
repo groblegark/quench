@@ -17,9 +17,11 @@ pub use shell::{ShellConfig, ShellPolicyConfig, ShellSuppressConfig};
 
 use crate::error::{Error, Result};
 use parse::{
-    parse_cloc_config, parse_escapes_config, parse_rust_config, parse_shell_config,
-    warn_unknown_key,
+    parse_agents_config, parse_cloc_config, parse_escapes_config, parse_rust_config,
+    parse_shell_config, warn_unknown_key,
 };
+
+pub use crate::checks::agents::config::{AgentsConfig, AgentsScopeConfig};
 
 /// Minimum config structure for version checking.
 #[derive(Deserialize)]
@@ -263,6 +265,10 @@ pub struct CheckConfig {
     /// Escapes (escape hatches) check configuration.
     #[serde(default)]
     pub escapes: EscapesConfig,
+
+    /// Agents (agent context files) check configuration.
+    #[serde(default)]
+    pub agents: AgentsConfig,
 }
 
 /// Escapes check configuration.
@@ -675,7 +681,14 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
             // Parse escapes config
             let escapes = parse_escapes_config(t.get("escapes"));
 
-            CheckConfig { cloc, escapes }
+            // Parse agents config
+            let agents = parse_agents_config(t.get("agents"));
+
+            CheckConfig {
+                cloc,
+                escapes,
+                agents,
+            }
         }
         _ => CheckConfig::default(),
     };
