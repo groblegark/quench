@@ -16,6 +16,7 @@ Adapters are auto-detected based on project files:
 | Adapter | Detection | File Patterns |
 |---------|-----------|---------------|
 | `rust` | `Cargo.toml` exists | `**/*.rs` |
+| `golang` | `go.mod` exists | `**/*.go` |
 | `shell` | `*.sh` files in root, `bin/`, or `scripts/` | `**/*.sh`, `**/*.bash` |
 | `generic` | Always (fallback) | From config |
 
@@ -42,6 +43,29 @@ build_time = true
 check = "comment"                # forbid | comment | allow
 
 [rust.policy]
+lint_changes = "standalone"
+```
+
+## Go Adapter
+
+See [langs/golang.md](langs/golang.md) for full Go configuration.
+
+### Summary
+
+- **Test detection**: `*_test.go` files (Go convention)
+- **Escape patterns**: `unsafe.Pointer`, `//go:linkname`, `//go:noescape`
+- **Lint suppression**: `//nolint` directives
+- **Build metrics**: Binary size, build time
+
+```toml
+[golang]
+binary_size = true
+build_time = true
+
+[golang.suppress]
+check = "comment"                # forbid | comment | allow
+
+[golang.policy]
 lint_changes = "standalone"
 ```
 
@@ -94,6 +118,5 @@ tests = ["test/**/*", "tests/**/*", "**/*_test.*", "**/*.spec.*"]
 |---------|-----------|---------------|-------------|
 | `typescript` | `tsconfig.json` | `*.test.ts`, `*.spec.ts` | `as unknown`, `@ts-ignore`, `any` |
 | `python` | `pyproject.toml` | `test_*.py`, `*_test.py` | `# type: ignore`, `# noqa` |
-| `go` | `go.mod` | `*_test.go` | `unsafe.Pointer`, `//nolint` |
 
 Future adapters will also provide build metrics. See [checks/build.md](checks/build.md) for how adapters integrate with the build check (bundle size, build time, etc.).

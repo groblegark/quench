@@ -48,6 +48,16 @@ Use for: Patterns that should not appear in production code.
 
 Lint suppressions (`#[allow(...)]`, `#[expect(...)]`) are configured separately via `[rust.suppress]`. See [langs/rust.md](../langs/rust.md#suppress).
 
+### Go
+
+| Pattern | Default Mode | Comment Required |
+|---------|--------------|------------------|
+| `unsafe.Pointer` | comment | `// SAFETY:` |
+| `//go:linkname` | comment | `// LINKNAME:` |
+| `//go:noescape` | comment | `// NOESCAPE:` |
+
+Lint suppressions (`//nolint`) are configured separately via `[golang.suppress]`. See [langs/golang.md](../langs/golang.md#suppress).
+
 ### Shell
 
 | Pattern | Default Mode | Comment Required | Threshold |

@@ -135,6 +135,7 @@ docs/specs/
 │   ├── license-headers.md
 │   └── tests.md        # Includes coverage, test time
 └── langs/              # Language-specific details
+    ├── golang.md       # Go: build metrics, coverage
     ├── rust.md         # Rust: build metrics, coverage
     └── shell.md        # Shell: bats, kcov coverage
 ```
