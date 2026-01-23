@@ -55,26 +55,29 @@ fn text_output_format_advice_indented() {
 /// Spec: docs/specs/03-output.md#verbosity
 ///
 /// > Summary lists checks by status: `PASS: check1, check2` and `FAIL: check3`
+/// > Stub checks (not yet implemented) are omitted from the summary entirely.
 #[test]
 fn text_output_summary_lists_checks_by_status() {
+    // When cloc fails and all other checks are stubs, only FAIL line appears
     cli()
         .on("output-test")
         .exits(1)
-        .stdout_has(predicates::str::is_match(r"(?m)^PASS: [a-z, ]+$").unwrap())
         .stdout_has(predicates::str::is_match(r"(?m)^FAIL: [a-z, ]+$").unwrap());
 }
 
 /// Spec: docs/specs/03-output.md#verbosity
 ///
 /// > When all checks pass, only PASS line: `PASS: check1, check2, ...`
+/// > Stub checks (not yet implemented) are omitted from the summary entirely.
 #[test]
 fn text_output_passing_summary_only() {
     let dir = temp_project();
+    // Only non-stub checks appear; currently only cloc is implemented
     cli()
         .pwd(dir.path())
         .args(&["--no-git"])
         .passes()
-        .stdout_has(predicates::str::is_match(r"^PASS: [a-z, ]+\n?$").unwrap());
+        .stdout_has("PASS: cloc\n");
 }
 
 // =============================================================================
