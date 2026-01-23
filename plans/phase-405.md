@@ -1,5 +1,7 @@
 # Phase 405: Shell Adapter - Detection
 
+**Root Feature:** `quench-3caa`
+
 ## Overview
 
 Implement the core Shell language adapter with file detection and classification. This phase enables quench to automatically detect Shell projects and apply appropriate source/test patterns. The adapter will:
