@@ -9,7 +9,7 @@
 use super::*;
 use yare::parameterized;
 
-use comment::{is_comment_line, strip_comment_markers};
+use comment::{is_comment_line, is_match_in_comment, strip_comment_markers};
 
 #[parameterized(
     same_line = { "unsafe { code } // SAFETY: reason", 1, true },
@@ -46,6 +46,31 @@ fn is_comment_line_cases(input: &str, expected: bool) {
         expected,
         "input {:?} should {} be a comment line",
         input,
+        if expected { "" } else { "not" }
+    );
+}
+
+#[parameterized(
+    // Match is before comment start - NOT in comment
+    match_before_comment = { "eval cmd // explanation", 0, false },
+    match_in_code = { "eval cmd", 0, false },
+    // Match is after comment start - IN comment
+    match_in_c_comment = { "code // don't use eval here", 20, true },
+    match_in_shell_comment = { "code # used with eval", 10, true },
+    // Match at start of line with // comment
+    whole_line_comment = { "// don't use eval", 0, true },
+    // Shell comment at line start
+    shell_line_comment = { "# used with eval", 0, true },
+    // Match exactly at comment boundary
+    at_comment_start = { "x // eval", 5, true },
+)]
+fn is_match_in_comment_cases(line: &str, offset: usize, expected: bool) {
+    assert_eq!(
+        is_match_in_comment(line, offset),
+        expected,
+        "line {:?} with match at offset {} should {} be in comment",
+        line,
+        offset,
         if expected { "" } else { "not" }
     );
 }

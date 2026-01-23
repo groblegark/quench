@@ -102,3 +102,16 @@ pub(super) fn is_comment_line(line: &str) -> bool {
         || trimmed.starts_with("--")  // SQL/Lua
         || trimmed.starts_with(";;") // Lisp
 }
+
+/// Check if a match at a given offset within a line is inside a comment.
+///
+/// Returns true if the match is entirely within the comment portion of the line.
+/// This helps avoid false positives when patterns appear in comments but not in code.
+pub(super) fn is_match_in_comment(line_content: &str, match_offset_in_line: usize) -> bool {
+    // Find comment start in the line
+    if let Some(comment_start) = find_comment_start(line_content) {
+        // If match starts at or after the comment marker, it's in a comment
+        return match_offset_in_line >= comment_start;
+    }
+    false
+}

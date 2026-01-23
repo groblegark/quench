@@ -137,3 +137,22 @@ fn comment_not_found_when_code_above() {
         "code above should stop comment search"
     );
 }
+
+#[test]
+fn parse_code_with_inline_comment() {
+    // Inline comment after the code should be stripped
+    let content = "# shellcheck disable=SC2090  # explanation here\neval \"$cmd\"";
+    let suppresses = parse_shellcheck_suppresses(content, None);
+
+    assert_eq!(suppresses.len(), 1);
+    assert_eq!(suppresses[0].codes, vec!["SC2090"]);
+}
+
+#[test]
+fn parse_multiple_codes_with_inline_comment() {
+    let content = "# shellcheck disable=SC2034,SC2086  # these are fine\necho $var";
+    let suppresses = parse_shellcheck_suppresses(content, None);
+
+    assert_eq!(suppresses.len(), 1);
+    assert_eq!(suppresses[0].codes, vec!["SC2034", "SC2086"]);
+}

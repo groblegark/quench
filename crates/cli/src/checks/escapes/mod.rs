@@ -24,7 +24,7 @@ use crate::config::{CheckLevel, EscapeAction, SuppressConfig, SuppressLevel};
 use crate::pattern::CompiledPattern;
 use shell_suppress::check_shell_suppress_violations;
 
-use comment::has_justification_comment;
+use comment::{has_justification_comment, is_match_in_comment};
 use patterns::{
     compile_merged_patterns, default_test_patterns, get_adapter_escape_patterns, merge_patterns,
 };
@@ -281,6 +281,20 @@ impl Check for EscapesCheck {
                     .collect();
 
                 for m in unique_matches {
+                    // Calculate offset of match within the line
+                    let line_start = content[..m.offset].rfind('\n').map(|i| i + 1).unwrap_or(0);
+                    let offset_in_line = m.offset - line_start;
+
+                    // For comment and forbid actions, skip matches that appear only in comments.
+                    // This prevents false positives like "don't use eval" in explanatory comments.
+                    // Count action patterns (like TODO/FIXME) are often legitimately in comments.
+                    let skip_comment_matches =
+                        matches!(pattern.action, EscapeAction::Comment | EscapeAction::Forbid);
+                    if skip_comment_matches && is_match_in_comment(&m.line_content, offset_in_line)
+                    {
+                        continue;
+                    }
+
                     // Check if line is in test code (file-level OR inline #[cfg(test)])
                     // Note: m.line is 1-indexed, but is_test_line expects 0-indexed
                     let is_test_code = is_test_file

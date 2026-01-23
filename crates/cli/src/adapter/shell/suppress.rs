@@ -68,6 +68,9 @@ fn parse_shellcheck_disable(line: &str) -> Option<Vec<String>> {
     // Must be "disable=" directive (not "source=" or other)
     let codes_str = rest.strip_prefix("disable=")?;
 
+    // Strip inline comment if present (e.g., "SC2090  # explanation")
+    let codes_str = codes_str.split('#').next().unwrap_or(codes_str);
+
     let codes: Vec<String> = codes_str
         .split(',')
         .map(|s| s.trim().to_string())
