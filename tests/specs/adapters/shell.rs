@@ -19,7 +19,6 @@ use crate::prelude::*;
 ///
 /// > shell | *.sh files in root, bin/, or scripts/ | **/*.sh, **/*.bash
 #[test]
-#[ignore = "TODO: Phase 402 - Shell Adapter Implementation"]
 fn shell_adapter_auto_detected_when_sh_files_in_scripts() {
     // Project has .sh files in scripts/ but no quench.toml [shell] section
     // Should still apply Shell defaults
@@ -38,7 +37,6 @@ fn shell_adapter_auto_detected_when_sh_files_in_scripts() {
 ///
 /// > shell | *.sh files in root, bin/, or scripts/
 #[test]
-#[ignore = "TODO: Phase 402 - Shell Adapter Implementation"]
 fn shell_adapter_auto_detected_when_sh_files_in_bin() {
     let dir = temp_project();
     std::fs::create_dir_all(dir.path().join("bin")).unwrap();
@@ -62,7 +60,6 @@ fn shell_adapter_auto_detected_when_sh_files_in_bin() {
 ///
 /// > shell | *.sh files in root, bin/, or scripts/
 #[test]
-#[ignore = "TODO: Phase 402 - Shell Adapter Implementation"]
 fn shell_adapter_auto_detected_when_sh_files_in_root() {
     let dir = temp_project();
     std::fs::write(dir.path().join("setup.sh"), "#!/bin/bash\necho 'setup'\n").unwrap();
@@ -85,7 +82,6 @@ fn shell_adapter_auto_detected_when_sh_files_in_root() {
 ///
 /// > source = ["**/*.sh", "**/*.bash"]
 #[test]
-#[ignore = "TODO: Phase 402 - Shell Adapter Implementation"]
 fn shell_adapter_default_source_pattern_matches_sh_files() {
     let cloc = check("cloc").on("shell/auto-detect").json().passes();
     let metrics = cloc.require("metrics");
@@ -102,7 +98,6 @@ fn shell_adapter_default_source_pattern_matches_sh_files() {
 ///
 /// > source = ["**/*.sh", "**/*.bash"]
 #[test]
-#[ignore = "TODO: Phase 402 - Shell Adapter Implementation"]
 fn shell_adapter_default_source_pattern_matches_bash_files() {
     let dir = temp_project();
     std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
@@ -126,7 +121,6 @@ fn shell_adapter_default_source_pattern_matches_bash_files() {
 ///
 /// > tests = ["tests/**/*.bats", "test/**/*.bats", "*_test.sh"]
 #[test]
-#[ignore = "TODO: Phase 402 - Shell Adapter Implementation"]
 fn shell_adapter_default_test_pattern_matches_bats_files() {
     let dir = temp_project();
     std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
@@ -156,7 +150,6 @@ fn shell_adapter_default_test_pattern_matches_bats_files() {
 ///
 /// > *_test.sh files
 #[test]
-#[ignore = "TODO: Phase 402 - Shell Adapter Implementation"]
 fn shell_adapter_default_test_pattern_matches_test_sh_files() {
     let dir = temp_project();
     std::fs::create_dir_all(dir.path().join("scripts")).unwrap();

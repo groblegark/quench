@@ -9,8 +9,10 @@ use std::sync::Arc;
 pub mod generic;
 pub mod glob;
 pub mod rust;
+pub mod shell;
 
 pub use glob::build_glob_set;
+pub use shell::ShellAdapter;
 
 pub use generic::GenericAdapter;
 pub use rust::{CfgTestInfo, RustAdapter, parse_suppress_attrs};
@@ -130,6 +132,7 @@ impl Default for AdapterRegistry {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProjectLanguage {
     Rust,
+    Shell,
     Generic,
 }
 
@@ -138,7 +141,49 @@ pub fn detect_language(root: &Path) -> ProjectLanguage {
     if root.join("Cargo.toml").exists() {
         return ProjectLanguage::Rust;
     }
+
+    // Check for Shell project markers: *.sh in root, bin/, or scripts/
+    if has_shell_markers(root) {
+        return ProjectLanguage::Shell;
+    }
+
     ProjectLanguage::Generic
+}
+
+/// Check if project has Shell markers.
+/// Detection: *.sh files in root, bin/, or scripts/
+fn has_shell_markers(root: &Path) -> bool {
+    // Check root directory
+    if has_sh_files(root) {
+        return true;
+    }
+
+    // Check bin/ directory
+    let bin_dir = root.join("bin");
+    if bin_dir.is_dir() && has_sh_files(&bin_dir) {
+        return true;
+    }
+
+    // Check scripts/ directory
+    let scripts_dir = root.join("scripts");
+    if scripts_dir.is_dir() && has_sh_files(&scripts_dir) {
+        return true;
+    }
+
+    false
+}
+
+/// Check if a directory contains *.sh files.
+fn has_sh_files(dir: &Path) -> bool {
+    dir.read_dir()
+        .ok()
+        .map(|entries| {
+            entries.filter_map(|e| e.ok()).any(|entry| {
+                let path = entry.path();
+                path.is_file() && path.extension().and_then(|e| e.to_str()) == Some("sh")
+            })
+        })
+        .unwrap_or(false)
 }
 
 impl AdapterRegistry {
@@ -149,6 +194,9 @@ impl AdapterRegistry {
         match detect_language(root) {
             ProjectLanguage::Rust => {
                 registry.register(Arc::new(RustAdapter::new()));
+            }
+            ProjectLanguage::Shell => {
+                registry.register(Arc::new(ShellAdapter::new()));
             }
             ProjectLanguage::Generic => {}
         }
