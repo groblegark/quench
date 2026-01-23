@@ -67,3 +67,40 @@ pub fn temp_file_with_lines(lines: &[&str]) -> NamedTempFile {
     file.flush().unwrap();
     file
 }
+
+// Pattern matching test utilities
+
+use crate::pattern::CompiledPattern;
+
+/// Compiles a pattern and asserts it finds expected number of matches.
+///
+/// Useful for parameterized tests that verify pattern matching behavior.
+pub fn assert_pattern_matches(pattern: &str, content: &str, expected_count: usize) {
+    let compiled = CompiledPattern::compile(pattern)
+        .unwrap_or_else(|e| panic!("failed to compile pattern {:?}: {}", pattern, e));
+    let matches = compiled.find_all(content);
+    assert_eq!(
+        matches.len(),
+        expected_count,
+        "pattern {:?} in {:?} should have {} matches, found {}",
+        pattern,
+        content,
+        expected_count,
+        matches.len()
+    );
+}
+
+/// Compiles a pattern and asserts it matches at specific line numbers.
+///
+/// Line numbers are 1-indexed.
+pub fn assert_pattern_at_lines(pattern: &str, content: &str, expected_lines: &[u32]) {
+    let compiled = CompiledPattern::compile(pattern)
+        .unwrap_or_else(|e| panic!("failed to compile pattern {:?}: {}", pattern, e));
+    let matches = compiled.find_all_with_lines(content);
+    let actual_lines: Vec<u32> = matches.iter().map(|m| m.line).collect();
+    assert_eq!(
+        actual_lines, expected_lines,
+        "pattern {:?} should match at lines {:?}, found {:?}",
+        pattern, expected_lines, actual_lines
+    );
+}
