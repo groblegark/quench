@@ -83,6 +83,214 @@ mod ignore_patterns {
     }
 }
 
+mod cfg_test_parsing {
+    use super::*;
+
+    #[test]
+    fn basic_cfg_test_block() {
+        let content = r#"
+pub fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_add() {
+        assert_eq!(super::add(1, 2), 3);
+    }
+}
+"#;
+        let info = CfgTestInfo::parse(content);
+
+        // Lines 0-4 are source (empty, pub fn, a+b, }, empty)
+        // Lines 5-11 are test (#[cfg(test)], mod tests, #[test], fn, assert, }, })
+        assert!(!info.is_test_line(1)); // pub fn add
+        assert!(!info.is_test_line(2)); // a + b
+        assert!(info.is_test_line(5)); // #[cfg(test)]
+        assert!(info.is_test_line(6)); // mod tests
+        assert!(info.is_test_line(11)); // closing brace
+    }
+
+    #[test]
+    fn nested_braces_in_test() {
+        let content = r#"
+pub fn main() {}
+
+#[cfg(test)]
+mod tests {
+    fn helper() {
+        if true {
+            println!("nested");
+        }
+    }
+}
+"#;
+        let info = CfgTestInfo::parse(content);
+
+        assert!(!info.is_test_line(1)); // pub fn main
+        assert!(info.is_test_line(3)); // #[cfg(test)]
+        assert!(info.is_test_line(7)); // nested println
+        assert!(info.is_test_line(10)); // closing brace of mod tests
+    }
+
+    #[test]
+    fn multiple_cfg_test_blocks() {
+        let content = r#"
+fn a() {}
+
+#[cfg(test)]
+mod tests_a {
+    #[test]
+    fn test_a() {}
+}
+
+fn b() {}
+
+#[cfg(test)]
+mod tests_b {
+    #[test]
+    fn test_b() {}
+}
+"#;
+        let info = CfgTestInfo::parse(content);
+
+        assert_eq!(info.test_ranges.len(), 2);
+        assert!(!info.is_test_line(1)); // fn a()
+        assert!(info.is_test_line(3)); // first #[cfg(test)]
+        assert!(!info.is_test_line(9)); // fn b()
+        assert!(info.is_test_line(11)); // second #[cfg(test)]
+    }
+
+    #[test]
+    fn no_cfg_test_blocks() {
+        let content = r#"
+pub fn main() {
+    println!("Hello");
+}
+"#;
+        let info = CfgTestInfo::parse(content);
+
+        assert!(info.test_ranges.is_empty());
+        assert!(!info.is_test_line(0));
+        assert!(!info.is_test_line(1));
+    }
+
+    #[test]
+    fn cfg_test_with_spaces() {
+        // #[cfg(test)] with extra whitespace inside
+        let content = r#"
+pub fn main() {}
+
+#[cfg( test )]
+mod tests {
+    fn test() {}
+}
+"#;
+        let info = CfgTestInfo::parse(content);
+
+        assert!(!info.test_ranges.is_empty());
+        assert!(info.is_test_line(3)); // #[cfg( test )]
+    }
+
+    #[test]
+    fn string_literals_with_braces() {
+        // Note: This test documents a known limitation
+        // Braces in string literals may confuse the parser
+        let content = r#"
+fn source() {}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test() {
+        let s = "{ not a real brace }";
+        assert!(true);
+    }
+}
+"#;
+        let info = CfgTestInfo::parse(content);
+
+        // The parser may or may not handle this correctly
+        // We just verify it doesn't panic and returns at least one range
+        assert!(!info.test_ranges.is_empty());
+    }
+}
+
+mod line_classification {
+    use super::*;
+
+    #[test]
+    fn source_file_with_inline_tests() {
+        let adapter = RustAdapter::new();
+        let content = r#"
+pub fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add() {
+        assert_eq!(add(1, 2), 3);
+    }
+}
+"#;
+        let classification = adapter.classify_lines(Path::new("src/lib.rs"), content);
+
+        // Source: pub fn add, a + b, } = 3 non-blank lines before #[cfg(test)]
+        // Test: #[cfg(test)], mod tests, use super::*, #[test], fn test_add, assert_eq, }, } = 8 lines
+        assert!(classification.source_lines > 0, "should have source lines");
+        assert!(
+            classification.test_lines > 0,
+            "should have test lines from #[cfg(test)]"
+        );
+    }
+
+    #[test]
+    fn test_file_all_test_loc() {
+        let adapter = RustAdapter::new();
+        let content = r#"
+use super::*;
+
+#[test]
+fn test_something() {
+    assert!(true);
+}
+"#;
+        let classification = adapter.classify_lines(Path::new("tests/test.rs"), content);
+
+        assert_eq!(
+            classification.source_lines, 0,
+            "test file should have no source lines"
+        );
+        assert!(
+            classification.test_lines > 0,
+            "test file should have test lines"
+        );
+    }
+
+    #[test]
+    fn source_file_no_inline_tests() {
+        let adapter = RustAdapter::new();
+        let content = r#"
+pub fn add(a: i32, b: i32) -> i32 {
+    a + b
+}
+
+pub fn multiply(a: i32, b: i32) -> i32 {
+    a * b
+}
+"#;
+        let classification = adapter.classify_lines(Path::new("src/lib.rs"), content);
+
+        assert!(classification.source_lines > 0, "should have source lines");
+        assert_eq!(classification.test_lines, 0, "should have no test lines");
+    }
+}
+
 mod workspace {
     use super::*;
     use tempfile::TempDir;

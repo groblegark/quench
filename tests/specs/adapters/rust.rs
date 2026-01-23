@@ -106,30 +106,28 @@ fn rust_adapter_detects_workspace_packages_from_cargo_toml() {
 ///
 /// > Lines inside #[cfg(test)] blocks are counted as test LOC
 #[test]
-#[ignore = "TODO: Phase 302 - Rust Adapter Implementation"]
 fn rust_adapter_cfg_test_blocks_counted_as_test_loc() {
     let cloc = check("cloc").on("rust/cfg-test").json().passes();
     let metrics = cloc.require("metrics");
 
     // Source file has both source and #[cfg(test)] code
-    let source_loc = metrics
-        .get("source_loc")
+    let source_lines = metrics
+        .get("source_lines")
         .and_then(|v| v.as_u64())
         .unwrap_or(0);
-    let test_loc = metrics
-        .get("test_loc")
+    let test_lines = metrics
+        .get("test_lines")
         .and_then(|v| v.as_u64())
         .unwrap_or(0);
 
-    assert!(source_loc > 0, "should have source LOC");
-    assert!(test_loc > 0, "should have test LOC from #[cfg(test)]");
+    assert!(source_lines > 0, "should have source LOC");
+    assert!(test_lines > 0, "should have test LOC from #[cfg(test)]");
 }
 
 /// Spec: docs/specs/langs/rust.md#test-code-detection
 ///
 /// > Configurable: split_cfg_test = true (default)
 #[test]
-#[ignore = "TODO: Phase 302 - Rust Adapter Implementation"]
 fn rust_adapter_split_cfg_test_can_be_disabled() {
     let dir = temp_project();
     std::fs::write(
@@ -165,11 +163,11 @@ mod tests {
     let metrics = cloc.require("metrics");
 
     // With split_cfg_test = false, all lines should be counted as source
-    let test_loc = metrics
-        .get("test_loc")
+    let test_lines = metrics
+        .get("test_lines")
         .and_then(|v| v.as_u64())
         .unwrap_or(0);
-    assert_eq!(test_loc, 0, "should not split #[cfg(test)] when disabled");
+    assert_eq!(test_lines, 0, "should not split #[cfg(test)] when disabled");
 }
 
 // =============================================================================

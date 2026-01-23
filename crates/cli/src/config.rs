@@ -29,6 +29,9 @@ struct FlexibleConfig {
     #[serde(default)]
     check: Option<toml::Value>,
 
+    #[serde(default)]
+    rust: Option<toml::Value>,
+
     #[serde(flatten)]
     unknown: std::collections::BTreeMap<String, toml::Value>,
 }
@@ -50,6 +53,32 @@ pub struct Config {
     /// Check configurations.
     #[serde(default)]
     pub check: CheckConfig,
+
+    /// Rust-specific configuration.
+    #[serde(default)]
+    pub rust: RustConfig,
+}
+
+/// Rust language-specific configuration.
+#[derive(Debug, Clone, Deserialize)]
+pub struct RustConfig {
+    /// Split #[cfg(test)] blocks from source LOC (default: true).
+    #[serde(default = "RustConfig::default_split_cfg_test")]
+    pub split_cfg_test: bool,
+}
+
+impl Default for RustConfig {
+    fn default() -> Self {
+        Self {
+            split_cfg_test: Self::default_split_cfg_test(),
+        }
+    }
+}
+
+impl RustConfig {
+    fn default_split_cfg_test() -> bool {
+        true
+    }
 }
 
 /// Workspace configuration for monorepos.
@@ -265,7 +294,7 @@ pub struct IgnoreConfig {
 pub const SUPPORTED_VERSION: i64 = 1;
 
 /// Known top-level keys in the config.
-const KNOWN_KEYS: &[&str] = &["version", "project", "workspace", "check"];
+const KNOWN_KEYS: &[&str] = &["version", "project", "workspace", "check", "rust"];
 
 /// Known project keys in the config.
 const KNOWN_PROJECT_KEYS: &[&str] = &["name", "source", "tests", "ignore"];
@@ -548,12 +577,30 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
         _ => CheckConfig::default(),
     };
 
+    // Parse rust config
+    let rust = parse_rust_config(flexible.rust.as_ref());
+
     Ok(Config {
         version: flexible.version,
         project,
         workspace,
         check,
+        rust,
     })
+}
+
+/// Parse Rust-specific configuration from TOML value.
+fn parse_rust_config(value: Option<&toml::Value>) -> RustConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return RustConfig::default();
+    };
+
+    let split_cfg_test = t
+        .get("split_cfg_test")
+        .and_then(|v| v.as_bool())
+        .unwrap_or_else(RustConfig::default_split_cfg_test);
+
+    RustConfig { split_cfg_test }
 }
 
 /// Parse escapes configuration from TOML value.
