@@ -4,8 +4,8 @@ use std::path::Path;
 
 use super::{
     CheckLevel, ClocConfig, EscapeAction, EscapePattern, EscapesConfig, LineMetric,
-    LintChangesPolicy, RustConfig, RustPolicyConfig, SuppressConfig, SuppressLevel,
-    SuppressScopeConfig,
+    LintChangesPolicy, RustConfig, RustPolicyConfig, ShellConfig, ShellPolicyConfig,
+    ShellSuppressConfig, SuppressConfig, SuppressLevel, SuppressScopeConfig,
 };
 
 /// Parse Rust-specific configuration from TOML value.
@@ -26,6 +26,105 @@ pub(super) fn parse_rust_config(value: Option<&toml::Value>) -> RustConfig {
         cfg_test_split,
         suppress,
         policy,
+    }
+}
+
+/// Parse Shell-specific configuration from TOML value.
+pub(super) fn parse_shell_config(value: Option<&toml::Value>) -> ShellConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return ShellConfig::default();
+    };
+
+    // Parse source patterns
+    let source = t
+        .get("source")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_else(ShellConfig::default_source);
+
+    // Parse test patterns
+    let tests = t
+        .get("tests")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_else(ShellConfig::default_tests);
+
+    // Parse suppress config
+    let suppress = parse_shell_suppress_config(t.get("suppress"));
+
+    // Parse policy config
+    let policy = parse_shell_policy_config(t.get("policy"));
+
+    ShellConfig {
+        source,
+        tests,
+        suppress,
+        policy,
+    }
+}
+
+/// Parse shell suppress configuration.
+fn parse_shell_suppress_config(value: Option<&toml::Value>) -> ShellSuppressConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return ShellSuppressConfig::default();
+    };
+
+    let check = match t.get("check").and_then(|v| v.as_str()) {
+        Some("forbid") => SuppressLevel::Forbid,
+        Some("comment") => SuppressLevel::Comment,
+        Some("allow") => SuppressLevel::Allow,
+        _ => ShellSuppressConfig::default_check(),
+    };
+
+    let comment = t.get("comment").and_then(|v| v.as_str()).map(String::from);
+
+    let source = parse_suppress_scope_config(t.get("source"), false);
+    let test = t
+        .get("test")
+        .map(|v| parse_suppress_scope_config(Some(v), true))
+        .unwrap_or_else(ShellSuppressConfig::default_test);
+
+    ShellSuppressConfig {
+        check,
+        comment,
+        source,
+        test,
+    }
+}
+
+/// Parse shell policy configuration.
+fn parse_shell_policy_config(value: Option<&toml::Value>) -> ShellPolicyConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return ShellPolicyConfig::default();
+    };
+
+    let lint_changes = match t.get("lint_changes").and_then(|v| v.as_str()) {
+        Some("standalone") => LintChangesPolicy::Standalone,
+        Some("none") | None => LintChangesPolicy::None,
+        _ => LintChangesPolicy::None,
+    };
+
+    let lint_config = t
+        .get("lint_config")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_else(ShellPolicyConfig::default_lint_config);
+
+    ShellPolicyConfig {
+        lint_changes,
+        lint_config,
     }
 }
 

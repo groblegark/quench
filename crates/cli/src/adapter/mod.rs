@@ -12,7 +12,7 @@ pub mod rust;
 pub mod shell;
 
 pub use glob::build_glob_set;
-pub use shell::ShellAdapter;
+pub use shell::{ShellAdapter, ShellcheckSuppress, parse_shellcheck_suppresses};
 
 pub use generic::GenericAdapter;
 pub use rust::{CfgTestInfo, RustAdapter, parse_suppress_attrs};

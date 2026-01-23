@@ -247,13 +247,22 @@ fn escapes_json_includes_source_test_breakdown_per_pattern() {
 
 /// Spec: docs/specs/checks/escape-hatches.md#json-output
 ///
-/// > Violation types: missing_comment, forbidden, threshold_exceeded
+/// > Violation types: missing_comment, forbidden, threshold_exceeded,
+/// > suppress_forbidden, suppress_missing_comment, shellcheck_forbidden, shellcheck_missing_comment
 #[test]
 fn escapes_violation_type_is_one_of_expected_values() {
     let escapes = check("escapes").on("violations").json().fails();
     let violations = escapes.require("violations").as_array().unwrap();
 
-    let valid_types = ["missing_comment", "forbidden", "threshold_exceeded"];
+    let valid_types = [
+        "missing_comment",
+        "forbidden",
+        "threshold_exceeded",
+        "suppress_forbidden",
+        "suppress_missing_comment",
+        "shellcheck_forbidden",
+        "shellcheck_missing_comment",
+    ];
     for violation in violations {
         let vtype = violation.get("type").and_then(|t| t.as_str()).unwrap();
         assert!(
