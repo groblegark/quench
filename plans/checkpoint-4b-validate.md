@@ -1,6 +1,6 @@
 # Checkpoint 4B: Rust Adapter Complete - Validation
 
-**Root Feature:** `quench-rust-adapter`
+**Root Feature:** `quench-4d66`
 
 ## Overview
 
