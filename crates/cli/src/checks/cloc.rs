@@ -9,7 +9,7 @@ use std::sync::atomic::Ordering;
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use serde_json::json;
 
-use crate::adapter::{AdapterRegistry, FileKind};
+use crate::adapter::{AdapterRegistry, FileKind, RustAdapter};
 use crate::check::{Check, CheckContext, CheckResult, Violation};
 use crate::config::CheckLevel;
 
@@ -38,6 +38,14 @@ impl Check for ClocCheck {
         // Uses language-specific adapter when detected (e.g., Rust adapter for Cargo.toml projects)
         let registry = AdapterRegistry::for_project(ctx.root);
 
+        // Get Rust config for split_cfg_test
+        let rust_config = &ctx.config.rust;
+        let rust_adapter = if rust_config.split_cfg_test {
+            Some(RustAdapter::new())
+        } else {
+            None
+        };
+
         // Build pattern matcher for exclude patterns only
         let exclude_matcher = ExcludeMatcher::new(&cloc_config.exclude);
 
@@ -64,18 +72,57 @@ impl Check for ClocCheck {
                     let token_count = metrics.tokens;
                     let relative_path = file.path.strip_prefix(ctx.root).unwrap_or(&file.path);
                     let file_kind = registry.classify(relative_path);
-                    let is_test = file_kind == FileKind::Test;
                     let is_excluded = exclude_matcher.is_excluded(&file.path, ctx.root);
 
+                    // Check if this is a Rust source file that might have inline tests
+                    let is_rust_source = file.path.extension().and_then(|e| e.to_str())
+                        == Some("rs")
+                        && file_kind == FileKind::Source
+                        && rust_adapter.is_some();
+
+                    // Determine source/test line counts
+                    let (file_source_lines, file_test_lines, is_test) =
+                        if let (true, Some(adapter)) = (is_rust_source, rust_adapter.as_ref()) {
+                            // Use line-level classification for Rust source files
+                            let content = match std::fs::read_to_string(&file.path) {
+                                Ok(c) => c,
+                                Err(_) => {
+                                    // Fallback to whole-file classification on read error
+                                    continue;
+                                }
+                            };
+
+                            let classification = adapter.classify_lines(relative_path, &content);
+
+                            // File is considered "test" for size limits if it has more test than source
+                            let is_test = classification.test_lines > classification.source_lines;
+                            (
+                                classification.source_lines,
+                                classification.test_lines,
+                                is_test,
+                            )
+                        } else {
+                            // Use whole-file classification
+                            let is_test = file_kind == FileKind::Test;
+                            if is_test {
+                                (0, line_count, true)
+                            } else {
+                                (line_count, 0, false)
+                            }
+                        };
+
                     // Accumulate global metrics
-                    if is_test {
-                        test_lines += line_count;
-                        test_files += 1;
-                        test_tokens += token_count;
-                    } else {
-                        source_lines += line_count;
+                    source_lines += file_source_lines;
+                    test_lines += file_test_lines;
+
+                    // File counts: count file in source if any source lines, test if any test lines
+                    if file_source_lines > 0 {
                         source_files += 1;
-                        source_tokens += token_count;
+                        source_tokens += token_count * file_source_lines / line_count.max(1);
+                    }
+                    if file_test_lines > 0 {
+                        test_files += 1;
+                        test_tokens += token_count * file_test_lines / line_count.max(1);
                     }
 
                     // Accumulate per-package metrics
@@ -83,18 +130,21 @@ impl Check for ClocCheck {
                         && let Some(pkg_name) = file_package(&file.path, ctx.root, packages)
                     {
                         let pkg = package_metrics.entry(pkg_name).or_default();
-                        if is_test {
-                            pkg.test_lines += line_count;
-                            pkg.test_files += 1;
-                            pkg.test_tokens += token_count;
-                        } else {
-                            pkg.source_lines += line_count;
+                        pkg.source_lines += file_source_lines;
+                        pkg.test_lines += file_test_lines;
+                        if file_source_lines > 0 {
                             pkg.source_files += 1;
-                            pkg.source_tokens += token_count;
+                            pkg.source_tokens +=
+                                token_count * file_source_lines / line_count.max(1);
+                        }
+                        if file_test_lines > 0 {
+                            pkg.test_files += 1;
+                            pkg.test_tokens += token_count * file_test_lines / line_count.max(1);
                         }
                     }
 
                     // Size limit check (skip excluded files)
+                    // For files with both source and test lines, check source portion against source limit
                     if !is_excluded {
                         let max_lines = if is_test {
                             cloc_config.max_lines_test
@@ -102,6 +152,7 @@ impl Check for ClocCheck {
                             cloc_config.max_lines
                         };
 
+                        // Use total line count for size limit check
                         if line_count > max_lines {
                             match try_create_violation(
                                 ctx,

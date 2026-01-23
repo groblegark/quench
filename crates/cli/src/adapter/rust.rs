@@ -3,11 +3,12 @@
 //! Provides Rust-specific behavior for checks:
 //! - File classification (source vs test)
 //! - Default patterns for Rust projects
-//! - (Future) Inline test detection via #[cfg(test)]
+//! - Inline test detection via #[cfg(test)]
 //!
 //! See docs/specs/langs/rust.md for specification.
 
 use std::fs;
+use std::ops::Range;
 use std::path::Path;
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
@@ -87,6 +88,135 @@ fn build_glob_set(patterns: &[String]) -> GlobSet {
         }
     }
     builder.build().unwrap_or_else(|_| GlobSet::empty())
+}
+
+// =============================================================================
+// CFG(TEST) BLOCK DETECTION
+// =============================================================================
+
+/// Result of parsing a Rust file for #[cfg(test)] blocks.
+#[derive(Debug, Default)]
+pub struct CfgTestInfo {
+    /// Line ranges (0-indexed) that are inside #[cfg(test)] blocks.
+    pub test_ranges: Vec<Range<usize>>,
+}
+
+impl CfgTestInfo {
+    /// Parse a Rust source file to find #[cfg(test)] block ranges.
+    ///
+    /// Uses a simplified brace-counting approach:
+    /// 1. Scan for #[cfg(test)] attribute
+    /// 2. Count { and } to track block depth
+    /// 3. Block ends when brace depth returns to 0
+    ///
+    /// Limitations (acceptable for v1):
+    /// - Braces in string literals may confuse the parser
+    /// - Multi-line attributes not fully supported
+    /// - `mod tests;` (external module) declarations need file-level classification
+    pub fn parse(content: &str) -> Self {
+        let mut info = Self::default();
+        let mut in_cfg_test = false;
+        let mut brace_depth: i32 = 0;
+        let mut block_start = 0;
+
+        for (line_idx, line) in content.lines().enumerate() {
+            let trimmed = line.trim();
+
+            // Check for #[cfg(test)] attribute
+            if !in_cfg_test && is_cfg_test_attr(trimmed) {
+                in_cfg_test = true;
+                block_start = line_idx;
+                brace_depth = 0;
+                continue;
+            }
+
+            if in_cfg_test {
+                // Count braces to track block depth
+                for ch in trimmed.chars() {
+                    match ch {
+                        '{' => brace_depth += 1,
+                        '}' => {
+                            brace_depth -= 1;
+                            if brace_depth == 0 {
+                                // End of #[cfg(test)] block
+                                info.test_ranges.push(block_start..line_idx + 1);
+                                in_cfg_test = false;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        info
+    }
+
+    /// Check if a line (0-indexed) is inside a #[cfg(test)] block.
+    pub fn is_test_line(&self, line_idx: usize) -> bool {
+        self.test_ranges.iter().any(|r| r.contains(&line_idx))
+    }
+}
+
+/// Check if a line is a #[cfg(test)] attribute.
+fn is_cfg_test_attr(line: &str) -> bool {
+    // Match #[cfg(test)] with optional whitespace
+    line.starts_with("#[cfg(test)]")
+        || line.starts_with("#[cfg( test )]")
+        || line.contains("#[cfg(test)]")
+}
+
+/// Result of classifying lines within a single file.
+#[derive(Debug, Default)]
+pub struct LineClassification {
+    pub source_lines: usize,
+    pub test_lines: usize,
+}
+
+impl RustAdapter {
+    /// Parse a file and return line-level classification.
+    ///
+    /// Returns a struct with source and test line counts.
+    pub fn classify_lines(&self, path: &Path, content: &str) -> LineClassification {
+        // First check if the whole file is a test file
+        let file_kind = self.classify(path);
+
+        if file_kind == FileKind::Test {
+            // Entire file is test code
+            let total_lines = content.lines().filter(|l| !l.trim().is_empty()).count();
+            return LineClassification {
+                source_lines: 0,
+                test_lines: total_lines,
+            };
+        }
+
+        if file_kind != FileKind::Source {
+            return LineClassification::default();
+        }
+
+        // Parse for #[cfg(test)] blocks
+        let cfg_info = CfgTestInfo::parse(content);
+
+        let mut source_lines = 0;
+        let mut test_lines = 0;
+
+        for (idx, line) in content.lines().enumerate() {
+            if line.trim().is_empty() {
+                continue;
+            }
+
+            if cfg_info.is_test_line(idx) {
+                test_lines += 1;
+            } else {
+                source_lines += 1;
+            }
+        }
+
+        LineClassification {
+            source_lines,
+            test_lines,
+        }
+    }
 }
 
 // =============================================================================
