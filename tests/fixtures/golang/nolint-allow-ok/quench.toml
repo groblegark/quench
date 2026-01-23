@@ -1,0 +1,7 @@
+version = 1
+
+[golang.suppress]
+check = "comment"
+
+[golang.suppress.source]
+allow = ["unused"]

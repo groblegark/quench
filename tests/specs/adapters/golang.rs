@@ -216,6 +216,69 @@ fn nolint_with_comment_passes() {
     check("escapes").on("golang/nolint-comment-ok").passes();
 }
 
+/// Spec: docs/specs/langs/golang.md#supported-patterns
+///
+/// > //nolint:errcheck,gosec (multiple linters)
+#[test]
+fn nolint_with_multiple_codes_and_comment_passes() {
+    check("escapes").on("golang/nolint-multiple-codes").passes();
+}
+
+/// Spec: docs/specs/langs/golang.md#configuration
+///
+/// > forbid = ["govet"]             # never suppress go vet findings
+#[test]
+fn nolint_with_forbidden_code_fails() {
+    check("escapes")
+        .on("golang/nolint-forbid-fail")
+        .fails()
+        .stdout_has("govet")
+        .stdout_has("forbidden");
+}
+
+/// Spec: docs/specs/langs/golang.md#configuration
+///
+/// > allow = ["unused"]             # no comment needed for these
+#[test]
+fn nolint_with_allowed_code_passes_without_comment() {
+    check("escapes").on("golang/nolint-allow-ok").passes();
+}
+
+/// Spec: docs/specs/langs/golang.md#suppress
+///
+/// > Default: "comment" for source, "allow" for test code.
+#[test]
+fn nolint_in_test_file_passes_without_comment() {
+    check("escapes").on("golang/nolint-test-file-ok").passes();
+}
+
+/// Spec: docs/specs/langs/golang.md#supported-patterns
+///
+/// > //nolint (all linters, discouraged)
+#[test]
+fn nolint_all_linters_with_comment_passes() {
+    check("escapes").on("golang/nolint-all-linters").passes();
+}
+
+/// Spec: docs/specs/langs/golang.md#configuration
+///
+/// > comment = "// OK:"           # optional: require specific pattern
+#[test]
+fn nolint_with_custom_pattern_passes() {
+    check("escapes").on("golang/nolint-custom-pattern").passes();
+}
+
+/// Spec: docs/specs/langs/golang.md#configuration
+///
+/// > comment = "// OK:" requires that specific pattern
+#[test]
+fn nolint_without_custom_pattern_fails() {
+    check("escapes")
+        .on("golang/nolint-custom-pattern-fail")
+        .fails()
+        .stdout_has("// OK:");
+}
+
 // =============================================================================
 // LINT CONFIG POLICY SPECS
 // =============================================================================
