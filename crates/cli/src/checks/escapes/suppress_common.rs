@@ -74,6 +74,18 @@ fn get_go_lint_guidance(lint_code: &str) -> &'static str {
     }
 }
 
+/// Get lint-specific guidance for JavaScript/TypeScript lints.
+fn get_js_lint_guidance(lint_code: &str) -> &'static str {
+    match lint_code {
+        "no-console" => "Is this console output needed in production?",
+        "no-explicit-any"
+        | "@typescript-eslint/no-explicit-any"
+        | "lint/suspicious/noExplicitAny" => "Can this be properly typed instead?",
+        "no-unused-vars" | "@typescript-eslint/no-unused-vars" => "Is this variable still needed?",
+        _ => "Is this suppression necessary?",
+    }
+}
+
 /// Format pattern instructions based on number of patterns and lint guidance.
 ///
 /// The conditional phrase ("If so", "If not", "If it should be kept") is determined
@@ -133,6 +145,7 @@ pub fn build_suppress_missing_comment_advice(
             "rust" => get_rust_lint_guidance(code),
             "shell" => get_shell_lint_guidance(code),
             "go" => get_go_lint_guidance(code),
+            "javascript" => get_js_lint_guidance(code),
             _ => "Is this suppression necessary?",
         }
     } else {
@@ -149,6 +162,7 @@ pub fn build_suppress_missing_comment_advice(
             "rust" => "Add a comment above the attribute.",
             "shell" => "Add a comment above the directive.",
             "go" => "Add a comment above the directive or inline (//nolint:code // reason).",
+            "javascript" => "Add a comment above the directive or use inline reason (-- reason).",
             _ => "Add a comment above the directive.",
         };
         parts.push(msg.to_string());
