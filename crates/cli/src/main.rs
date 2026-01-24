@@ -513,7 +513,7 @@ fn run_init(_cli: &Cli, args: &InitArgs) -> anyhow::Result<ExitCode> {
     // Build config based on profiles
     let mut config = String::from("version = 1\n");
 
-    for profile in &args.profile {
+    for profile in &args.with_profiles {
         match profile.as_str() {
             "rust" => {
                 config.push('\n');
@@ -534,12 +534,12 @@ fn run_init(_cli: &Cli, args: &InitArgs) -> anyhow::Result<ExitCode> {
     }
 
     std::fs::write(&config_path, config)?;
-    if args.profile.is_empty() {
+    if args.with_profiles.is_empty() {
         println!("Created quench.toml");
     } else {
         println!(
             "Created quench.toml with profile(s): {}",
-            args.profile.join(", ")
+            args.with_profiles.join(", ")
         );
     }
     Ok(ExitCode::Success)

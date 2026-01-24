@@ -10,7 +10,7 @@ fn init_shell_profile_generates_config() {
     let temp = Project::empty();
 
     quench_cmd()
-        .args(["init", "--profile", "shell"])
+        .args(["init", "--with", "shell"])
         .current_dir(temp.path())
         .assert()
         .success()
@@ -39,7 +39,7 @@ fn init_shell_profile_includes_escape_patterns() {
     let temp = Project::empty();
 
     quench_cmd()
-        .args(["init", "--profile", "shell"])
+        .args(["init", "--with", "shell"])
         .current_dir(temp.path())
         .assert()
         .success();
@@ -67,7 +67,7 @@ fn init_combined_profiles_generates_both() {
     let temp = Project::empty();
 
     quench_cmd()
-        .args(["init", "--profile", "rust,shell"])
+        .args(["init", "--with", "rust,shell"])
         .current_dir(temp.path())
         .assert()
         .success()
@@ -92,7 +92,7 @@ fn init_shell_profile_message() {
     let temp = Project::empty();
 
     quench_cmd()
-        .args(["init", "--profile", "shell"])
+        .args(["init", "--with", "shell"])
         .current_dir(temp.path())
         .assert()
         .success()
@@ -107,7 +107,6 @@ fn init_shell_profile_message() {
 ///
 /// > --with flag accepts comma-separated profiles
 #[test]
-#[ignore = "TODO: Phase 1510 - Rename --profile to --with"]
 fn init_with_accepts_comma_separated_profiles() {
     let temp = Project::empty();
     quench_cmd()
