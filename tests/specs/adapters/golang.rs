@@ -486,9 +486,11 @@ fn exact_unsafe_pointer_fail_text() {
     check("escapes")
         .on("golang/unsafe-pointer-fail")
         .fails()
-        .stdout_eq(r###"escapes: FAIL
+        .stdout_eq(
+            r###"escapes: FAIL
   main.go:7: missing_comment: unsafe_pointer
     Add a // SAFETY: comment explaining pointer validity.
 FAIL: escapes
-"###);
+"###,
+        );
 }

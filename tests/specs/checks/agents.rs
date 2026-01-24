@@ -868,14 +868,13 @@ sync_source = "CLAUDE.md"
 /// > Missing file shows human-readable description with exact format.
 #[test]
 fn exact_missing_file_text() {
-    check("agents")
-        .on("agents/missing-file")
-        .fails()
-        .stdout_eq(r###"agents: FAIL
+    check("agents").on("agents/missing-file").fails().stdout_eq(
+        r###"agents: FAIL
   CLAUDE.md: missing required file
     Required agent file 'CLAUDE.md' not found at project root
 FAIL: agents
-"###);
+"###,
+    );
 }
 
 /// Spec: docs/specs/checks/agents.md#output
@@ -883,10 +882,8 @@ FAIL: agents
 /// > Out of sync shows other file name with exact format.
 #[test]
 fn exact_out_of_sync_text() {
-    check("agents")
-        .on("agents/out-of-sync")
-        .fails()
-        .stdout_eq(r###"agents: FAIL
+    check("agents").on("agents/out-of-sync").fails().stdout_eq(
+        r###"agents: FAIL
   .cursorrules: out of sync with CLAUDE.md
     Code Style differs. Use --fix to sync from CLAUDE.md, or reconcile manually.
   CLAUDE.md: missing required section
@@ -898,7 +895,8 @@ fn exact_out_of_sync_text() {
   .cursorrules: missing required section
     Add a "## Landing the Plane" section: Checklist for AI agents before completing work
 FAIL: agents
-"###);
+"###,
+    );
 }
 
 /// Spec: docs/specs/checks/agents.md#output
@@ -906,10 +904,8 @@ FAIL: agents
 /// > Forbidden table shows line number with exact format.
 #[test]
 fn exact_forbidden_table_text() {
-    check("agents")
-        .on("agents/with-table")
-        .fails()
-        .stdout_eq(r###"agents: FAIL
+    check("agents").on("agents/with-table").fails().stdout_eq(
+        r###"agents: FAIL
   CLAUDE.md: missing required section
     Add a "## Directory Structure" section: Overview of project layout and key directories
   CLAUDE.md: missing required section
@@ -917,7 +913,8 @@ fn exact_forbidden_table_text() {
   CLAUDE.md:7: forbidden table
     Tables are not token-efficient. Convert to a list or prose.
 FAIL: agents
-"###);
+"###,
+    );
 }
 
 /// Spec: docs/specs/checks/agents.md#output
@@ -928,11 +925,13 @@ fn exact_missing_section_text() {
     check("agents")
         .on("agents/missing-section")
         .fails()
-        .stdout_eq(r###"agents: FAIL
+        .stdout_eq(
+            r###"agents: FAIL
   CLAUDE.md: missing required section
     Add a "## Landing the Plane" section: Checklist for AI agents before finishing work
 FAIL: agents
-"###);
+"###,
+        );
 }
 
 /// Spec: docs/specs/checks/agents.md#output
@@ -943,7 +942,8 @@ fn exact_oversized_lines_text() {
     check("agents")
         .on("agents/oversized-lines")
         .fails()
-        .stdout_eq(r###"agents: FAIL
+        .stdout_eq(
+            r###"agents: FAIL
   CLAUDE.md: missing required section
     Add a "## Directory Structure" section: Overview of project layout and key directories
   CLAUDE.md: missing required section
@@ -951,7 +951,8 @@ fn exact_oversized_lines_text() {
   CLAUDE.md: file too large (59 vs 50)
     File has 59 lines (max: 50). Split into smaller files or reduce content.
 FAIL: agents
-"###);
+"###,
+        );
 }
 
 /// Spec: docs/specs/checks/agents.md#json-output
@@ -966,10 +967,16 @@ fn exact_agents_project_json() {
     let files_found = metrics.get("files_found").unwrap().as_array().unwrap();
     assert_eq!(files_found.len(), 3);
     assert!(files_found.iter().any(|f| f.as_str() == Some("CLAUDE.md")));
-    assert!(files_found.iter().any(|f| f.as_str() == Some(".cursorrules")));
-    assert!(files_found
-        .iter()
-        .any(|f| f.as_str() == Some("crates/api/CLAUDE.md")));
+    assert!(
+        files_found
+            .iter()
+            .any(|f| f.as_str() == Some(".cursorrules"))
+    );
+    assert!(
+        files_found
+            .iter()
+            .any(|f| f.as_str() == Some("crates/api/CLAUDE.md"))
+    );
 
     let files_missing = metrics.get("files_missing").unwrap().as_array().unwrap();
     assert!(files_missing.is_empty());
