@@ -1,5 +1,7 @@
 # Checkpoint 7H: Tech Debt - Docs Check
 
+**Root Feature:** `quench-25c1`
+
 ## Overview
 
 Clean up tech debt in the docs check by moving implemented features from "Future Work" documentation to the main spec and adding missing behavioral tests. The explicit TOC code block syntax feature (`toc` and `no-toc` language tags) is fully implemented but incorrectly documented as future work and lacks behavioral test coverage.
