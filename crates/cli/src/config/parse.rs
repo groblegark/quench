@@ -6,10 +6,10 @@
 use std::path::Path;
 
 use super::{
-    AgentsConfig, AgentsScopeConfig, CheckLevel, ClocConfig, EscapeAction, EscapePattern,
-    EscapesConfig, GoConfig, GoPolicyConfig, GoSuppressConfig, LineMetric, LintChangesPolicy,
-    RustConfig, RustPolicyConfig, ShellConfig, ShellPolicyConfig, ShellSuppressConfig,
-    SuppressConfig, SuppressLevel, SuppressScopeConfig,
+    AgentsConfig, AgentsScopeConfig, CheckLevel, ClocConfig, DocsConfig, EscapeAction,
+    EscapePattern, EscapesConfig, GoConfig, GoPolicyConfig, GoSuppressConfig, LineMetric,
+    LintChangesPolicy, RustConfig, RustPolicyConfig, ShellConfig, ShellPolicyConfig,
+    ShellSuppressConfig, SuppressConfig, SuppressLevel, SuppressScopeConfig, TocConfig,
 };
 use crate::checks::agents::config::{ContentRule, RequiredSection, SectionsConfig};
 
@@ -734,5 +734,37 @@ fn parse_required_section(value: &toml::Value) -> Option<RequiredSection> {
             Some(RequiredSection { name, advice })
         }
         _ => None,
+    }
+}
+
+/// Parse docs configuration from TOML value.
+pub(super) fn parse_docs_config(value: Option<&toml::Value>) -> DocsConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return DocsConfig::default();
+    };
+
+    let check = t.get("check").and_then(|v| v.as_str()).map(String::from);
+
+    let toc = parse_toc_config(t.get("toc"));
+
+    DocsConfig { check, toc }
+}
+
+/// Parse TOC configuration from TOML value.
+fn parse_toc_config(value: Option<&toml::Value>) -> TocConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return TocConfig::default();
+    };
+
+    let check = t.get("check").and_then(|v| v.as_str()).map(String::from);
+
+    let include = parse_string_array(t.get("include")).unwrap_or_else(TocConfig::default_include);
+
+    let exclude = parse_string_array(t.get("exclude")).unwrap_or_else(TocConfig::default_exclude);
+
+    TocConfig {
+        check,
+        include,
+        exclude,
     }
 }

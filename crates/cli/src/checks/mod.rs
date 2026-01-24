@@ -15,6 +15,7 @@
 
 pub mod agents;
 pub mod cloc;
+pub mod docs;
 pub mod escapes;
 pub mod git;
 pub mod stub;
@@ -37,11 +38,7 @@ pub fn all_checks() -> Vec<Arc<dyn Check>> {
         Arc::new(cloc::ClocCheck),
         Arc::new(escapes::EscapesCheck),
         Arc::new(agents::AgentsCheck),
-        Arc::new(stub::StubCheck::new(
-            "docs",
-            "Documentation validation",
-            true,
-        )),
+        Arc::new(docs::DocsCheck),
         Arc::new(stub::StubCheck::new("tests", "Test correlation", true)),
         Arc::new(git::GitCheck),
         Arc::new(stub::StubCheck::new("build", "Build metrics", false)),

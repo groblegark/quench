@@ -465,7 +465,7 @@ consider refactoring to be more unit testable.
 
 Avoid picking and removing individual lines to satisfy the linter,
 prefer properly refactoring out testable code blocks.
-PASS: escapes, agents
+PASS: escapes, agents, docs
 FAIL: cloc
 ";
 

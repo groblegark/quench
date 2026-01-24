@@ -22,8 +22,8 @@ pub use suppress::{SuppressConfig, SuppressLevel, SuppressScopeConfig};
 
 use crate::error::{Error, Result};
 use parse::{
-    parse_agents_config, parse_cloc_config, parse_escapes_config, parse_go_config,
-    parse_rust_config, parse_shell_config, warn_unknown_key,
+    parse_agents_config, parse_cloc_config, parse_docs_config, parse_escapes_config,
+    parse_go_config, parse_rust_config, parse_shell_config, warn_unknown_key,
 };
 use suggest::warn_unknown_check;
 
@@ -242,6 +242,64 @@ pub struct CheckConfig {
     /// Agents (agent context files) check configuration.
     #[serde(default)]
     pub agents: AgentsConfig,
+
+    /// Docs (documentation validation) check configuration.
+    #[serde(default)]
+    pub docs: DocsConfig,
+}
+
+/// Configuration for docs check.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(default)]
+pub struct DocsConfig {
+    /// Check level: "error" | "warn" | "off"
+    pub check: Option<String>,
+
+    /// TOC validation settings.
+    pub toc: TocConfig,
+}
+
+/// Configuration for TOC validation.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct TocConfig {
+    /// Check level: "error" | "warn" | "off"
+    pub check: Option<String>,
+
+    /// Include patterns for markdown files.
+    #[serde(default = "TocConfig::default_include")]
+    pub include: Vec<String>,
+
+    /// Exclude patterns (plans, etc.).
+    #[serde(default = "TocConfig::default_exclude")]
+    pub exclude: Vec<String>,
+}
+
+impl Default for TocConfig {
+    fn default() -> Self {
+        Self {
+            check: None,
+            include: Self::default_include(),
+            exclude: Self::default_exclude(),
+        }
+    }
+}
+
+impl TocConfig {
+    fn default_include() -> Vec<String> {
+        vec!["**/*.md".to_string(), "**/*.mdc".to_string()]
+    }
+
+    fn default_exclude() -> Vec<String> {
+        vec![
+            "plans/**".to_string(),
+            "plan.md".to_string(),
+            "*_plan.md".to_string(),
+            "plan_*".to_string(),
+            "**/fixtures/**".to_string(),
+            "**/testdata/**".to_string(),
+        ]
+    }
 }
 
 /// Escapes check configuration.
@@ -672,10 +730,14 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
             // Parse agents config
             let agents = parse_agents_config(t.get("agents"));
 
+            // Parse docs config
+            let docs = parse_docs_config(t.get("docs"));
+
             CheckConfig {
                 cloc,
                 escapes,
                 agents,
+                docs,
             }
         }
         _ => CheckConfig::default(),
