@@ -14,11 +14,13 @@
 //! - license: License header validation (disabled by default)
 
 pub mod agents;
+pub mod build;
 pub mod cloc;
 pub mod docs;
 pub mod escapes;
 pub mod git;
 pub mod stub;
+pub mod testing;
 
 use std::sync::Arc;
 
@@ -39,9 +41,9 @@ pub fn all_checks() -> Vec<Arc<dyn Check>> {
         Arc::new(escapes::EscapesCheck),
         Arc::new(agents::AgentsCheck),
         Arc::new(docs::DocsCheck),
-        Arc::new(stub::StubCheck::new("tests", "Test correlation", true)),
+        Arc::new(testing::TestsCheck),
         Arc::new(git::GitCheck),
-        Arc::new(stub::StubCheck::new("build", "Build metrics", false)),
+        Arc::new(build::BuildCheck),
         Arc::new(stub::StubCheck::new("license", "License headers", false)),
     ]
 }

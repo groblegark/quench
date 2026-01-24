@@ -1,0 +1,244 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
+//! Build check: binary size and build time metrics.
+//!
+//! CI-only check that measures:
+//! - Binary sizes for configured targets
+//! - Cold build time (clean build)
+//! - Hot build time (incremental build)
+
+use std::collections::HashMap;
+use std::path::Path;
+use std::process::Command;
+use std::time::{Duration, Instant};
+
+use serde_json::json;
+
+use crate::adapter::{ProjectLanguage, detect_language};
+use crate::check::{Check, CheckContext, CheckResult};
+
+pub struct BuildCheck;
+
+impl Check for BuildCheck {
+    fn name(&self) -> &'static str {
+        "build"
+    }
+
+    fn description(&self) -> &'static str {
+        "Build metrics (size, time)"
+    }
+
+    fn default_enabled(&self) -> bool {
+        false // CI-only by default
+    }
+
+    fn run(&self, ctx: &CheckContext) -> CheckResult {
+        // Skip if not in CI mode
+        if !ctx.ci_mode {
+            return CheckResult::stub(self.name());
+        }
+
+        let mut metrics = BuildMetrics::default();
+        let language = detect_language(ctx.root);
+
+        // Measure binary sizes
+        let targets = get_build_targets(ctx.root, language);
+        for target in targets {
+            if let Some(size) = measure_binary_size(ctx.root, &target, language) {
+                metrics.sizes.insert(target, size);
+            }
+        }
+
+        // Measure build times (only if configured)
+        if ctx.config.ratchet.build_time_cold || ctx.config.ratchet.build_time_hot {
+            if ctx.config.ratchet.build_time_cold {
+                metrics.time_cold = measure_cold_build(ctx.root, language);
+            }
+            if ctx.config.ratchet.build_time_hot {
+                metrics.time_hot = measure_hot_build(ctx.root, language);
+            }
+        }
+
+        // Return result with metrics
+        if metrics.sizes.is_empty() && metrics.time_cold.is_none() && metrics.time_hot.is_none() {
+            // No metrics collected - still pass but as stub
+            CheckResult::stub(self.name())
+        } else {
+            CheckResult::passed(self.name()).with_metrics(metrics.to_json())
+        }
+    }
+}
+
+#[derive(Default)]
+struct BuildMetrics {
+    sizes: HashMap<String, u64>,
+    time_cold: Option<Duration>,
+    time_hot: Option<Duration>,
+}
+
+impl BuildMetrics {
+    fn to_json(&self) -> serde_json::Value {
+        json!({
+            "size": self.sizes,
+            "time": {
+                "cold": self.time_cold.map(|d| d.as_secs_f64()),
+                "hot": self.time_hot.map(|d| d.as_secs_f64()),
+            }
+        })
+    }
+}
+
+/// Get build targets for the project.
+fn get_build_targets(root: &Path, language: ProjectLanguage) -> Vec<String> {
+    match language {
+        ProjectLanguage::Rust => get_rust_targets(root),
+        ProjectLanguage::Go => get_go_targets(root),
+        _ => Vec::new(),
+    }
+}
+
+/// Get Rust binary targets from Cargo.toml.
+fn get_rust_targets(root: &Path) -> Vec<String> {
+    let cargo_toml = root.join("Cargo.toml");
+    if !cargo_toml.exists() {
+        return Vec::new();
+    }
+
+    // Try parsing Cargo.toml to find [[bin]] sections
+    if let Ok(content) = std::fs::read_to_string(&cargo_toml)
+        && let Ok(manifest) = content.parse::<toml::Table>()
+    {
+        let mut targets = Vec::new();
+
+        // Check for [[bin]] sections
+        if let Some(bins) = manifest.get("bin").and_then(|v| v.as_array()) {
+            for bin in bins {
+                if let Some(name) = bin.get("name").and_then(|v| v.as_str()) {
+                    targets.push(name.to_string());
+                }
+            }
+        }
+
+        // Check for [package] name as default binary
+        if targets.is_empty()
+            && let Some(pkg) = manifest.get("package").and_then(|v| v.as_table())
+            && let Some(name) = pkg.get("name").and_then(|v| v.as_str())
+            && root.join("src/main.rs").exists()
+        {
+            targets.push(name.to_string());
+        }
+
+        return targets;
+    }
+
+    Vec::new()
+}
+
+/// Get Go binary targets (package name from go.mod).
+fn get_go_targets(root: &Path) -> Vec<String> {
+    let go_mod = root.join("go.mod");
+    if !go_mod.exists() {
+        return Vec::new();
+    }
+
+    if let Ok(content) = std::fs::read_to_string(&go_mod) {
+        for line in content.lines() {
+            if let Some(module) = line.strip_prefix("module ") {
+                // Use the last part of the module path as the binary name
+                let name = module.trim().rsplit('/').next().unwrap_or(module.trim());
+                return vec![name.to_string()];
+            }
+        }
+    }
+
+    Vec::new()
+}
+
+/// Measure binary size for a target.
+fn measure_binary_size(root: &Path, target: &str, language: ProjectLanguage) -> Option<u64> {
+    let binary_path = match language {
+        ProjectLanguage::Rust => root.join("target/release").join(target),
+        ProjectLanguage::Go => root.join(target),
+        _ => return None,
+    };
+
+    std::fs::metadata(&binary_path).ok().map(|m| m.len())
+}
+
+/// Measure cold build time (clean build).
+fn measure_cold_build(root: &Path, language: ProjectLanguage) -> Option<Duration> {
+    let (clean_cmd, build_cmd) = match language {
+        ProjectLanguage::Rust => (vec!["cargo", "clean"], vec!["cargo", "build", "--release"]),
+        ProjectLanguage::Go => (vec!["go", "clean", "-cache"], vec!["go", "build", "./..."]),
+        _ => return None,
+    };
+
+    // Clean first
+    let output = Command::new(clean_cmd[0])
+        .args(&clean_cmd[1..])
+        .current_dir(root)
+        .output()
+        .ok()?;
+
+    if !output.status.success() {
+        return None;
+    }
+
+    // Time the build
+    let start = Instant::now();
+    let output = Command::new(build_cmd[0])
+        .args(&build_cmd[1..])
+        .current_dir(root)
+        .output()
+        .ok()?;
+
+    if output.status.success() {
+        Some(start.elapsed())
+    } else {
+        None
+    }
+}
+
+/// Measure hot build time (incremental build).
+fn measure_hot_build(root: &Path, language: ProjectLanguage) -> Option<Duration> {
+    let (touch_path, build_cmd) = match language {
+        ProjectLanguage::Rust => {
+            let lib_rs = root.join("src/lib.rs");
+            let main_rs = root.join("src/main.rs");
+            let touch = if lib_rs.exists() { lib_rs } else { main_rs };
+            (touch, vec!["cargo", "build", "--release"])
+        }
+        ProjectLanguage::Go => {
+            let main_go = root.join("main.go");
+            (main_go, vec!["go", "build", "./..."])
+        }
+        _ => return None,
+    };
+
+    // Touch a source file to trigger incremental rebuild
+    if touch_path.exists() {
+        let _ = Command::new("touch")
+            .arg(&touch_path)
+            .current_dir(root)
+            .output();
+    }
+
+    // Time the build
+    let start = Instant::now();
+    let output = Command::new(build_cmd[0])
+        .args(&build_cmd[1..])
+        .current_dir(root)
+        .output()
+        .ok()?;
+
+    if output.status.success() {
+        Some(start.elapsed())
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+#[path = "mod_tests.rs"]
+mod tests;

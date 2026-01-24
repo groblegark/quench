@@ -36,6 +36,7 @@ fn make_current_metrics(escapes: HashMap<String, usize>) -> CurrentMetrics {
             source: escapes,
             test: HashMap::new(),
         }),
+        ..Default::default()
     }
 }
 
@@ -194,4 +195,231 @@ fn multiple_patterns_mixed_results() {
     // But unwrap should be tracked as an improvement
     assert_eq!(result.improvements.len(), 1);
     assert_eq!(result.improvements[0].name, "escapes.unwrap");
+}
+
+// =============================================================================
+// Performance Metrics Tests
+// =============================================================================
+
+use crate::baseline::BuildTimeMetrics as BaselineBuildTime;
+use std::time::Duration;
+
+fn make_binary_size_config(tolerance: Option<&str>) -> RatchetConfig {
+    RatchetConfig {
+        check: CheckLevel::Error,
+        binary_size: true,
+        binary_size_tolerance: tolerance.map(String::from),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn binary_size_regression_fails() {
+    let config = make_binary_size_config(None);
+    let baseline = BaselineMetrics {
+        binary_size: Some(HashMap::from([("myapp".to_string(), 1_000_000)])),
+        ..Default::default()
+    };
+    let current = CurrentMetrics {
+        binary_size: Some(HashMap::from([("myapp".to_string(), 1_500_000)])),
+        ..Default::default()
+    };
+
+    let result = compare(&current, &baseline, &config);
+
+    assert!(!result.passed);
+    assert_eq!(result.comparisons.len(), 1);
+    assert!(!result.comparisons[0].passed);
+    assert_eq!(result.comparisons[0].current, 1_500_000.0);
+    assert_eq!(result.comparisons[0].baseline, 1_000_000.0);
+}
+
+#[test]
+fn binary_size_within_tolerance_passes() {
+    let config = make_binary_size_config(Some("100KB"));
+    let baseline = BaselineMetrics {
+        binary_size: Some(HashMap::from([("myapp".to_string(), 1_000_000)])),
+        ..Default::default()
+    };
+    let current = CurrentMetrics {
+        binary_size: Some(HashMap::from([("myapp".to_string(), 1_050_000)])),
+        ..Default::default()
+    };
+
+    let result = compare(&current, &baseline, &config);
+
+    assert!(result.passed);
+    assert_eq!(result.comparisons.len(), 1);
+    assert!(result.comparisons[0].passed);
+}
+
+#[test]
+fn binary_size_exceeds_tolerance_fails() {
+    let config = make_binary_size_config(Some("100KB")); // 102,400 bytes tolerance
+    let baseline = BaselineMetrics {
+        binary_size: Some(HashMap::from([("myapp".to_string(), 1_000_000)])),
+        ..Default::default()
+    };
+    let current = CurrentMetrics {
+        binary_size: Some(HashMap::from([("myapp".to_string(), 1_200_000)])), // +200KB
+        ..Default::default()
+    };
+
+    let result = compare(&current, &baseline, &config);
+
+    assert!(!result.passed);
+}
+
+#[test]
+fn binary_size_improvement_tracked() {
+    let config = make_binary_size_config(None);
+    let baseline = BaselineMetrics {
+        binary_size: Some(HashMap::from([("myapp".to_string(), 1_000_000)])),
+        ..Default::default()
+    };
+    let current = CurrentMetrics {
+        binary_size: Some(HashMap::from([("myapp".to_string(), 800_000)])),
+        ..Default::default()
+    };
+
+    let result = compare(&current, &baseline, &config);
+
+    assert!(result.passed);
+    assert_eq!(result.improvements.len(), 1);
+    assert_eq!(result.improvements[0].name, "binary_size.myapp");
+}
+
+fn make_build_time_config(cold: bool, hot: bool, tolerance: Option<&str>) -> RatchetConfig {
+    RatchetConfig {
+        check: CheckLevel::Error,
+        build_time_cold: cold,
+        build_time_hot: hot,
+        build_time_tolerance: tolerance.map(String::from),
+        ..Default::default()
+    }
+}
+
+#[test]
+fn build_time_cold_regression_fails() {
+    let config = make_build_time_config(true, false, None);
+    let baseline = BaselineMetrics {
+        build_time: Some(BaselineBuildTime {
+            cold: 10.0,
+            hot: 5.0,
+        }),
+        ..Default::default()
+    };
+    let current = CurrentMetrics {
+        build_time: Some(BuildTimeCurrent {
+            cold: Some(Duration::from_secs(15)),
+            hot: None,
+        }),
+        ..Default::default()
+    };
+
+    let result = compare(&current, &baseline, &config);
+
+    assert!(!result.passed);
+}
+
+#[test]
+fn build_time_within_tolerance_passes() {
+    let config = make_build_time_config(true, false, Some("5s"));
+    let baseline = BaselineMetrics {
+        build_time: Some(BaselineBuildTime {
+            cold: 10.0,
+            hot: 5.0,
+        }),
+        ..Default::default()
+    };
+    let current = CurrentMetrics {
+        build_time: Some(BuildTimeCurrent {
+            cold: Some(Duration::from_secs(12)), // +2s, within 5s tolerance
+            hot: None,
+        }),
+        ..Default::default()
+    };
+
+    let result = compare(&current, &baseline, &config);
+
+    assert!(result.passed);
+}
+
+#[test]
+fn extract_build_metrics() {
+    let metrics_json = json!({
+        "size": { "myapp": 1000000 },
+        "time": { "cold": 10.5, "hot": 2.3 }
+    });
+
+    let check_result = CheckResult::passed("build").with_metrics(metrics_json);
+    let output = CheckOutput::new("2026-01-20T00:00:00Z".to_string(), vec![check_result]);
+
+    let current = CurrentMetrics::from_output(&output);
+
+    assert!(current.binary_size.is_some());
+    assert_eq!(
+        current.binary_size.as_ref().unwrap().get("myapp"),
+        Some(&1000000)
+    );
+
+    assert!(current.build_time.is_some());
+    let build_time = current.build_time.as_ref().unwrap();
+    assert!(build_time.cold.is_some());
+    assert!(build_time.hot.is_some());
+}
+
+#[test]
+fn extract_test_time_metrics() {
+    let metrics_json = json!({
+        "total": 30.5,
+        "avg": 0.5,
+        "max": 2.0
+    });
+
+    let check_result = CheckResult::passed("tests").with_metrics(metrics_json);
+    let output = CheckOutput::new("2026-01-20T00:00:00Z".to_string(), vec![check_result]);
+
+    let current = CurrentMetrics::from_output(&output);
+
+    assert!(current.test_time.is_some());
+    let test_time = current.test_time.as_ref().unwrap();
+    assert_eq!(test_time.total.as_secs_f64(), 30.5);
+    assert_eq!(test_time.avg.as_secs_f64(), 0.5);
+    assert_eq!(test_time.max.as_secs_f64(), 2.0);
+}
+
+#[test]
+fn update_baseline_with_perf_metrics() {
+    let mut baseline = Baseline::new();
+    let current = CurrentMetrics {
+        binary_size: Some(HashMap::from([("myapp".to_string(), 800_000)])),
+        build_time: Some(BuildTimeCurrent {
+            cold: Some(Duration::from_secs(10)),
+            hot: Some(Duration::from_secs(2)),
+        }),
+        test_time: Some(TestTimeCurrent {
+            total: Duration::from_secs(30),
+            avg: Duration::from_millis(500),
+            max: Duration::from_secs(2),
+        }),
+        ..Default::default()
+    };
+
+    update_baseline(&mut baseline, &current, &[]);
+
+    assert!(baseline.metrics.binary_size.is_some());
+    assert_eq!(
+        baseline.metrics.binary_size.as_ref().unwrap().get("myapp"),
+        Some(&800_000)
+    );
+
+    assert!(baseline.metrics.build_time.is_some());
+    let build_time = baseline.metrics.build_time.as_ref().unwrap();
+    assert_eq!(build_time.cold, 10.0);
+    assert_eq!(build_time.hot, 2.0);
+
+    assert!(baseline.metrics.test_time.is_some());
+    let test_time = baseline.metrics.test_time.as_ref().unwrap();
+    assert_eq!(test_time.total, 30.0);
 }

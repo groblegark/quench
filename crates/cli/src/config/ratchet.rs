@@ -3,9 +3,12 @@
 
 //! Ratcheting configuration.
 
+use std::time::Duration;
+
 use serde::Deserialize;
 
 use super::CheckLevel;
+use crate::tolerance::{parse_duration, parse_size};
 
 /// Ratcheting configuration.
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -57,6 +60,34 @@ pub struct RatchetConfig {
     /// Build time tolerance (e.g., "5s").
     #[serde(default)]
     pub build_time_tolerance: Option<String>,
+
+    /// Test time tolerance (e.g., "2s"). Defaults to build_time_tolerance.
+    #[serde(default)]
+    pub test_time_tolerance: Option<String>,
+}
+
+impl RatchetConfig {
+    /// Get binary size tolerance in bytes.
+    pub fn binary_size_tolerance_bytes(&self) -> Option<u64> {
+        self.binary_size_tolerance
+            .as_ref()
+            .and_then(|s| parse_size(s).ok())
+    }
+
+    /// Get build time tolerance as Duration.
+    pub fn build_time_tolerance_duration(&self) -> Option<Duration> {
+        self.build_time_tolerance
+            .as_ref()
+            .and_then(|s| parse_duration(s).ok())
+    }
+
+    /// Get test time tolerance as Duration (uses build_time_tolerance if not separately configured).
+    pub fn test_time_tolerance_duration(&self) -> Option<Duration> {
+        self.test_time_tolerance
+            .as_ref()
+            .and_then(|s| parse_duration(s).ok())
+            .or_else(|| self.build_time_tolerance_duration())
+    }
 }
 
 fn default_true() -> bool {
