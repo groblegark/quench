@@ -71,3 +71,30 @@ fn parse_global_config_long_flag() {
     let cli = Cli::parse_from(["quench", "--config", "custom.toml", "check"]);
     assert_eq!(cli.config, Some(PathBuf::from("custom.toml")));
 }
+
+#[test]
+fn default_template_contains_required_sections() {
+    let template = default_template();
+    assert!(template.contains("version = 1"));
+    assert!(template.contains("[check.cloc]"));
+    assert!(template.contains("[check.escapes]"));
+    assert!(template.contains("[check.agents]"));
+    assert!(template.contains("[check.docs]"));
+    assert!(template.contains("[check.tests]"));
+    assert!(template.contains("[check.license]"));
+    assert!(template.contains("[git.commit]"));
+    assert!(template.contains("# Supported Languages:"));
+    assert!(template.contains("# [rust], [golang], [javascript], [shell]"));
+}
+
+#[test]
+fn default_template_has_explicit_check_levels() {
+    let template = default_template();
+    // Enabled checks
+    assert!(template.contains("[check.cloc]\ncheck = \"error\""));
+    assert!(template.contains("[check.escapes]\ncheck = \"error\""));
+    assert!(template.contains("[check.agents]\ncheck = \"error\""));
+    assert!(template.contains("[check.docs]\ncheck = \"error\""));
+    // Disabled checks with stub comments
+    assert!(template.contains("check = \"off\"  # stub in quench v0.3.0"));
+}

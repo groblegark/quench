@@ -388,6 +388,44 @@ pub fn golang_landing_items() -> &'static [&'static str] {
     ]
 }
 
+// =============================================================================
+// DEFAULT TEMPLATE
+// =============================================================================
+
+/// Default template for quench init without profiles.
+///
+/// Matches docs/specs/templates/init.default.toml
+pub fn default_template() -> &'static str {
+    r#"# Quench configuration
+# https://github.com/alfredjeanlab/quench
+version = 1
+
+[check.cloc]
+check = "error"
+
+[check.escapes]
+check = "error"
+
+[check.agents]
+check = "error"
+
+[check.docs]
+check = "error"
+
+[check.tests]
+check = "off"  # stub in quench v0.3.0
+
+[check.license]
+check = "off"  # stub in quench v0.3.0
+
+[git.commit]
+check = "off"  # stub in quench v0.3.0
+
+# Supported Languages:
+# [rust], [golang], [javascript], [shell]
+"#
+}
+
 #[cfg(test)]
 #[path = "cli_tests.rs"]
 mod tests;

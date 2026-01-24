@@ -341,7 +341,6 @@ fn init_detects_cursor_from_mdc_rules() {
 ///
 /// > Output matches templates/init.default.toml format
 #[test]
-#[ignore = "TODO: Phase 1515 - Init Output Template"]
 fn init_output_matches_template_format() {
     let temp = Project::empty();
 

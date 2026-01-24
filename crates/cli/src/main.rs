@@ -500,7 +500,9 @@ fn run_report(_cli: &Cli, args: &ReportArgs) -> anyhow::Result<()> {
 }
 
 fn run_init(_cli: &Cli, args: &InitArgs) -> anyhow::Result<ExitCode> {
-    use quench::cli::{golang_profile_defaults, rust_profile_defaults, shell_profile_defaults};
+    use quench::cli::{
+        default_template, golang_profile_defaults, rust_profile_defaults, shell_profile_defaults,
+    };
 
     let cwd = std::env::current_dir()?;
     let config_path = cwd.join("quench.toml");
@@ -510,28 +512,33 @@ fn run_init(_cli: &Cli, args: &InitArgs) -> anyhow::Result<ExitCode> {
         return Ok(ExitCode::ConfigError);
     }
 
-    // Build config based on profiles
-    let mut config = String::from("version = 1\n");
-
-    for profile in &args.with_profiles {
-        match profile.as_str() {
-            "rust" => {
-                config.push('\n');
-                config.push_str(&rust_profile_defaults());
-            }
-            "shell" => {
-                config.push('\n');
-                config.push_str(&shell_profile_defaults());
-            }
-            "golang" | "go" => {
-                config.push('\n');
-                config.push_str(&golang_profile_defaults());
-            }
-            other => {
-                eprintln!("quench: warning: unknown profile '{}', skipping", other);
+    // Build config: start with default template
+    let config = if args.with_profiles.is_empty() {
+        default_template().to_string()
+    } else {
+        // With profiles: start with template, append profile sections
+        let mut cfg = default_template().to_string();
+        for profile in &args.with_profiles {
+            match profile.as_str() {
+                "rust" => {
+                    cfg.push('\n');
+                    cfg.push_str(&rust_profile_defaults());
+                }
+                "shell" => {
+                    cfg.push('\n');
+                    cfg.push_str(&shell_profile_defaults());
+                }
+                "golang" | "go" => {
+                    cfg.push('\n');
+                    cfg.push_str(&golang_profile_defaults());
+                }
+                other => {
+                    eprintln!("quench: warning: unknown profile '{}', skipping", other);
+                }
             }
         }
-    }
+        cfg
+    };
 
     std::fs::write(&config_path, config)?;
     if args.with_profiles.is_empty() {
