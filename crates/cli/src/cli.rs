@@ -333,6 +333,57 @@ pub fn shell_landing_items() -> &'static [&'static str] {
     &["shellcheck **/*.sh", "bats tests/"]
 }
 
+/// Default Go profile configuration for quench init.
+pub fn golang_profile_defaults() -> String {
+    r#"[golang]
+binary_size = true
+build_time = true
+
+[golang.suppress]
+check = "comment"
+
+[golang.suppress.test]
+check = "allow"
+
+[golang.policy]
+lint_changes = "standalone"
+lint_config = [".golangci.yml", ".golangci.yaml", ".golangci.toml"]
+
+[[check.escapes.patterns]]
+name = "unsafe_pointer"
+pattern = "unsafe\\.Pointer"
+action = "comment"
+comment = "// SAFETY:"
+advice = "Add a // SAFETY: comment explaining pointer validity."
+
+[[check.escapes.patterns]]
+name = "go_linkname"
+pattern = "//go:linkname"
+action = "comment"
+comment = "// LINKNAME:"
+advice = "Add a // LINKNAME: comment explaining the external symbol dependency."
+
+[[check.escapes.patterns]]
+name = "go_noescape"
+pattern = "//go:noescape"
+action = "comment"
+comment = "// NOESCAPE:"
+advice = "Add a // NOESCAPE: comment explaining why escape analysis should be bypassed."
+"#
+    .to_string()
+}
+
+/// Go-specific Landing the Plane checklist items.
+pub fn golang_landing_items() -> &'static [&'static str] {
+    &[
+        "go fmt ./...",
+        "go vet ./...",
+        "golangci-lint run",
+        "go test ./...",
+        "go build ./...",
+    ]
+}
+
 #[cfg(test)]
 #[path = "cli_tests.rs"]
 mod tests;

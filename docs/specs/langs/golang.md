@@ -8,7 +8,7 @@ Detected when `go.mod` exists in project root.
 
 ## Profile Defaults
 
-When using [`quench init --profile go`](../01-cli.md#profile-selection-recommended), the following opinionated defaults are configured:
+When using [`quench init --profile golang`](../01-cli.md#profile-selection-recommended) (or `--profile go`), the following opinionated defaults are configured:
 
 ```toml
 [golang]
