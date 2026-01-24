@@ -33,11 +33,11 @@ version = 1
 
 [check.cloc]
 exclude = ["tests/fixtures/**"]
-advice_test = "Use table-driven tests with t.Run()."
+advice_test = "Use table-driven tests with t.Run()."  # customize advice for project
 
 [check.agents]
-required = ["CLAUDE.md"]
-tables = "forbid"
+required = ["CLAUDE.md"]  # default: ["*"] any agent file
+tables = "forbid"         # default: "allow"
 
 [check.agents.sections]
 required = ["Directory Structure", "Landing the Plane"]
