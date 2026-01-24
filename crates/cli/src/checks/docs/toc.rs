@@ -336,7 +336,7 @@ fn try_resolve(
                 {
                     let prefix = format!("{}/", parent_name);
                     if let Some(stripped) = normalized.strip_prefix(&prefix) {
-                        return try_resolve_glob(root, stripped);
+                        return try_resolve_glob(parent, stripped);
                     }
                 }
                 false
@@ -359,9 +359,10 @@ fn try_resolve(
                 && let Some(parent_name) = parent.file_name().and_then(|n| n.to_str())
             {
                 // Try stripping the parent dir name prefix
+                // e.g., "quality/foo.sh" in checks/quality/README.md → checks/quality/foo.sh
                 let prefix = format!("{}/", parent_name);
                 if let Some(stripped) = normalized.strip_prefix(&prefix) {
-                    return root.join(stripped).exists();
+                    return parent.join(stripped).exists();
                 }
             }
             false

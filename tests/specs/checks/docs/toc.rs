@@ -316,3 +316,33 @@ TEMPNAME/
     .unwrap();
     check("docs").pwd(temp.path()).passes();
 }
+
+/// Spec: docs/specs/checks/docs.md#resolution
+///
+/// > Strip markdown file's parent directory name prefix resolves relative to parent dir
+///
+/// Regression test: When a README in `checks/quality/` has a TOC entry like
+/// `quality/evaluate.sh`, the StripParentDirName strategy should look for
+/// `checks/quality/evaluate.sh`, not `evaluate.sh` at the project root.
+#[test]
+fn toc_parent_dir_prefix_stripped_resolves_relative_to_parent() {
+    let temp = default_project();
+    // Create subdirectory structure with files
+    temp.file("checks/quality/evaluate.sh", "#!/bin/bash\n");
+    temp.file("checks/quality/metrics/loc.sh", "#!/bin/bash\n");
+    // README in subdirectory with TOC using parent dir name as prefix
+    temp.file(
+        "checks/quality/README.md",
+        r#"# Quality Checks
+
+```
+quality/
+├── evaluate.sh
+└── metrics/
+    └── loc.sh
+```
+"#,
+    );
+    // Both files exist at checks/quality/*, should pass
+    check("docs").pwd(temp.path()).passes();
+}

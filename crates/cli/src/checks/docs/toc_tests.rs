@@ -371,6 +371,77 @@ fn four_dots_not_ignored() {
     assert!(entries.iter().any(|e| e.path == "src/...."));
 }
 
+// === StripParentDirName resolution ===
+
+#[test]
+fn strip_parent_dir_name_resolves_relative_to_parent() {
+    use tempfile::TempDir;
+
+    // Create a temp directory structure:
+    // temp/
+    // ├── checks/
+    // │   └── quality/
+    // │       ├── README.md
+    // │       └── evaluate.sh
+    let temp = TempDir::new().unwrap();
+    let root = temp.path();
+
+    let quality_dir = root.join("checks/quality");
+    std::fs::create_dir_all(&quality_dir).unwrap();
+    std::fs::write(quality_dir.join("README.md"), "# Quality").unwrap();
+    std::fs::write(quality_dir.join("evaluate.sh"), "#!/bin/bash").unwrap();
+
+    let md_file = quality_dir.join("README.md");
+
+    // Entry path is "quality/evaluate.sh" - should resolve to checks/quality/evaluate.sh
+    assert!(try_resolve(
+        root,
+        &md_file,
+        "quality/evaluate.sh",
+        ResolutionStrategy::StripParentDirName
+    ));
+
+    // Should NOT resolve to root/evaluate.sh (old buggy behavior)
+    // Verify by testing a path that only exists at root
+    std::fs::write(root.join("only-at-root.sh"), "#!/bin/bash").unwrap();
+    assert!(!try_resolve(
+        root,
+        &md_file,
+        "quality/only-at-root.sh",
+        ResolutionStrategy::StripParentDirName
+    ));
+}
+
+#[test]
+fn strip_parent_dir_name_with_nested_paths() {
+    use tempfile::TempDir;
+
+    // Create:
+    // temp/
+    // └── checks/
+    //     └── quality/
+    //         ├── README.md
+    //         └── metrics/
+    //             └── loc.sh
+    let temp = TempDir::new().unwrap();
+    let root = temp.path();
+
+    let quality_dir = root.join("checks/quality");
+    std::fs::create_dir_all(quality_dir.join("metrics")).unwrap();
+    std::fs::write(quality_dir.join("README.md"), "# Quality").unwrap();
+    std::fs::write(quality_dir.join("metrics/loc.sh"), "#!/bin/bash").unwrap();
+
+    let md_file = quality_dir.join("README.md");
+
+    // Entry path is "quality/metrics/loc.sh" - should resolve to checks/quality/metrics/loc.sh
+    assert!(try_resolve(
+        root,
+        &md_file,
+        "quality/metrics/loc.sh",
+        ResolutionStrategy::StripParentDirName
+    ));
+}
+
 // === Glob pattern detection ===
 
 #[test]
