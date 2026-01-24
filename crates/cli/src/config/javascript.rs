@@ -49,7 +49,9 @@ impl JavaScriptConfig {
             "**/*.ts".to_string(),
             "**/*.tsx".to_string(),
             "**/*.mjs".to_string(),
+            "**/*.mts".to_string(),
             "**/*.cjs".to_string(),
+            "**/*.cts".to_string(),
         ]
     }
 
@@ -57,6 +59,7 @@ impl JavaScriptConfig {
         vec![
             "**/tests/**".to_string(),
             "**/test/**".to_string(),
+            "**/__tests__/**".to_string(),
             "**/*_test.*".to_string(),
             "**/*_tests.*".to_string(),
             "**/*.test.*".to_string(),

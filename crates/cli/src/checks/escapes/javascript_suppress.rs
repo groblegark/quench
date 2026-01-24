@@ -13,63 +13,10 @@ use crate::check::{CheckContext, Violation};
 use crate::config::{SuppressConfig, SuppressLevel};
 
 use super::suppress_common::{
-    SuppressAttrInfo, SuppressCheckParams, SuppressViolationKind, check_suppress_attr,
+    SuppressAttrInfo, SuppressCheckParams, SuppressViolationKind,
+    build_suppress_missing_comment_advice, check_suppress_attr,
 };
 use super::try_create_violation;
-
-/// Get lint-specific guidance for JavaScript/TypeScript lints.
-fn get_js_lint_guidance(lint_code: &str) -> &'static str {
-    match lint_code {
-        "no-console" => "Is this console output needed in production?",
-        "no-explicit-any"
-        | "@typescript-eslint/no-explicit-any"
-        | "lint/suspicious/noExplicitAny" => "Can this be properly typed instead?",
-        "no-unused-vars" | "@typescript-eslint/no-unused-vars" => "Is this variable still needed?",
-        _ => "Is this suppression necessary?",
-    }
-}
-
-/// Build the three-part suppress missing comment advice message for JavaScript.
-fn build_js_missing_comment_advice(
-    lint_code: Option<&str>,
-    required_patterns: &[String],
-) -> String {
-    let mut parts = Vec::new();
-
-    // Part 1: General statement
-    parts.push("Lint suppression requires justification.".to_string());
-
-    // Part 2: Lint-specific guidance
-    let guidance = if let Some(code) = lint_code {
-        get_js_lint_guidance(code)
-    } else {
-        "Is this suppression necessary?"
-    };
-    parts.push(guidance.to_string());
-
-    // Part 3: Pattern instructions
-    if !required_patterns.is_empty() {
-        if required_patterns.len() == 1 {
-            parts.push(format!(
-                "Add a comment above or use inline reason (e.g., `// {} ...` or `-- reason`).",
-                required_patterns[0]
-            ));
-        } else {
-            let formatted = required_patterns
-                .iter()
-                .map(|p| format!("  {} ...", p))
-                .collect::<Vec<_>>()
-                .join("\n");
-            parts.push(format!("Add a comment above with one of:\n{}", formatted));
-        }
-    } else {
-        parts.push(
-            "Add a comment above the directive or use inline reason (-- reason).".to_string(),
-        );
-    }
-
-    parts.join("\n")
-}
 
 /// Check JavaScript suppress directives and return violations.
 pub fn check_javascript_suppress_violations(
@@ -162,8 +109,11 @@ pub fn check_javascript_suppress_violations(
                     ref lint_code,
                     ref required_patterns,
                 } => {
-                    let advice =
-                        build_js_missing_comment_advice(lint_code.as_deref(), required_patterns);
+                    let advice = build_suppress_missing_comment_advice(
+                        "javascript",
+                        lint_code.as_deref(),
+                        required_patterns,
+                    );
                     ("suppress_missing_comment", advice)
                 }
                 SuppressViolationKind::AllForbidden => {

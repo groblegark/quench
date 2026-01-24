@@ -17,6 +17,8 @@ use yare::parameterized;
     src_tsx = { "src/App.tsx", FileKind::Source },
     src_mjs = { "src/utils.mjs", FileKind::Source },
     src_mts = { "src/utils.mts", FileKind::Source },
+    src_cjs = { "src/utils.cjs", FileKind::Source },
+    src_cts = { "src/utils.cts", FileKind::Source },
     nested = { "packages/core/src/lib.ts", FileKind::Source },
     test_dot_test_js = { "src/index.test.js", FileKind::Test },
     test_dot_test_ts = { "src/index.test.ts", FileKind::Test },
@@ -24,9 +26,13 @@ use yare::parameterized;
     test_dot_test_tsx = { "src/App.test.tsx", FileKind::Test },
     test_dot_spec_js = { "src/index.spec.js", FileKind::Test },
     test_dot_spec_ts = { "src/index.spec.ts", FileKind::Test },
+    test_underscore = { "src/index_test.ts", FileKind::Test },
+    test_underscore_plural = { "src/index_tests.ts", FileKind::Test },
+    test_prefix = { "src/test_helper.ts", FileKind::Test },
     test_dunder_tests = { "src/__tests__/helper.ts", FileKind::Test },
     test_dir = { "test/integration.ts", FileKind::Test },
     tests_dir = { "tests/e2e.ts", FileKind::Test },
+    test_nested_dir = { "src/test/util.ts", FileKind::Test },
     node_modules = { "node_modules/lodash/index.js", FileKind::Other },
     dist = { "dist/bundle.js", FileKind::Other },
     build = { "build/output.js", FileKind::Other },
@@ -80,7 +86,7 @@ fn has_correct_name_and_extensions() {
     assert_eq!(adapter.name(), "javascript");
     assert_eq!(
         adapter.extensions(),
-        &["js", "jsx", "ts", "tsx", "mjs", "mts"]
+        &["js", "jsx", "ts", "tsx", "mjs", "mts", "cjs", "cts"]
     );
 }
 
@@ -152,14 +158,4 @@ fn ts_ignore_pattern_matches() {
     // Should not match
     assert!(compiled.find_all("// @ts-expect-error").is_empty()); // allowed alternative
     assert!(compiled.find_all("// ts-ignore").is_empty()); // missing @
-}
-
-// =============================================================================
-// PACKAGE NAME EXTRACTION TESTS
-// =============================================================================
-
-#[test]
-fn package_name_returns_none_for_missing_file() {
-    let name = JavaScriptAdapter::package_name(Path::new("/nonexistent"));
-    assert!(name.is_none());
 }

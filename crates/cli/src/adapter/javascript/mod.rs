@@ -10,11 +10,9 @@
 //!
 //! See docs/specs/langs/javascript.md for specification.
 
-use std::fs;
 use std::path::Path;
 
 use globset::GlobSet;
-use serde_json::Value;
 
 mod policy;
 mod suppress;
@@ -64,26 +62,26 @@ impl JavaScriptAdapter {
     /// Returns Some(true) for JS/TS extensions, None if GlobSet needed.
     #[inline]
     fn is_js_extension(path: &Path) -> Option<bool> {
-        path.extension()
-            .and_then(|ext| ext.to_str())
-            .map(|ext| matches!(ext, "js" | "jsx" | "ts" | "tsx" | "mjs" | "mts"))
+        path.extension().and_then(|ext| ext.to_str()).map(|ext| {
+            matches!(
+                ext,
+                "js" | "jsx" | "ts" | "tsx" | "mjs" | "mts" | "cjs" | "cts"
+            )
+        })
     }
 
     /// Create a new JavaScript adapter with default patterns.
     pub fn new() -> Self {
         Self {
             test_patterns: build_glob_set(&[
-                "**/*.test.js".to_string(),
-                "**/*.test.ts".to_string(),
-                "**/*.test.jsx".to_string(),
-                "**/*.test.tsx".to_string(),
-                "**/*.spec.js".to_string(),
-                "**/*.spec.ts".to_string(),
-                "**/*.spec.jsx".to_string(),
-                "**/*.spec.tsx".to_string(),
+                "**/*.test.*".to_string(),
+                "**/*.spec.*".to_string(),
+                "**/*_test.*".to_string(),
+                "**/*_tests.*".to_string(),
+                "**/test_*.*".to_string(),
                 "**/__tests__/**".to_string(),
-                "test/**".to_string(),
-                "tests/**".to_string(),
+                "**/test/**".to_string(),
+                "**/tests/**".to_string(),
             ]),
             ignore_patterns: build_glob_set(&[
                 "node_modules/**".to_string(),
@@ -115,14 +113,6 @@ impl JavaScriptAdapter {
         self.ignore_patterns.is_match(path)
     }
 
-    /// Read package name from package.json at the given root.
-    pub fn package_name(root: &Path) -> Option<String> {
-        let pkg_json = root.join("package.json");
-        let content = fs::read_to_string(&pkg_json).ok()?;
-        let value: Value = serde_json::from_str(&content).ok()?;
-        value.get("name")?.as_str().map(String::from)
-    }
-
     /// Check lint policy against changed files.
     ///
     /// Returns policy check result with violation details.
@@ -147,7 +137,7 @@ impl Adapter for JavaScriptAdapter {
     }
 
     fn extensions(&self) -> &'static [&'static str] {
-        &["js", "jsx", "ts", "tsx", "mjs", "mts"]
+        &["js", "jsx", "ts", "tsx", "mjs", "mts", "cjs", "cts"]
     }
 
     fn classify(&self, path: &Path) -> FileKind {
