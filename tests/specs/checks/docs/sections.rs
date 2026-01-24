@@ -14,7 +14,6 @@ use crate::prelude::*;
 ///
 /// > sections.required = ["Purpose", "Configuration"]
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn missing_required_section_in_spec_generates_violation() {
     check("docs")
         .on("docs/section-required")
@@ -27,7 +26,6 @@ fn missing_required_section_in_spec_generates_violation() {
 ///
 /// > sections.forbid = ["TODO", "Draft*"]
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn forbidden_section_in_spec_generates_violation() {
     check("docs")
         .on("docs/section-forbidden")
@@ -40,16 +38,18 @@ fn forbidden_section_in_spec_generates_violation() {
 ///
 /// > Case-insensitive matching for section names.
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn section_matching_is_case_insensitive() {
     let temp = Project::empty();
     temp.config(
-        r#"[check.docs]
+        r#"[check.docs.specs]
 path = "docs/specs"
 sections.required = ["purpose"]
 "#,
     );
-    temp.file("docs/specs/CLAUDE.md", "# Specs\n");
+    temp.file(
+        "docs/specs/CLAUDE.md",
+        "# Specs\n\n## Purpose\n\nSpecs index.\n",
+    );
     temp.file(
         "docs/specs/feature.md",
         "# Feature\n\n## PURPOSE\n\nThis is the purpose.\n",

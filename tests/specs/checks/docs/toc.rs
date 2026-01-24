@@ -14,7 +14,6 @@ use crate::prelude::*;
 ///
 /// > Each file in the tree is checked for existence.
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn toc_tree_entries_validated_against_filesystem() {
     // Valid TOC with all files existing should pass
     check("docs").on("docs/toc-ok").passes();
@@ -24,7 +23,6 @@ fn toc_tree_entries_validated_against_filesystem() {
 ///
 /// > broken_toc: File does not exist.
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn broken_toc_path_generates_violation() {
     check("docs")
         .on("docs/toc-broken")
@@ -68,7 +66,6 @@ FAIL: docs
 ///
 /// > Both box-drawing format and indentation format are supported.
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn toc_box_drawing_format_supported() {
     let temp = default_project();
     temp.file(
@@ -99,7 +96,6 @@ docs/specs/
 ///
 /// > Indentation format (spaces or tabs) is supported.
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn toc_indentation_format_supported() {
     let temp = default_project();
     temp.file(
@@ -131,7 +127,6 @@ docs/specs/
 /// > Paths resolved in order: 1. Relative to markdown file's directory
 /// > 2. Relative to project root
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn toc_path_resolution_order() {
     let temp = default_project();
     // Create file at project root

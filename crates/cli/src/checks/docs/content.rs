@@ -49,19 +49,24 @@ fn validate_spec_sections(
             Some(a) => format!("Add a \"## {}\" section: {}", missing.name, a),
             None => format!("Add a \"## {}\" section.", missing.name),
         };
-        violations.push(Violation::file_only(path, "missing_section", advice));
+        violations.push(
+            Violation::file_only(path, "missing_section", advice).with_section(&missing.name),
+        );
     }
 
     for forbidden in result.forbidden {
-        violations.push(Violation::file(
-            path,
-            forbidden.line,
-            "forbidden_section",
-            format!(
-                "Section \"{}\" is forbidden (matched pattern: {}).",
-                forbidden.heading, forbidden.matched_pattern
-            ),
-        ));
+        violations.push(
+            Violation::file(
+                path,
+                forbidden.line,
+                "forbidden_section",
+                format!(
+                    "Section \"{}\" is forbidden (matched pattern: {}).",
+                    forbidden.heading, forbidden.matched_pattern
+                ),
+            )
+            .with_section(&forbidden.heading),
+        );
     }
 }
 

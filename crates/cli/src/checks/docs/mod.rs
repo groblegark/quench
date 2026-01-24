@@ -56,10 +56,20 @@ impl Check for DocsCheck {
             violations.truncate(limit);
         }
 
-        if violations.is_empty() {
+        // Collect metrics for JSON output
+        let metrics =
+            specs::collect_metrics(ctx).map(|m| serde_json::to_value(m).unwrap_or_default());
+
+        let result = if violations.is_empty() {
             CheckResult::passed("docs")
         } else {
             CheckResult::failed("docs", violations)
+        };
+
+        if let Some(m) = metrics {
+            result.with_metrics(m)
+        } else {
+            result
         }
     }
 

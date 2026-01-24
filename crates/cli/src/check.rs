@@ -126,6 +126,14 @@ pub struct Violation {
     /// How the area was matched ("scope" or "source").
     #[serde(skip_serializing_if = "Option::is_none")]
     pub area_match: Option<String>,
+
+    /// Referenced path for broken_toc violations.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub path: Option<String>,
+
+    /// Link target for broken_link violations.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub target: Option<String>,
 }
 
 impl Violation {
@@ -153,6 +161,8 @@ impl Violation {
             expected_docs: None,
             area: None,
             area_match: None,
+            path: None,
+            target: None,
         }
     }
 
@@ -179,6 +189,8 @@ impl Violation {
             expected_docs: None,
             area: None,
             area_match: None,
+            path: None,
+            target: None,
         }
     }
 
@@ -206,6 +218,8 @@ impl Violation {
             expected_docs: None,
             area: None,
             area_match: None,
+            path: None,
+            target: None,
         }
     }
 
@@ -246,6 +260,24 @@ impl Violation {
     pub fn with_sync(mut self, other_file: impl Into<PathBuf>, section: impl Into<String>) -> Self {
         self.other_file = Some(other_file.into());
         self.section = Some(section.into());
+        self
+    }
+
+    /// Add section context to the violation.
+    pub fn with_section(mut self, section: impl Into<String>) -> Self {
+        self.section = Some(section.into());
+        self
+    }
+
+    /// Add path context for broken_toc violations.
+    pub fn with_path(mut self, path: impl Into<String>) -> Self {
+        self.path = Some(path.into());
+        self
+    }
+
+    /// Add target context for broken_link violations.
+    pub fn with_target(mut self, target: impl Into<String>) -> Self {
+        self.target = Some(target.into());
         self
     }
 }

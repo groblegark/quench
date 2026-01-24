@@ -15,7 +15,6 @@ use crate::prelude::*;
 /// > Detection order: 1. {path}/CLAUDE.md 2. docs/CLAUDE.md
 /// > 3. {path}/[00-]{overview,summary,index}.md 4. docs/SPECIFICATIONS.md
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn specs_directory_index_file_detected() {
     let docs = check("docs").on("docs/index-auto").json().passes();
     let metrics = docs.require("metrics");

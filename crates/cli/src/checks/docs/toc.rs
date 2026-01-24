@@ -732,7 +732,7 @@ fn validate_file_toc(
                     "broken_toc",
                     &advice,
                 )
-                .with_pattern(entry.path.clone()),
+                .with_path(entry.path.clone()),
             );
         }
     }

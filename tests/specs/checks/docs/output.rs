@@ -14,7 +14,6 @@ use crate::prelude::*;
 ///
 /// > Violation types: missing_section, forbidden_section, broken_toc, broken_link, unreachable_spec
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn docs_violation_type_is_one_of_expected_values() {
     let docs = check("docs").on("docs/toc-broken").json().fails();
     let violations = docs.require("violations").as_array().unwrap();
@@ -42,7 +41,6 @@ fn docs_violation_type_is_one_of_expected_values() {
 ///
 /// > broken_toc violation includes file, line, path, advice
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn broken_toc_violation_structure() {
     let docs = check("docs").on("docs/toc-broken").json().fails();
     let violations = docs.require("violations").as_array().unwrap();
@@ -62,7 +60,6 @@ fn broken_toc_violation_structure() {
 ///
 /// > broken_link violation includes file, line, target, advice
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn broken_link_violation_structure() {
     let docs = check("docs").on("docs/link-broken").json().fails();
     let violations = docs.require("violations").as_array().unwrap();
@@ -82,7 +79,6 @@ fn broken_link_violation_structure() {
 ///
 /// > missing_section violation includes file, section, advice
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn missing_section_violation_structure() {
     let docs = check("docs").on("docs/section-required").json().fails();
     let violations = docs.require("violations").as_array().unwrap();
@@ -104,7 +100,6 @@ fn missing_section_violation_structure() {
 ///
 /// > metrics: { index_file, spec_files }
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn docs_json_metrics_structure() {
     let docs = check("docs").on("docs/index-auto").json().passes();
     let metrics = docs.require("metrics");
@@ -117,7 +112,6 @@ fn docs_json_metrics_structure() {
 ///
 /// > forbidden_section violation includes file, section, advice
 #[test]
-#[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn forbidden_section_violation_structure() {
     let docs = check("docs").on("docs/section-forbidden").json().fails();
     let violations = docs.require("violations").as_array().unwrap();
