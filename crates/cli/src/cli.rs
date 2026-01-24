@@ -216,9 +216,9 @@ pub struct InitArgs {
     #[arg(long)]
     pub force: bool,
 
-    /// Configuration profile(s) to use (e.g., rust, claude)
-    #[arg(long, short, value_delimiter = ',')]
-    pub profile: Vec<String>,
+    /// Profile(s) to include (e.g., rust, shell, claude)
+    #[arg(long = "with", value_delimiter = ',')]
+    pub with_profiles: Vec<String>,
 }
 
 #[derive(Clone, Copy, Default, clap::ValueEnum)]
