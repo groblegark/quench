@@ -212,15 +212,8 @@ fn validate_linked_mode(
                 continue;
             }
 
-            // Strip fragment
-            let target = links::strip_fragment(&link.target);
-
-            // Resolve relative to current file's directory
-            let resolved = if let Some(parent) = current.parent() {
-                parent.join(target)
-            } else {
-                PathBuf::from(target)
-            };
+            // Resolve relative to current file
+            let resolved = links::resolve_link(&current, &link.target);
 
             // Canonicalize to handle .. and symlinks
             let canonical = match resolved.canonicalize() {

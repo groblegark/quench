@@ -90,7 +90,7 @@ pub(super) fn strip_fragment(target: &str) -> &str {
 }
 
 /// Resolve a link target relative to the markdown file.
-fn resolve_link(md_file: &Path, target: &str) -> std::path::PathBuf {
+pub(super) fn resolve_link(md_file: &Path, target: &str) -> std::path::PathBuf {
     let target = strip_fragment(target);
 
     // Normalize `.`/`./` prefix

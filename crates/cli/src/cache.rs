@@ -22,7 +22,8 @@ use crate::check::Violation;
 /// v7: Migrated from bincode to postcard serialization.
 /// v8: Fixed cfg(test) detection false positives on comments.
 /// v11: TOC validator skips box diagrams (blocks with top corner characters).
-pub const CACHE_VERSION: u32 = 11;
+/// v12: StripParentDirName resolves relative to parent dir, not root.
+pub const CACHE_VERSION: u32 = 12;
 
 /// Cache file name within .quench directory.
 pub const CACHE_FILE_NAME: &str = "cache.bin";
