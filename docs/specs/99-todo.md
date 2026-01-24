@@ -335,6 +335,81 @@ When a root config defines workspace members, `quench check` runs each member wi
 - Explicit members list vs auto-discovery of nested configs
 - Inheritance: opt-in or default?
 
+## Language Server Protocol (LSP)
+
+Expose Quench checks as an LSP server for IDE integration.
+
+### Use Cases
+
+- Real-time violation feedback in editor (alongside linters and type checkers)
+- Hover diagnostics for metrics and advice
+- Inline code actions for auto-fixes
+- Integration with VSCode, Neovim, Emacs, etc.
+
+### Implementation
+
+**Core LSP features:**
+- `initialize`: Load `quench.toml` and detect check configuration
+- `textDocument/didOpen`: Initial analysis of opened file
+- `textDocument/didChange`: Incremental re-analysis on edits
+- `textDocument/publishDiagnostics`: Stream violations as they're detected
+- `textDocument/codeAction`: Provide fixes from `--fix` mode
+- `workspace/didChangeConfiguration`: Reload config when `quench.toml` changes
+
+**Performance considerations:**
+- Debounce on text changes (avoid analysis on every keystroke)
+- Cache analysis results per file
+- Lazy-load checks (only run requested checks)
+- Use same parallelization as CLI
+
+### Configuration
+
+LSP server inherits from project's `quench.toml`:
+
+```toml
+[lsp]
+enabled = true                  # default: false for now (future feature)
+debounce_ms = 500              # delay before analyzing after keystroke
+max_violations = 50            # show up to N violations per file
+auto_fix_on_save = false       # optional: auto-apply fixes on save
+```
+
+### Diagnostics Format
+
+Maps Quench violations to LSP `Diagnostic` objects:
+
+```json
+{
+  "range": {"start": {"line": 10, "character": 5}, "end": {"line": 10, "character": 20}},
+  "severity": 1,  // Error
+  "code": "cloc:file_too_large",
+  "source": "quench",
+  "message": "file_too_large (lines: 150 vs 100)",
+  "relatedInformation": [
+    {
+      "location": {"uri": "file:///...", "range": {...}},
+      "message": "Split into smaller modules."
+    }
+  ]
+}
+```
+
+### Code Actions
+
+Support LSP `codeAction` requests for violations that can be auto-fixed:
+
+```json
+{
+  "title": "Apply quench fix",
+  "kind": "quickfix",
+  "command": {
+    "title": "Fix",
+    "command": "quench.fix",
+    "arguments": ["file:///path/to/file.rs", 10, 5]
+  }
+}
+```
+
 ## Import Dependency Rules
 
 Enforce layered architecture by validating import/dependency relationships between modules.
