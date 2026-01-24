@@ -53,10 +53,7 @@ fn broken_link_includes_file_and_line() {
 
     assert!(link_violation.get("file").is_some(), "should have file");
     assert!(link_violation.get("line").is_some(), "should have line");
-    assert!(
-        link_violation.get("pattern").is_some(),
-        "should have pattern"
-    );
+    assert!(link_violation.get("target").is_some(), "should have target");
 }
 
 /// Spec: docs/specs/checks/docs.md#what-gets-validated-1

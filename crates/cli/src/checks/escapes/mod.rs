@@ -507,6 +507,8 @@ fn create_threshold_violation(
         expected_docs: None,
         area: None,
         area_match: None,
+        path: None,
+        target: None,
     })
 }
 

@@ -417,8 +417,6 @@ fn validate_specs_content(
 }
 
 /// Specs metrics for reporting.
-// KEEP UNTIL: Phase 616+ adds metrics to JSON output
-#[allow(dead_code)]
 #[derive(Debug, Serialize)]
 pub struct SpecsMetrics {
     /// Detected or configured index file path.
@@ -429,8 +427,6 @@ pub struct SpecsMetrics {
 }
 
 /// Collect specs metrics for reporting.
-// KEEP UNTIL: Phase 616+ adds metrics to JSON output
-#[allow(dead_code)]
 pub fn collect_metrics(ctx: &CheckContext) -> Option<SpecsMetrics> {
     let config = &ctx.config.check.docs.specs;
     let specs_dir = ctx.root.join(&config.path);

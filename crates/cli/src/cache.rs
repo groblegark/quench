@@ -25,7 +25,7 @@ use crate::check::Violation;
 /// v12: StripParentDirName resolves relative to parent dir, not root.
 /// v13: Added content validation for spec files (sections, tables, size limits).
 /// v14: Added source-based area detection for docs commit checking.
-pub const CACHE_VERSION: u32 = 15;
+pub const CACHE_VERSION: u32 = 16;
 
 /// Cache file name within .quench directory.
 pub const CACHE_FILE_NAME: &str = "cache.bin";
@@ -156,6 +156,8 @@ impl CachedViolation {
             expected_docs: None,
             area: None,
             area_match: None,
+            path: None,
+            target: None,
         }
     }
 }

@@ -191,7 +191,7 @@ fn validate_file_links(
                     "broken_link",
                     "Linked file does not exist. Update the link or create the file.",
                 )
-                .with_pattern(strip_fragment(&link.target)),
+                .with_target(strip_fragment(&link.target)),
             );
         }
     }

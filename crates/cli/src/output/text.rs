@@ -300,9 +300,14 @@ impl TextFormatter {
             _ => v.violation_type.clone(),
         };
 
-        // Append pattern if present (for escape/suppress violations)
+        // Append context field if present
+        // Priority: pattern (for escapes), path (for broken_toc), target (for broken_link)
         if let Some(ref pattern) = v.pattern {
             format!("{}: {}", base, pattern)
+        } else if let Some(ref path) = v.path {
+            format!("{}: {}", base, path)
+        } else if let Some(ref target) = v.target {
+            format!("{}: {}", base, target)
         } else {
             base
         }
