@@ -12,7 +12,7 @@ When using [`quench init --profile rust`](../01-cli.md#profile-selection-recomme
 
 ```toml
 [rust]
-cfg_test_split = true
+cfg_test_split = "count"         # count | require | off (default: "count")
 binary_size = true
 build_time = true
 
@@ -61,8 +61,8 @@ ignore = ["target/"]
 - Files in `tests/` directory
 
 **Inline test code** (within source files):
-- Lines inside `#[cfg(test)]` blocks are counted as test LOC
-- Configurable: `cfg_test_split = true` (default)
+- Lines inside `#[cfg(test)]` blocks handling is configurable
+- See [CFG Test Split Modes](#cfg-test-split-modes) below
 
 ```rust
 pub fn add(a: i32, b: i32) -> i32 {  // ← source LOC
@@ -139,6 +139,85 @@ macro_rules! make_tests {
 }
 make_tests!();  // #[cfg(test)] inside macro not detected
 ```
+
+## CFG Test Split Modes
+
+The `cfg_test_split` option controls how `#[cfg(test)]` blocks are handled for LOC counting:
+
+```toml
+[rust]
+cfg_test_split = "count"  # count | require | off (default: "count")
+```
+
+| Mode | Behavior |
+|------|----------|
+| `"count"` | Split `#[cfg(test)]` blocks into test LOC (default) |
+| `"require"` | Fail if source files contain inline `#[cfg(test)]` blocks; require separate `_tests.rs` files |
+| `"off"` | Count all lines as source LOC, don't parse for `#[cfg(test)]` |
+
+### Backward Compatibility
+
+Boolean values are still supported for backward compatibility:
+- `cfg_test_split = true` → same as `"count"`
+- `cfg_test_split = false` → same as `"off"`
+
+### Mode: "count" (Default)
+
+Lines inside `#[cfg(test)]` blocks are counted as test LOC:
+
+```rust
+pub fn add(a: i32, b: i32) -> i32 {  // ← source LOC
+    a + b
+}
+
+#[cfg(test)]                          // ← test LOC starts
+mod tests {
+    #[test]
+    fn test_add() {
+        assert_eq!(add(1, 2), 3);
+    }
+}                                     // ← test LOC ends
+```
+
+Result: separate source and test line counts.
+
+### Mode: "require"
+
+Projects using `"require"` mode enforce the sibling test file convention:
+
+```
+src/parser.rs       # source only, no #[cfg(test)]
+src/parser_tests.rs # all tests here
+```
+
+External module declarations (`#[cfg(test)] mod tests;`) are **not** flagged as violations. Only inline test blocks fail:
+
+```rust
+// ✓ ALLOWED (external module)
+#[cfg(test)]
+#[path = "parser_tests.rs"]
+mod tests;
+
+// ✗ VIOLATION (inline test block)
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_it() { }
+}
+```
+
+Violations report the location of the inline test:
+
+```
+src/parser.rs:150: inline_cfg_test
+  Move tests to a sibling _tests.rs file.
+```
+
+This pairs with the sibling `_tests.rs` convention documented in the project's CLAUDE.md.
+
+### Mode: "off"
+
+All lines are counted as source LOC. The parser doesn't look for `#[cfg(test)]` blocks at all. This is faster but less accurate for projects with inline tests.
 
 ## Default Escape Patterns
 
@@ -365,7 +444,8 @@ Multiple test suites contribute to coverage via LLVM profile merging.
 # tests = ["tests/**", "test/**/*.rs", "benches/**", "*_test.rs", "*_tests.rs"]
 # ignore = ["target/"]
 
-cfg_test_split = true            # Count #[cfg(test)] as test LOC
+cfg_test_split = "count"         # count | require | off (default: "count")
+                                 # Boolean still works: true="count", false="off"
 
 # Custom cloc advice for Rust source files (overrides generic default)
 # cloc_advice = "Custom advice for oversized Rust files..."

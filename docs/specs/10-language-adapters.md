@@ -36,7 +36,7 @@ See [langs/rust.md](langs/rust.md) for full Rust configuration.
 
 ```toml
 [rust]
-cfg_test_split = true            # Count #[cfg(test)] as test LOC
+cfg_test_split = "count"         # count | require | off (default: "count")
 binary_size = true
 build_time = true
 

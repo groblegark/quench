@@ -87,8 +87,8 @@ mod tests {
 }
 ```
 
-When `check.rust.cfg_test_split = true` (default), lines inside `#[cfg(test)]`
-blocks are counted as test LOC even in source files.
+When `rust.cfg_test_split = "count"` (default), lines inside `#[cfg(test)]`
+blocks are counted as test LOC even in source files. See [langs/rust.md#cfg-test-split-modes](../langs/rust.md#cfg-test-split-modes) for other modes.
 
 ## Output
 
@@ -236,7 +236,7 @@ advice_test = "Can tests be parameterized or use shared fixtures to be more conc
 # cloc_advice = "Custom advice for Go source files..."
 
 # Rust-specific: parse #[cfg(test)] blocks
-# check.rust.cfg_test_split = true  # default
+# rust.cfg_test_split = "count"  # count | require | off (default: "count")
 ```
 
 **Note**: Ratio is reporting-only. File size limits are enforced if configured.

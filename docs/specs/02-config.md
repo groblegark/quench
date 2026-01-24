@@ -118,7 +118,8 @@ Rust language configuration. Auto-detected when `Cargo.toml` exists.
 # tests = ["tests/**", "test/**/*.rs", "benches/**", "*_test.rs", "*_tests.rs"]
 # ignore = ["target/"]
 
-cfg_test_split = true                  # Count #[cfg(test)] as test LOC
+cfg_test_split = "count"               # count | require | off (default: "count")
+                                       # Boolean still works: true="count", false="off"
 
 # Build targets for coverage + binary size (default: all [[bin]] entries)
 # targets = ["myapp", "myserver"]
