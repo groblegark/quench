@@ -31,7 +31,7 @@ check_fixtures() {
     local fixtures_dir="$REPO_ROOT/tests/fixtures"
     if [[ ! -d "$fixtures_dir/bench-small" ]]; then
         echo -e "${YELLOW}Fixtures not found. Generating...${NC}"
-        ./scripts/gen-fixtures
+        ./scripts/fixtures/gen-fixtures
     fi
 }
 

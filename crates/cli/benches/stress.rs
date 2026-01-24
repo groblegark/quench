@@ -156,7 +156,7 @@ fn bench_deep_nesting(c: &mut Criterion) {
 /// End-to-end stress benchmarks using disk fixtures.
 ///
 /// These benchmarks run quench against generated stress fixtures.
-/// Generate fixtures first with: ./scripts/generate-stress-fixtures
+/// Generate fixtures first with: ./scripts/fixtures/generate-stress-fixtures
 fn bench_stress_e2e(c: &mut Criterion) {
     let mut group = c.benchmark_group("stress_e2e");
     group.sample_size(10); // Fewer samples for slow benchmarks
@@ -173,7 +173,7 @@ fn bench_stress_e2e(c: &mut Criterion) {
     for (fixture, description) in fixtures {
         let path = e2e_fixture_path(fixture);
         if !path.exists() {
-            eprintln!("Skipping {fixture} ({description}): run ./scripts/generate-stress-fixtures");
+            eprintln!("Skipping {fixture} ({description}): run ./scripts/fixtures/generate-stress-fixtures");
             continue;
         }
 

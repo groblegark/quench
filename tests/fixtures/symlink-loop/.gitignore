@@ -1,4 +1,4 @@
-# Symlinks created by scripts/setup-symlink-fixtures.sh
+# Symlinks created by scripts/fixtures/setup-symlink-fixtures.sh
 # Git doesn't track symlinks well, so they're generated at test time
 loop
 indirect/

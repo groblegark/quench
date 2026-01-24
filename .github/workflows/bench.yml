@@ -40,7 +40,7 @@ jobs:
             criterion-baseline-main-
 
       - name: Generate test fixtures
-        run: ./scripts/gen-fixtures
+        run: ./scripts/fixtures/gen-fixtures
 
       - name: Run benchmarks
         run: |
@@ -95,7 +95,7 @@ jobs:
           key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Generate test fixtures
-        run: ./scripts/gen-fixtures
+        run: ./scripts/fixtures/gen-fixtures
 
       - name: Run and save baseline
         run: |

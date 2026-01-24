@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Alfred Jean LLC
-# scripts/gen-shell-fixture - Generate Shell-specific benchmark fixture
+# scripts/fixtures/gen-shell-fixture - Generate Shell-specific benchmark fixture
 #
 # Creates a Shell project with:
 # - bin/ scripts (entry points)
@@ -10,14 +10,14 @@
 # - Realistic distribution of source vs test files
 #
 # Usage:
-#   ./scripts/gen-shell-fixture [fixture_dir] [script_count] [util_count]
-#   ./scripts/gen-shell-fixture                          # Default: 100 scripts, 400 utils
-#   ./scripts/gen-shell-fixture tests/fixtures/bench-shell 100 400
+#   ./scripts/fixtures/gen-shell-fixture [fixture_dir] [script_count] [util_count]
+#   ./scripts/fixtures/gen-shell-fixture                          # Default: 100 scripts, 400 utils
+#   ./scripts/fixtures/gen-shell-fixture tests/fixtures/bench-shell 100 400
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 FIXTURE_DIR="${1:-$REPO_ROOT/tests/fixtures/bench-shell}"
 SCRIPT_COUNT="${2:-100}"

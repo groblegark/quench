@@ -93,7 +93,7 @@ Generate stress fixtures for edge-case testing:
 
 ```bash
 # Generate all stress fixtures
-./scripts/generate-stress-fixtures
+./scripts/fixtures/generate-stress-fixtures
 
 # Available fixtures:
 # - stress-huge-files: 50K tiny files (traversal stress)
@@ -104,7 +104,7 @@ Generate stress fixtures for edge-case testing:
 Run stress benchmarks:
 
 ```bash
-./scripts/generate-stress-fixtures
+./scripts/fixtures/generate-stress-fixtures
 cargo bench --bench stress -- stress_e2e
 ```
 
@@ -164,5 +164,5 @@ This is typically higher than allocator-tracked memory but more representative o
 The stress fixture generator may need several minutes for 50K files:
 ```bash
 # Generate with progress output
-./scripts/generate-stress-fixtures 2>&1 | tee fixture-gen.log
+./scripts/fixtures/generate-stress-fixtures 2>&1 | tee fixture-gen.log
 ```

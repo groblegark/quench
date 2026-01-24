@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Alfred Jean LLC
-# scripts/gen-stress-fixture - Generate stress test fixtures for performance testing
+# scripts/fixtures/gen-stress-fixture - Generate stress test fixtures for performance testing
 #
 # Creates fixtures that exercise edge cases:
 # - Large files (10K-50K lines)
@@ -10,14 +10,14 @@
 # - Deep module nesting (20 levels)
 #
 # Usage:
-#   ./scripts/gen-stress-fixture [fixture_dir]
-#   ./scripts/gen-stress-fixture                     # Default: tests/fixtures/stress-rust
-#   ./scripts/gen-stress-fixture tests/fixtures/stress-rust
+#   ./scripts/fixtures/gen-stress-fixture [fixture_dir]
+#   ./scripts/fixtures/gen-stress-fixture                     # Default: tests/fixtures/stress-rust
+#   ./scripts/fixtures/gen-stress-fixture tests/fixtures/stress-rust
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 FIXTURE_DIR="${1:-$REPO_ROOT/tests/fixtures/stress-rust}"
 

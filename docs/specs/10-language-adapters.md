@@ -17,6 +17,7 @@ Adapters are auto-detected based on project files:
 |---------|-----------|---------------|
 | `rust` | `Cargo.toml` exists | `**/*.rs` |
 | `golang` | `go.mod` exists | `**/*.go` |
+| `javascript` | `package.json`, `tsconfig.json`, or `jsconfig.json` exists | `**/*.js`, `**/*.ts`, `**/*.jsx`, `**/*.tsx` |
 | `shell` | `*.sh` files in root, `bin/`, or `scripts/` | `**/*.sh`, `**/*.bash` |
 | `generic` | Always (fallback) | From config |
 

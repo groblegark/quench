@@ -66,7 +66,7 @@ Memory measured using `/usr/bin/time -l` (maximum resident set size).
 | stress-monorepo | 5K | <10s | 0.21s | PASS |
 | stress-large-file | 5×5MB | <5s | 0.30s | PASS |
 
-Stress fixtures generated with `./scripts/generate-stress-fixtures`.
+Stress fixtures generated with `./scripts/fixtures/generate-stress-fixtures`.
 
 ## Observations
 
@@ -105,7 +105,7 @@ cargo bench --bench baseline -- --baseline milestone-1
 ## Infrastructure Added (Checkpoint 6E)
 
 1. **Memory profiling**: External measurement via `/usr/bin/time -l`
-2. **Stress fixtures**: `./scripts/generate-stress-fixtures` creates 50K/5K/5MB test fixtures
+2. **Stress fixtures**: `./scripts/fixtures/generate-stress-fixtures` creates 50K/5K/5MB test fixtures
 3. **E2E stress benchmarks**: Added to `benches/stress.rs` benchmark group
 4. **CI benchmark workflow**: `.github/workflows/bench.yml` for regression detection
 5. **Profiling guide**: `docs/profiling.md` with instructions for time/memory profiling

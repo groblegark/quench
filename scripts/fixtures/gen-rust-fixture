@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Alfred Jean LLC
-# scripts/gen-rust-fixture - Generate Rust-specific benchmark fixture
+# scripts/fixtures/gen-rust-fixture - Generate Rust-specific benchmark fixture
 #
 # Creates a Cargo workspace with:
 # - Multiple packages exercising Rust adapter features
@@ -10,14 +10,14 @@
 # - Realistic distribution of source vs test files
 #
 # Usage:
-#   ./scripts/gen-rust-fixture [fixture_dir] [package_count] [files_per_package]
-#   ./scripts/gen-rust-fixture                     # Default: 5 packages, 100 files/pkg
-#   ./scripts/gen-rust-fixture tests/fixtures/bench-rust 5 100
+#   ./scripts/fixtures/gen-rust-fixture [fixture_dir] [package_count] [files_per_package]
+#   ./scripts/fixtures/gen-rust-fixture                     # Default: 5 packages, 100 files/pkg
+#   ./scripts/fixtures/gen-rust-fixture tests/fixtures/bench-rust 5 100
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 FIXTURE_DIR="${1:-$REPO_ROOT/tests/fixtures/bench-rust}"
 PACKAGE_COUNT="${2:-5}"
@@ -45,7 +45,7 @@ members = ["crates/*"]
 resolver = "2"
 
 # Benchmark fixture workspace - auto-generated
-# DO NOT EDIT - regenerate with ./scripts/gen-rust-fixture
+# DO NOT EDIT - regenerate with ./scripts/fixtures/gen-rust-fixture
 TOML
 
 # Generate packages

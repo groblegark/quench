@@ -6,22 +6,22 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 
 cd "$PROJECT_ROOT"
 
 echo "Setting up test fixtures..."
 
 # Generate deeply nested fixture
-if [ -x "./scripts/generate-bench-deep.sh" ]; then
+if [ -x "./scripts/fixtures/generate-bench-deep.sh" ]; then
     echo "  Generating bench-deep fixture..."
-    ./scripts/generate-bench-deep.sh
+    ./scripts/fixtures/generate-bench-deep.sh
 fi
 
 # Create symlinks
-if [ -x "./scripts/setup-symlink-fixtures.sh" ]; then
+if [ -x "./scripts/fixtures/setup-symlink-fixtures.sh" ]; then
     echo "  Setting up symlink fixtures..."
-    ./scripts/setup-symlink-fixtures.sh
+    ./scripts/fixtures/setup-symlink-fixtures.sh
 fi
 
 echo "Test fixtures ready."
