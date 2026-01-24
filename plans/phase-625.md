@@ -1,5 +1,7 @@
 # Phase 625: Docs Check - Specs Content
 
+**Root Feature:** `quench-85b3`
+
 ## Overview
 
 Add content validation for spec files in `docs/specs/`. This includes required/forbidden section validation, content rules (tables, diagrams), and size limits. Reuses patterns from the `agents` check while respecting the different defaults for specification documents (tables/diagrams allowed by default).
