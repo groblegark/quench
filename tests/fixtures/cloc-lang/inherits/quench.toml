@@ -1,0 +1,6 @@
+version = 1
+[check.cloc]
+check = "error"
+max_lines = 5
+
+# No [rust.cloc] section - inherits check = "error"

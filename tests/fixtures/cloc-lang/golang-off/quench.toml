@@ -1,0 +1,6 @@
+version = 1
+[check.cloc]
+max_lines = 5
+
+[golang.cloc]
+check = "off"

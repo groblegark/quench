@@ -32,6 +32,9 @@ mod config;
 #[path = "specs/checks/cloc.rs"]
 mod checks_cloc;
 
+#[path = "specs/checks/cloc_lang.rs"]
+mod checks_cloc_lang;
+
 #[path = "specs/checks/escapes.rs"]
 mod checks_escapes;
 
