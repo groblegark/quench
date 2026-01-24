@@ -1,5 +1,0 @@
-version = 1
-
-[golang.policy]
-lint_changes = "standalone"
-lint_config = [".golangci.yml"]
