@@ -1,5 +1,7 @@
 # Phase 493: JavaScript Adapter - Detection
 
+**Root Feature:** `quench-40da`
+
 ## Overview
 
 Implement JavaScript/TypeScript project detection for quench. This enables automatic language detection when `package.json`, `tsconfig.json`, or `jsconfig.json` is present, along with default source/test/ignore patterns and workspace detection for npm/yarn/pnpm monorepos.
