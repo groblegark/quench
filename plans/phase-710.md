@@ -1,5 +1,7 @@
 # Phase 710: Tests Check - Correlation
 
+**Root Feature:** `quench-88fc`
+
 ## Overview
 
 Enhance the tests check to provide comprehensive source/test correlation with multiple test location strategies and per-commit scope checking. The current implementation handles branch-level aggregation; this phase adds commit-level checking with asymmetric rules (tests-first workflows are valid).
