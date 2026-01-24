@@ -548,7 +548,7 @@ fn go_suppress_source_has_no_defaults() {
     let config = parse_with_warnings(content, &path).unwrap();
 
     // Go should have empty patterns
-    assert!(config.go.suppress.source.patterns.is_empty());
+    assert!(config.golang.suppress.source.patterns.is_empty());
 }
 
 // cloc advice tests
@@ -623,7 +623,7 @@ fn go_cloc_advice_overrides_default() {
     let content = r#"
 version = 1
 
-[go]
+[golang]
 cloc_advice = "Custom Go advice here"
 "#;
     let config = parse_with_warnings(content, &path).unwrap();

@@ -232,7 +232,7 @@ advice_test = "Can tests be parameterized or use shared fixtures to be more conc
 # Per-language advice (overrides generic advice for that language)
 # [rust]
 # cloc_advice = "Custom advice for Rust source files..."
-# [go]
+# [golang]
 # cloc_advice = "Custom advice for Go source files..."
 
 # Rust-specific: parse #[cfg(test)] blocks

@@ -3,5 +3,5 @@ version = 1
 [project]
 name = "go-multi"
 
-[go]
+[golang]
 targets = ["cmd/server", "cmd/cli"]

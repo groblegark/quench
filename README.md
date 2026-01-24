@@ -38,9 +38,7 @@ advice_test = "Use table-driven tests with t.Run()."  # customize advice for pro
 [check.agents]
 required = ["CLAUDE.md"]  # default: ["*"] any agent file
 tables = "forbid"         # default: "allow"
-
-[check.agents.sections]
-required = ["Directory Structure", "Landing the Plane"]
+# Scopes: [check.agents.root], .package, .module
 ```
 
 ## Checks

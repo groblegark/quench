@@ -53,7 +53,7 @@ struct FlexibleConfig {
     rust: Option<toml::Value>,
 
     #[serde(default)]
-    go: Option<toml::Value>,
+    golang: Option<toml::Value>,
 
     #[serde(default)]
     shell: Option<toml::Value>,
@@ -86,7 +86,7 @@ pub struct Config {
 
     /// Go-specific configuration.
     #[serde(default)]
-    pub go: GoConfig,
+    pub golang: GoConfig,
 
     /// Shell-specific configuration.
     #[serde(default)]
@@ -103,7 +103,7 @@ impl Config {
                 .as_deref()
                 .unwrap_or(RustConfig::default_cloc_advice()),
             "go" => self
-                .go
+                .golang
                 .cloc_advice
                 .as_deref()
                 .unwrap_or(GoConfig::default_cloc_advice()),
@@ -465,7 +465,7 @@ const KNOWN_KEYS: &[&str] = &[
     "workspace",
     "check",
     "rust",
-    "go",
+    "golang",
     "shell",
 ];
 
@@ -685,7 +685,7 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
     let rust = parse_rust_config(flexible.rust.as_ref());
 
     // Parse go config
-    let go = parse_go_config(flexible.go.as_ref());
+    let golang = parse_go_config(flexible.golang.as_ref());
 
     // Parse shell config
     let shell = parse_shell_config(flexible.shell.as_ref());
@@ -696,7 +696,7 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
         workspace,
         check,
         rust,
-        go,
+        golang,
         shell,
     })
 }

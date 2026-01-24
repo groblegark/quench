@@ -170,7 +170,7 @@ build_time = true
 ### Go (Future)
 
 ```toml
-[go]
+[golang]
 targets = ["cmd/myapp", "cmd/server"]
 binary_size = true
 build_time = true
