@@ -1,0 +1,4 @@
+# Lint config file - triggers policy check when changed
+linters:
+  enable:
+    - gofmt
