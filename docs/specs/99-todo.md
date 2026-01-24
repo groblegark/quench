@@ -367,7 +367,7 @@ check = "error"                          # error | warn | off
 
 [[check.imports.layer]]
 name = "core"
-modules = ["crate::core", "src/core/**"]
+paths = ["crate::core", "src/core/**"]
 self = true                              # submodules can import siblings (default)
 layers = false                           # no other layers allowed
 builtin = true                           # std/builtins allowed
@@ -375,7 +375,7 @@ external = ["serde", "thiserror"]        # only listed externals
 
 [[check.imports.layer]]
 name = "adapters"
-modules = ["crate::adapters", "src/adapters/**"]
+paths = ["crate::adapters", "src/adapters/**"]
 self = false                             # submodules can't import siblings
 layers = ["core"]                        # only core
 builtin = true
@@ -383,19 +383,19 @@ external = true                          # all externals allowed
 
 [[check.imports.layer]]
 name = "storage"
-modules = ["crate::storage", "src/storage/**"]
+paths = ["crate::storage", "src/storage/**"]
 layers = ["core"]
 external = ["sled", "serde"]
 
 [[check.imports.layer]]
 name = "engine"
-modules = ["crate::engine", "src/engine/**"]
+paths = ["crate::engine", "src/engine/**"]
 layers = ["core", "adapters", "storage"]
 external = true
 
 [[check.imports.layer]]
 name = "cli"
-modules = ["crate::cli", "src/cli/**", "src/main.rs"]
+paths = ["crate::cli", "src/cli/**", "src/main.rs"]
 layers = "*"                             # any layer (equivalent to true)
 builtin = "*"
 external = "*"
@@ -472,13 +472,13 @@ For Rust workspaces, layers can be defined at crate granularity:
 ```toml
 [[check.imports.layer]]
 name = "core"
-modules = ["quench_core"]               # Crate name from Cargo.toml
+paths = ["quench_core"]               # Crate name from Cargo.toml
 layers = false
 external = ["serde"]
 
 [[check.imports.layer]]
 name = "cli"
-modules = ["quench_cli"]
+paths = ["quench_cli"]
 layers = "*"
 external = "*"
 ```
@@ -490,12 +490,12 @@ Violations detected via `Cargo.toml` dependencies and `use` statements.
 ```toml
 [[check.imports.layer]]
 name = "core"
-modules = ["github.com/org/project/internal/core"]
+paths = ["github.com/org/project/internal/core"]
 layers = false
 
 [[check.imports.layer]]
 name = "cmd"
-modules = ["github.com/org/project/cmd/**"]
+paths = ["github.com/org/project/cmd/**"]
 layers = "*"
 ```
 
@@ -506,7 +506,7 @@ Respects `tsconfig.json` path aliases:
 ```toml
 [[check.imports.layer]]
 name = "core"
-modules = ["@/core/**", "src/core/**"]
+paths = ["@/core/**", "src/core/**"]
 layers = false
 external = ["zod", "date-fns"]
 ```
