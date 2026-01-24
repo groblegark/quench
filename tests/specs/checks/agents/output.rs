@@ -321,7 +321,7 @@ fn exact_oversized_lines_text() {
     Add a "## Directory Structure" section: Overview of project layout and key directories
   CLAUDE.md: missing required section
     Add a "## Landing the Plane" section: Checklist for AI agents before completing work
-  CLAUDE.md: file too large (59 vs 50)
+  CLAUDE.md: file too large (tokens: 59 vs 50)
     File has 59 lines (max: 50). Split into smaller files or reduce content.
 FAIL: agents
 "###,

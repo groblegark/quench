@@ -213,7 +213,7 @@ fn cloc_text_output_format() {
     assert_eq!(
         check("cloc").on("violations").fails().stdout(),
         r#"cloc: FAIL
-  src/oversized.rs: file_too_large (14 vs 10)
+  src/oversized.rs: file_too_large (lines: 14 vs 10)
     Split into smaller modules.
 7 checks passed, 1 failed
 "#,

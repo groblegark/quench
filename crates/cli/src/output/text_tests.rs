@@ -146,7 +146,7 @@ fn agents_file_too_large_description() {
     let violation = Violation::file_only("CLAUDE.md", "file_too_large", "File exceeds limit")
         .with_threshold(502, 500);
     let desc = formatter.format_violation_desc(&violation);
-    assert_eq!(desc, "file too large (502 vs 500)");
+    assert_eq!(desc, "file too large (tokens: 502 vs 500)");
 }
 
 #[test]

@@ -241,11 +241,11 @@ impl TextFormatter {
             "forbidden_diagram" => "forbidden box diagram".to_string(),
             "forbidden_mermaid" => "forbidden mermaid block".to_string(),
             "file_too_large" => {
-                // Agents check sets value/threshold but not lines
+                // Agents check sets value/threshold but not lines - use "tokens:" prefix
                 // Cloc check sets lines/nonblank - use default format with "lines:" prefix
                 match (v.value, v.threshold, v.lines) {
                     (Some(val), Some(thresh), None) => {
-                        format!("file too large ({} vs {})", val, thresh)
+                        format!("file too large (tokens: {} vs {})", val, thresh)
                     }
                     _ => self.format_default_desc(v),
                 }
