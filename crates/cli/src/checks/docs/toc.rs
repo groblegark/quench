@@ -669,46 +669,68 @@ fn validate_file_toc(
 
         let entries = parse_tree_block(&block);
         let abs_file = ctx.root.join(relative_path);
+        let file_entries: Vec<_> = entries.iter().filter(|e| !e.is_dir).collect();
 
-        // Try each strategy until one resolves all entries
-        let mut tried_strategies = Vec::new();
-        let mut unresolved = None;
+        // Find entries that fail ALL strategies (truly broken)
+        let resolves_any = |e: &&TreeEntry| {
+            strategies
+                .iter()
+                .any(|&s| try_resolve(ctx.root, &abs_file, &e.path, s))
+        };
+        let failed_all: Vec<_> = file_entries.iter().filter(|e| !resolves_any(e)).collect();
 
-        for strategy in strategies {
-            match try_resolve_block(ctx.root, &abs_file, &entries, strategy) {
-                None => {
-                    // All entries resolved with this strategy
-                    unresolved = None;
-                    break;
-                }
-                Some(failed) => {
-                    tried_strategies.push(strategy);
-                    unresolved = Some(failed);
+        let (to_report, advice) = if !failed_all.is_empty() {
+            let tried: Vec<_> = strategies.iter().map(|s| s.description()).collect();
+            (
+                failed_all.into_iter().copied().collect(),
+                format!(
+                    "File does not exist.\n\
+                     Update the table of contents to match actual files.\n\
+                     If this is not a TOC, add a language tag like ```text.\n\n\
+                     Tried: {}",
+                    tried.join(", ")
+                ),
+            )
+        } else {
+            // Check if any single strategy resolves all entries
+            let mut best: Option<(ResolutionStrategy, Vec<&TreeEntry>)> = None;
+            for strategy in strategies {
+                match try_resolve_block(ctx.root, &abs_file, &entries, strategy) {
+                    None => {
+                        best = None;
+                        break;
+                    }
+                    Some(failed) => {
+                        if best.as_ref().is_none_or(|(_, b)| failed.len() < b.len()) {
+                            best = Some((strategy, failed));
+                        }
+                    }
                 }
             }
-        }
+            match best {
+                None => continue,
+                Some((strategy, failed)) => (
+                    failed,
+                    format!(
+                        "File does not exist (when resolving {}).\n\
+                         TOC entries should use a consistent path style.\n\
+                         If this is not a TOC, add a language tag like ```text.",
+                        strategy.description()
+                    ),
+                ),
+            }
+        };
 
-        // Report violations for unresolved entries
-        if let Some(failed_entries) = unresolved {
-            let strategies_tried: Vec<_> =
-                tried_strategies.iter().map(|s| s.description()).collect();
-            let strategies_note = format!("Tried: {}", strategies_tried.join(", "));
-
-            let advice = format!(
-                "File does not exist.\n\
-                 Update the table of contents to match actual files.\n\
-                 If this is not a TOC, add a language tag like ```text.\n\n\
-                 {}",
-                strategies_note
+        for entry in to_report {
+            violations.push(
+                Violation::file(
+                    relative_path,
+                    block.start_line + entry.line_offset,
+                    "broken_toc",
+                    &advice,
+                )
+                .with_pattern(entry.path.clone()),
             );
-
-            for entry in failed_entries {
-                let line = block.start_line + entry.line_offset;
-                violations.push(
-                    Violation::file(relative_path, line, "broken_toc", &advice)
-                        .with_pattern(entry.path.clone()),
-                );
-            }
         }
     }
 }

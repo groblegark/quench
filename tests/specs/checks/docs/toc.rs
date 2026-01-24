@@ -346,3 +346,63 @@ quality/
     // Both files exist at checks/quality/*, should pass
     check("docs").pwd(temp.path()).passes();
 }
+
+/// Spec: docs/specs/checks/docs.md#resolution
+///
+/// > TOC with mixed path styles only reports truly missing files
+///
+/// When a TOC block has entries that resolve with different strategies,
+/// only report entries that fail ALL strategies.
+#[test]
+fn toc_mixed_strategies_only_reports_truly_missing() {
+    let temp = default_project();
+    // Create files that resolve with different strategies
+    temp.file("checks/benchmarks/run.sh", "#!/bin/bash\n");
+    temp.file("checks/benchmarks/lib/common.sh", "#!/bin/bash\n");
+    // README with TOC using full path from root
+    temp.file(
+        "checks/benchmarks/README.md",
+        r#"# Benchmarks
+
+```
+checks/benchmarks/
+├── run.sh
+├── lib/
+│   └── common.sh
+└── results/
+    └── missing.txt
+```
+"#,
+    );
+    // run.sh and common.sh exist (resolve via RelativeToRoot)
+    // missing.txt does NOT exist - should be the only violation
+    check("docs")
+        .pwd(temp.path())
+        .fails()
+        .stdout_has("missing.txt")
+        .stdout_lacks("run.sh")
+        .stdout_lacks("common.sh");
+}
+
+/// Spec: docs/specs/checks/docs.md#resolution
+///
+/// > Full relative path from root resolves correctly
+#[test]
+fn toc_full_path_from_root_resolves() {
+    let temp = default_project();
+    temp.file("checks/benchmarks/run.sh", "#!/bin/bash\n");
+    temp.file("checks/benchmarks/README.md", "# Benchmarks\n");
+    temp.file(
+        "checks/benchmarks/CLAUDE.md",
+        r#"# Benchmarks
+
+```
+checks/benchmarks/
+├── README.md
+└── run.sh
+```
+"#,
+    );
+    // Both entries use full path from root, should pass
+    check("docs").pwd(temp.path()).passes();
+}

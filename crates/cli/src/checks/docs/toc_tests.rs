@@ -442,6 +442,61 @@ fn strip_parent_dir_name_with_nested_paths() {
     ));
 }
 
+// === Mixed strategy resolution ===
+
+#[test]
+fn entry_resolved_by_any_strategy_is_not_reported() {
+    use tempfile::TempDir;
+
+    // Create:
+    // temp/
+    // └── checks/
+    //     └── benchmarks/
+    //         ├── README.md
+    //         └── run.sh
+    let temp = TempDir::new().unwrap();
+    let root = temp.path();
+
+    let bench_dir = root.join("checks/benchmarks");
+    std::fs::create_dir_all(&bench_dir).unwrap();
+    std::fs::write(bench_dir.join("README.md"), "# Benchmarks").unwrap();
+    std::fs::write(bench_dir.join("run.sh"), "#!/bin/bash").unwrap();
+
+    let md_file = bench_dir.join("README.md");
+
+    // Entry "checks/benchmarks/run.sh" resolves with RelativeToRoot
+    assert!(try_resolve(
+        root,
+        &md_file,
+        "checks/benchmarks/run.sh",
+        ResolutionStrategy::RelativeToRoot
+    ));
+
+    // But NOT with StripParentDirName (prefix is "benchmarks/", not "checks/benchmarks/")
+    assert!(!try_resolve(
+        root,
+        &md_file,
+        "checks/benchmarks/run.sh",
+        ResolutionStrategy::StripParentDirName
+    ));
+
+    // Entry "benchmarks/run.sh" resolves with StripParentDirName
+    assert!(try_resolve(
+        root,
+        &md_file,
+        "benchmarks/run.sh",
+        ResolutionStrategy::StripParentDirName
+    ));
+
+    // But NOT with RelativeToRoot (no file at root/benchmarks/run.sh)
+    assert!(!try_resolve(
+        root,
+        &md_file,
+        "benchmarks/run.sh",
+        ResolutionStrategy::RelativeToRoot
+    ));
+}
+
 // === Glob pattern detection ===
 
 #[test]
