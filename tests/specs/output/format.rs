@@ -359,3 +359,40 @@ fn quench_log_debug_emits_diagnostics() {
         .passes()
         .stderr_has(predicates::str::is_empty().not());
 }
+
+// =============================================================================
+// Output Snapshot Specs
+// =============================================================================
+
+/// Spec: docs/specs/03-output.md#text-output
+///
+/// > Text output format exact match
+#[test]
+fn check_output_format_exact() {
+    let output = quench_cmd()
+        .args(["check"])
+        .current_dir(fixture("output-test"))
+        .output()
+        .expect("command should run");
+
+    // Stub checks are omitted from summary per docs/specs/03-output.md#verbosity
+    let expected = "\
+cloc: FAIL
+  src/oversized.rs: file_too_large (lines: 15 vs 10)
+    Can the code be made more concise?
+
+    If not, split large source files into sibling modules or submodules in a folder;
+    consider refactoring to be more unit testable.
+
+    Avoid picking and removing individual lines to satisfy the linter,
+    prefer properly refactoring out testable code blocks.
+PASS: escapes, agents, docs
+FAIL: cloc
+";
+
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        expected,
+        "output format must match exactly"
+    );
+}

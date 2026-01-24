@@ -189,8 +189,8 @@ For all-checks specs, `.json()` returns `ChecksJson`:
 /// Spec: docs/specs/03-output.md#exit-codes
 #[test]
 fn exit_code_0_all_checks_pass() {
-    let dir = temp_project();
-    cli().pwd(dir.path()).args(&["--no-git"]).passes();
+    let temp = default_project();
+    cli().pwd(temp.path()).args(&["--no-git"]).passes();
 }
 
 /// Spec: docs/specs/03-output.md#json-format
@@ -232,8 +232,8 @@ For specs testing multiple checks with JSON output:
 /// Spec: docs/specs/01-cli.md#check-selection
 #[test]
 fn enable_flag_runs_only_that_check() {
-    let dir = temp_project();
-    let result = cli().pwd(dir.path()).args(&["--cloc"]).json().passes();
+    let temp = default_project();
+    let result = cli().pwd(temp.path()).args(&["--cloc"]).json().passes();
     assert_eq!(result.checks().len(), 1);
     assert_eq!(result.checks()[0]["name"], "cloc");
 }
@@ -247,7 +247,7 @@ For config parsing or error case specs:
 /// Spec: docs/specs/02-config.md#validation
 #[test]
 fn rejects_invalid_version() {
-    let temp =default_project();
+    let temp = default_project();
     temp.config("version = 999");
 
     check("cloc")

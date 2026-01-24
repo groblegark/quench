@@ -545,13 +545,13 @@ pub fn default_project() -> Project {
 ///
 /// ```ignore
 /// // Project with defaults
-/// let temp =default_project();
+/// let temp = default_project();
 /// temp.config("[check.cloc]\nmax_lines = 5");
 /// temp.file("src/lib.rs", "fn main() {}");
 /// check("cloc").pwd(temp.path()).fails();
 ///
 /// // Empty project (for init tests)
-/// let temp =Project::empty();
+/// let temp = Project::empty();
 /// quench_cmd().args(["init"]).current_dir(temp.path());
 /// ```
 pub struct Project {
@@ -611,3 +611,8 @@ pub fn check_names(json: &serde_json::Value) -> Vec<&str> {
         .filter_map(|c| c.get("name").and_then(|n| n.as_str()))
         .collect()
 }
+
+/// Minimal config that disables agents check (for tests not focused on agents)
+pub const MINIMAL_CONFIG: &str = r#"[check.agents]
+required = []
+"#;
