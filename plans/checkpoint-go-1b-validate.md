@@ -1,6 +1,7 @@
 # Checkpoint: Go Adapter Basic Complete - Validation
 
 **Plan:** `checkpoint-go-1b-validate`
+**Root Feature:** `quench-0b9f`
 
 ## Overview
 
