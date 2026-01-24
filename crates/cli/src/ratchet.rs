@@ -125,8 +125,14 @@ fn extract_build_time(json: &serde_json::Value) -> Option<BuildTimeCurrent> {
     }
 }
 
+/// Extract test time metrics from JSON.
+///
+/// Note: `avg` and `max` default to 0.0 if not present in the metrics.
+/// This allows ratcheting on just `total` without requiring all fields.
+/// However, be aware that missing fields will appear as "improved to 0".
 fn extract_test_time(json: &serde_json::Value) -> Option<TestTimeCurrent> {
     let total = json.get("total").and_then(|v| v.as_f64())?;
+    // Default to 0.0 for optional timing fields
     let avg = json.get("avg").and_then(|v| v.as_f64()).unwrap_or(0.0);
     let max = json.get("max").and_then(|v| v.as_f64()).unwrap_or(0.0);
 
@@ -157,7 +163,10 @@ pub struct MetricComparison {
     pub current: f64,
     pub baseline: f64,
     pub tolerance: f64,
-    pub min_allowed: f64,
+    /// The allowed threshold (baseline ± tolerance).
+    /// For "lower is better" metrics: max allowed = baseline + tolerance.
+    /// For "higher is better" metrics: min allowed = baseline - tolerance.
+    pub threshold: f64,
     pub passed: bool,
     pub improved: bool,
 }
@@ -165,13 +174,7 @@ pub struct MetricComparison {
 impl MetricComparison {
     /// Format the value based on metric type.
     pub fn format_value(&self, value: f64) -> String {
-        if self.name.starts_with("build_time.") || self.name.starts_with("test_time.") {
-            format!("{:.1}s", value)
-        } else if self.name.starts_with("coverage.") {
-            format!("{:.1}%", value * 100.0)
-        } else {
-            format!("{}", value as i64)
-        }
+        format_metric_value(&self.name, value)
     }
 
     /// Get contextual advice for this metric failure.
@@ -207,16 +210,21 @@ pub struct MetricImprovement {
     pub new_value: f64,
 }
 
+/// Format a metric value based on its type (determined by name prefix).
+fn format_metric_value(name: &str, value: f64) -> String {
+    if name.starts_with("build_time.") || name.starts_with("test_time.") {
+        format!("{:.1}s", value)
+    } else if name.starts_with("coverage.") {
+        format!("{:.1}%", value * 100.0)
+    } else {
+        format!("{}", value as i64)
+    }
+}
+
 impl MetricImprovement {
     /// Format the value based on metric type.
     pub fn format_value(&self, value: f64) -> String {
-        if self.name.starts_with("build_time.") || self.name.starts_with("test_time.") {
-            format!("{:.1}s", value)
-        } else if self.name.starts_with("coverage.") {
-            format!("{:.1}%", value * 100.0)
-        } else {
-            format!("{}", value as i64)
-        }
+        format_metric_value(&self.name, value)
     }
 }
 
@@ -242,8 +250,8 @@ pub fn compare(
                 name: format!("escapes.{}", pattern),
                 current: curr_count as f64,
                 baseline: base_count as f64,
-                tolerance: 0.0,                 // No tolerance for counts
-                min_allowed: base_count as f64, // Can't exceed baseline
+                tolerance: 0.0,               // No tolerance for counts
+                threshold: base_count as f64, // Can't exceed baseline
                 passed: curr_count <= base_count,
                 improved: curr_count < base_count,
             };
@@ -278,7 +286,7 @@ pub fn compare(
                 current: curr_size as f64,
                 baseline: base_size as f64,
                 tolerance: tolerance as f64,
-                min_allowed: max_allowed as f64,
+                threshold: max_allowed as f64,
                 passed: curr_size <= max_allowed,
                 improved: curr_size < base_size,
             };
@@ -389,7 +397,7 @@ fn compare_timing(
             current: curr_secs,
             baseline: base,
             tolerance: tolerance_secs,
-            min_allowed: max_allowed,
+            threshold: max_allowed,
             passed: curr_secs <= max_allowed,
             improved: curr_secs < base,
         };

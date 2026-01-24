@@ -60,7 +60,7 @@ impl From<&MetricComparison> for MetricComparisonOutput {
             current: comp.current,
             baseline: comp.baseline,
             tolerance: comp.tolerance,
-            max_allowed: comp.min_allowed, // Note: min_allowed is really max_allowed in context
+            max_allowed: comp.threshold,
             passed: comp.passed,
             improved: comp.improved,
         }

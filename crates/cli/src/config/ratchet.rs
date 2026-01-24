@@ -75,6 +75,11 @@ fn default_stale_days() -> u32 {
 }
 
 impl RatchetConfig {
+    /// Get coverage tolerance in percentage points.
+    pub fn coverage_tolerance_pct(&self) -> Option<f64> {
+        self.coverage_tolerance
+    }
+
     /// Get binary size tolerance in bytes.
     pub fn binary_size_tolerance_bytes(&self) -> Option<u64> {
         self.binary_size_tolerance
