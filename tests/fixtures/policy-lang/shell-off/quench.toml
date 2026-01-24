@@ -1,0 +1,5 @@
+version = 1
+
+[shell.policy]
+check = "off"
+lint_changes = "standalone"

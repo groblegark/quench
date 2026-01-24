@@ -1,0 +1,5 @@
+version = 1
+
+[golang.policy]
+check = "warn"
+lint_changes = "standalone"

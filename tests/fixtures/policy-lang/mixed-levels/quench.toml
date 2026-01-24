@@ -1,0 +1,13 @@
+version = 1
+
+[rust.policy]
+check = "error"
+lint_changes = "standalone"
+
+[golang.policy]
+check = "warn"
+lint_changes = "standalone"
+
+[javascript.policy]
+check = "off"
+lint_changes = "standalone"

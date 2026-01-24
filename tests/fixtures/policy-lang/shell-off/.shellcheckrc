@@ -1,0 +1,2 @@
+# Lint config file - triggers policy check when changed
+disable=SC2086

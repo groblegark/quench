@@ -1,0 +1,2 @@
+# Lint config file - triggers policy check when changed
+max_width = 100

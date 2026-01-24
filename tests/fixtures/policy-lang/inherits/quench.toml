@@ -1,0 +1,7 @@
+version = 1
+
+# Global policy check level - languages inherit this if not overridden
+# Note: This tests future inheritance behavior (Phase 1545 doesn't implement it)
+[check.policy]
+check = "error"
+lint_changes = "standalone"
