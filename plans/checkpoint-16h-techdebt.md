@@ -1,5 +1,7 @@
 # Checkpoint 16H: Tech Debt - Report Command
 
+**Root Feature:** `quench-e64d`
+
 ## Overview
 
 Address remaining technical debt in the report command after the f24fda0 refactoring. Focus on:
