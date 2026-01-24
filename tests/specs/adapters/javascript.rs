@@ -444,3 +444,157 @@ lint_config = ["eslint.config.js"]
         .args(&["--base", "HEAD"])
         .passes();
 }
+
+// =============================================================================
+// VALIDATION SNAPSHOT SPECS (Checkpoint 49B)
+// =============================================================================
+
+/// Checkpoint 49B: Validate js-simple produces expected JSON structure
+///
+/// Verifies that the JavaScript adapter auto-detects correctly and produces
+/// useful output with source/test file counts and line counts.
+#[test]
+fn js_simple_produces_expected_json_structure() {
+    let result = cli().on("js-simple").json().fails(); // fails because of agents check
+    let checks = result.checks();
+
+    // Find cloc check and verify metrics
+    let cloc = checks
+        .iter()
+        .find(|c| c.get("name").and_then(|n| n.as_str()) == Some("cloc"))
+        .expect("cloc check should exist");
+
+    let metrics = cloc.get("metrics").expect("cloc should have metrics");
+
+    // Verify key structure elements
+    assert!(
+        metrics.get("source_files").is_some(),
+        "should have source_files"
+    );
+    assert!(
+        metrics.get("test_files").is_some(),
+        "should have test_files"
+    );
+    assert!(
+        metrics.get("source_lines").is_some(),
+        "should have source_lines"
+    );
+    assert!(
+        metrics.get("test_lines").is_some(),
+        "should have test_lines"
+    );
+
+    // Verify counts match expected
+    assert_eq!(
+        metrics.get("source_files").and_then(|v| v.as_u64()),
+        Some(2),
+        "should have 2 source files"
+    );
+    assert_eq!(
+        metrics.get("test_files").and_then(|v| v.as_u64()),
+        Some(2),
+        "should have 2 test files"
+    );
+
+    // Verify escapes check exists and passes
+    let escapes = checks
+        .iter()
+        .find(|c| c.get("name").and_then(|n| n.as_str()) == Some("escapes"))
+        .expect("escapes check should exist");
+    assert_eq!(
+        escapes.get("passed").and_then(|v| v.as_bool()),
+        Some(true),
+        "escapes should pass"
+    );
+}
+
+/// Checkpoint 49B: Validate js-monorepo detects all workspace packages
+///
+/// Verifies that the pnpm workspace detection correctly enumerates
+/// packages and produces per-package metrics.
+#[test]
+fn js_monorepo_produces_by_package_metrics() {
+    let result = cli().on("js-monorepo").json().fails(); // fails because of agents check
+    let checks = result.checks();
+
+    // Find cloc check
+    let cloc = checks
+        .iter()
+        .find(|c| c.get("name").and_then(|n| n.as_str()) == Some("cloc"))
+        .expect("cloc check should exist");
+
+    // Verify by_package exists
+    let by_package = cloc.get("by_package").expect("should have by_package");
+
+    // Verify both packages detected
+    assert!(
+        by_package.get("core").is_some(),
+        "should detect 'core' package"
+    );
+    assert!(
+        by_package.get("cli").is_some(),
+        "should detect 'cli' package"
+    );
+
+    // Verify each package has metrics
+    let core = by_package.get("core").unwrap();
+    assert!(
+        core.get("source_files").is_some(),
+        "core should have source_files"
+    );
+    assert!(
+        core.get("test_files").is_some(),
+        "core should have test_files"
+    );
+
+    let cli_pkg = by_package.get("cli").unwrap();
+    assert!(
+        cli_pkg.get("source_files").is_some(),
+        "cli should have source_files"
+    );
+    assert!(
+        cli_pkg.get("test_files").is_some(),
+        "cli should have test_files"
+    );
+}
+
+/// Checkpoint 49B: Validate JavaScript-specific escapes detected in violations
+///
+/// Verifies that JavaScript escape patterns are correctly detected in the
+/// violations fixture's js/ subdirectory.
+#[test]
+fn violations_js_escapes_detected() {
+    let result = check("escapes").on("violations").json().fails();
+
+    // Verify JS-specific files are detected
+    assert!(
+        result.has_violation_for_file("as-unknown.ts"),
+        "should detect as-unknown.ts violation"
+    );
+    assert!(
+        result.has_violation_for_file("ts-ignore.ts"),
+        "should detect ts-ignore.ts violation"
+    );
+    assert!(
+        result.has_violation_for_file("eslint-disable.ts"),
+        "should detect eslint-disable.ts violation"
+    );
+
+    // Count JS violations (at least 3 from js/ directory)
+    let js_violations: Vec<_> = result
+        .violations()
+        .iter()
+        .filter(|v| {
+            v.get("file")
+                .and_then(|f| f.as_str())
+                .map(|f| f.starts_with("js/"))
+                .unwrap_or(false)
+        })
+        .collect();
+
+    assert!(
+        js_violations.len() >= 3,
+        "should have at least 3 JS violations, found {}",
+        js_violations.len()
+    );
+}
