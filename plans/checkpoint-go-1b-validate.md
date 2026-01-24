@@ -132,9 +132,9 @@ cargo test go -- --include-ignored
 - [ ] Unit tests pass (go_tests.rs, policy_tests.rs, suppress_tests.rs)
 - [ ] Document any ignored tests and why
 
-### Phase 5: Create/Update Snapshot Tests
+### Phase 5: Create/Update Exact output tests
 
-Add snapshot tests for Go adapter output following the pattern in `tests/specs/checks/agents.rs`.
+Add Exact output tests for Go adapter output following the pattern in `tests/specs/checks/agents.rs`.
 
 Add to `tests/specs/adapters/golang.rs`:
 
@@ -161,7 +161,7 @@ fn snapshot_unsafe_pointer_fail_text() {
 ```
 
 **Verification:**
-- [ ] Snapshot tests compile and run
+- [ ] Exact output tests compile and run
 - [ ] Snapshots capture expected output format
 - [ ] Snapshots stored in `tests/specs/snapshots/`
 
@@ -182,7 +182,7 @@ Generated: [DATE]
 | go-simple useful output | ? | |
 | go-multi package detection | ? | |
 | Go escapes detected | ? | |
-| Snapshot tests | ? | |
+| Exact output tests | ? | |
 
 **Overall Status: ?**
 
@@ -270,7 +270,7 @@ Based on the existing specs:
    - Count passed/failed/ignored
 
 3. **Phase 5**: Snapshot test creation
-   - Add snapshot tests to golang.rs
+   - Add Exact output tests to golang.rs
    - Run `cargo insta test` to generate
    - Review and accept snapshots
 
@@ -286,4 +286,4 @@ Based on the existing specs:
 | `quench check` on go-simple produces useful output | Phase 1 manual run |
 | `quench check` on go-multi detects all packages | Phase 2 manual run |
 | Go-specific escapes detected in violations | Phase 3 manual run |
-| Snapshot tests for Go adapter output | Phase 5 implementation |
+| Exact output tests for Go adapter output | Phase 5 implementation |

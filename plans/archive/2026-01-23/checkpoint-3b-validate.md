@@ -248,7 +248,7 @@ Generated: YYYY-MM-DD
 
 [Metrics showing separate tracking]
 
-### 4. Snapshot Tests
+### 4. Exact output tests
 
 [New specs added and results]
 

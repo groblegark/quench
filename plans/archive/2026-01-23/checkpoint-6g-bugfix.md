@@ -336,7 +336,7 @@ cargo test --test specs -- --include-ignored  # All should pass
 1. Run full test suite (including previously ignored tests)
 2. Run `make check` for full CI validation
 3. Dogfood: run quench on quench
-4. Verify no regressions in snapshot tests
+4. Verify no regressions in Exact output tests
 
 **Verification:**
 ```bash

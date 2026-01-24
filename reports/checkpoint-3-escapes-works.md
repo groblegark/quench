@@ -140,7 +140,7 @@ Key behaviors confirmed:
 - `forbid` action only fails in source code, always allowed in test code
 - Metrics show per-pattern breakdown for both source and test
 
-### 4. Snapshot Tests
+### 4. Exact output tests
 
 **New Text Output Specs (Phase 3):**
 
@@ -223,6 +223,6 @@ The escapes check implementation is validated and working correctly:
 2. **Comment search algorithm works**: Detects comments on same line and preceding lines
 3. **Source/test separation works**: Test code exempt from forbid/comment enforcement, metrics tracked separately
 4. **Output formats verified**: Both text and JSON outputs contain required fields
-5. **21 behavioral specs pass**: Including 5 new snapshot tests added in this checkpoint
+5. **21 behavioral specs pass**: Including 5 new Exact output tests added in this checkpoint
 
 The escapes check is ready for production use.

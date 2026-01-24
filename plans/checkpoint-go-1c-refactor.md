@@ -42,7 +42,7 @@ Read and confirm the validation report findings.
 | go-simple useful output | PASS | 3 source files, 1 test file |
 | go-multi package detection | PASS | 5 packages detected |
 | Go escapes detected | PASS | All 4 patterns work |
-| Snapshot tests | PASS | 2 snapshot tests created |
+| Exact output tests | PASS | 2 Exact output tests created |
 
 **Section 6 - Unexpected Behaviors:**
 > None discovered during validation. All checks performed as expected.

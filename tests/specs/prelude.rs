@@ -217,7 +217,7 @@ impl CheckJson {
         &self.root
     }
 
-    /// Get the raw JSON as a pretty-printed string (for snapshot tests)
+    /// Get the raw JSON as a pretty-printed string (for Exact output tests)
     pub fn raw_json(&self) -> String {
         serde_json::to_string_pretty(&self.root).expect("valid JSON")
     }

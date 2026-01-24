@@ -2,7 +2,7 @@
 
 ## Overview
 
-Establish the project foundation for quench: a fast quality linting CLI for AI agents. This phase sets up the Cargo workspace, error handling, and comprehensive test infrastructure including unit tests, integration tests, snapshot tests, and benchmarks.
+Establish the project foundation for quench: a fast quality linting CLI for AI agents. This phase sets up the Cargo workspace, error handling, and comprehensive test infrastructure including unit tests, integration tests, Exact output tests, and benchmarks.
 
 **Current State**: The workspace skeleton exists with `crates/cli`, basic lint configuration, and some dev-dependencies. The main binary is a stub.
 
@@ -553,7 +553,7 @@ cargo test --test specs -- --ignored # Show unimplemented count
 
 ### Snapshots
 ```bash
-cargo insta test              # Run snapshot tests
+cargo insta test              # Run Exact output tests
 cargo insta review            # Review changes
 ```
 

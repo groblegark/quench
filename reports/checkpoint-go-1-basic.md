@@ -9,7 +9,7 @@ Generated: 2026-01-23
 | go-simple useful output | PASS | 3 source files (22 lines), 1 test file (7 lines) |
 | go-multi package detection | PASS | 5 packages detected (cmd/server, cmd/cli, internal/core, pkg/storage, pkg/api) |
 | Go escapes detected | PASS | All 4 patterns detected (unsafe.Pointer, go:linkname, go:noescape, nolint) |
-| Snapshot tests | PASS | 2 snapshot tests created and passing |
+| Exact output tests | PASS | 2 Exact output tests created and passing |
 
 **Overall Status: PASS**
 
@@ -274,9 +274,9 @@ test result: ok. 28 passed; 0 failed
 - 28 unit tests (go::tests, policy::tests, suppress::tests)
 - No ignored tests
 
-### 5. Snapshot Tests
+### 5. Exact output tests
 
-Two snapshot tests were added to `tests/specs/adapters/golang.rs`:
+Two Exact output tests were added to `tests/specs/adapters/golang.rs`:
 
 1. **`snapshot_go_simple_cloc_json`**: Captures the JSON output format for Go adapter metrics
 2. **`snapshot_unsafe_pointer_fail_text`**: Captures the human-readable violation output
@@ -284,7 +284,7 @@ Two snapshot tests were added to `tests/specs/adapters/golang.rs`:
 Snapshots stored in: `tests/specs/adapters/snapshots/`
 
 **Verification:**
-- [x] Snapshot tests compile and run
+- [x] Exact output tests compile and run
 - [x] Snapshots capture expected output format
 - [x] Snapshots stored in correct location
 

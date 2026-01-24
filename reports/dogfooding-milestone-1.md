@@ -7,7 +7,7 @@ Date: 2026-01-23
 First dogfooding milestone - running quench on the quench project itself. This validates that:
 1. All enabled checks (cloc, escapes, agents) pass on the quench codebase
 2. The agents check properly validates CLAUDE.md
-3. Snapshot tests capture output format for regression testing
+3. Exact output tests capture output format for regression testing
 
 ## quench check Output
 
@@ -113,9 +113,9 @@ advice = "Checklist for AI agents before committing"
 
 ## Tests Added
 
-### Snapshot Tests
+### Exact output tests
 
-Added 6 snapshot tests in `tests/specs/checks/agents.rs`:
+Added 6 Exact output tests in `tests/specs/checks/agents.rs`:
 
 | Test | Description |
 |------|-------------|
@@ -144,13 +144,13 @@ None encountered. The dogfooding process was smooth:
 
 1. **cloc metrics show 0 files** - The cloc check reports 0 source files and 0 test files. This may be expected if the project root doesn't contain source files directly, or there might be a configuration issue with detecting the Rust workspace.
 
-2. **Consider adding timestamp redaction** - For snapshot tests with JSON output, timestamps need to be manually redacted for determinism. Consider adding a built-in option or helper for this.
+2. **Consider adding timestamp redaction** - For Exact output tests with JSON output, timestamps need to be manually redacted for determinism. Consider adding a built-in option or helper for this.
 
 ## Exit Criteria Status
 
 - [x] `quench check` passes on quench project itself
 - [x] `quench.toml` includes agents configuration
-- [x] Snapshot tests exist for all violation types
+- [x] Exact output tests exist for all violation types
 - [x] Fix functionality tested and working (via `agents_fix_syncs_files_from_sync_source`)
 - [x] `reports/dogfooding-milestone-1.md` documents the experience
 - [x] All tests pass: `make check`

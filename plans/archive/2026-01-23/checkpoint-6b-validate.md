@@ -9,7 +9,7 @@ This checkpoint validates that quench can successfully lint itself (dogfooding) 
 1. Running `quench check` on the quench codebase with all enabled checks (cloc, escapes, agents)
 2. Fixing any violations found
 3. Completing the `quench.toml` configuration for the quench project
-4. Adding snapshot tests for agents output
+4. Adding Exact output tests for agents output
 5. Documenting the dogfooding experience in `reports/dogfooding-milestone-1.md`
 
 ## Project Structure
@@ -23,7 +23,7 @@ quench/
 ├── tests/
 │   ├── specs/
 │   │   └── checks/
-│   │       └── agents.rs          # Extend with snapshot tests (Phase 4)
+│   │       └── agents.rs          # Extend with Exact output tests (Phase 4)
 │   └── fixtures/
 │       └── agents-project/        # Existing - multi-scope fixture
 └── crates/cli/src/
@@ -126,17 +126,17 @@ quench check
 # Should exit 0 with no violations
 ```
 
-### Phase 4: Add snapshot tests for agents output
+### Phase 4: Add Exact output tests for agents output
 
-**Goal:** Add `insta` snapshot tests that capture exact output format for agents check.
+**Goal:** Add `insta` Exact output tests that capture exact output format for agents check.
 
 **File:** `tests/specs/checks/agents.rs`
 
-**Add snapshot tests for each violation type:**
+**Add Exact output tests for each violation type:**
 
 ```rust
 // =============================================================================
-// SNAPSHOT TESTS
+// Exact output tests
 // =============================================================================
 // These tests use insta to capture exact output format for regression testing.
 
@@ -345,7 +345,7 @@ The `--fix` flag for agents:
 
 ### Output Format Consistency
 
-Snapshot tests should verify:
+Exact output tests should verify:
 - Text output includes check name, file path, violation type, and advice
 - JSON output includes all structured fields (passed, violations, metrics)
 - Consistent ordering and formatting
@@ -381,7 +381,7 @@ cargo test --test specs fix_syncs
 ```bash
 make check
 # All CI checks pass including:
-# - cargo test --all (includes new snapshot tests)
+# - cargo test --all (includes new Exact output tests)
 # - ./scripts/bootstrap (project conventions)
 ```
 
@@ -389,7 +389,7 @@ make check
 
 - [ ] `quench check` passes on quench project itself
 - [ ] `quench.toml` includes agents configuration
-- [ ] Snapshot tests exist for all violation types
+- [ ] Exact output tests exist for all violation types
 - [ ] Fix functionality tested and working
 - [ ] `reports/dogfooding-milestone-1.md` documents the experience
 - [ ] All tests pass: `make check`

@@ -250,7 +250,7 @@ cargo test --all
 **Steps:**
 1. Run `make check` to verify all CI checks pass
 2. Run quench on quench to verify dogfooding still works
-3. Verify snapshot tests are still valid (no regressions)
+3. Verify Exact output tests are still valid (no regressions)
 
 **Verification:**
 ```bash
