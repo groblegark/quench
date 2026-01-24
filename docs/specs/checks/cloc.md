@@ -100,8 +100,13 @@ Text output only appears when file size limits are exceeded:
 ```
 cloc: FAIL
   src/parser.rs: 923 lines (max: 750)
-    Can the code be made more concise? If not, split large source files into sibling modules
-    or submodules in a folder; consider refactoring to be more unit testable.
+    Can the code be made more concise?
+
+    If not, split large source files into sibling modules or submodules in a folder;
+    consider refactoring to be more unit testable.
+
+    Avoid picking and removing individual lines to satisfy the linter,
+    prefer properly refactoring out testable code blocks.
 
 PASS: escapes, agents, docs, tests
 FAIL: cloc
@@ -131,7 +136,7 @@ Typical healthy ranges: `0.5x` to `2.0x` (project-dependent).
       "type": "file_too_large",
       "value": 923,
       "threshold": 750,
-      "advice": "Can the code be made more concise? If not, split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable."
+      "advice": "Can the code be made more concise?\n\nIf not, split large source files into sibling modules or submodules in a folder;\nconsider refactoring to be more unit testable.\n\nAvoid picking and removing individual lines to satisfy the linter,\nprefer properly refactoring out testable code blocks."
     }
   ],
   "metrics": {
@@ -184,8 +189,13 @@ When limits are set, violations are reported:
 ```
 cloc: FAIL
   src/parser.rs: 923 lines (max: 900)
-    Can the code be made more concise? If not, split large source files into sibling modules
-    or submodules in a folder; consider refactoring to be more unit testable.
+    Can the code be made more concise?
+
+    If not, split large source files into sibling modules or submodules in a folder;
+    consider refactoring to be more unit testable.
+
+    Avoid picking and removing individual lines to satisfy the linter,
+    prefer properly refactoring out testable code blocks.
 ```
 
 Average lines per file is **reported** in metrics but not enforced.
@@ -209,8 +219,21 @@ max_tokens = 20000               # use false to disable
 exclude = ["**/generated/**", "**/migrations/**"]
 
 # Custom advice for violations (defaults shown)
-advice = "Can the code be made more concise? If not, split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable."
+advice = """
+Can the code be made more concise?
+
+If not, split large source files into sibling modules or submodules in a folder;
+consider refactoring to be more unit testable.
+
+Avoid picking and removing individual lines to satisfy the linter,
+prefer properly refactoring out testable code blocks."""
 advice_test = "Can tests be parameterized or use shared fixtures to be more concise? If not, split large test files into a folder."
+
+# Per-language advice (overrides generic advice for that language)
+# [rust]
+# cloc_advice = "Custom advice for Rust source files..."
+# [go]
+# cloc_advice = "Custom advice for Go source files..."
 
 # Rust-specific: parse #[cfg(test)] blocks
 # check.rust.cfg_test_split = true  # default

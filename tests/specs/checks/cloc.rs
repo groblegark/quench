@@ -246,7 +246,7 @@ fn cloc_source_violation_has_default_advice() {
         .unwrap();
     assert_eq!(
         advice,
-        "Can the code be made more concise? If not, split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable."
+        include_str!("../../../docs/specs/templates/cloc.advice.txt").trim()
     );
 }
 
@@ -275,7 +275,7 @@ fn cloc_test_violation_has_default_advice() {
         .unwrap();
     assert_eq!(
         advice,
-        "Can tests be parameterized or use shared fixtures to be more concise? If not, split large test files into a folder."
+        include_str!("../../../docs/specs/templates/cloc.advice_test.txt").trim()
     );
 }
 

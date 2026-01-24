@@ -94,6 +94,19 @@ pub struct Config {
     pub shell: ShellConfig,
 }
 
+impl Config {
+    /// Get cloc advice for source files, checking language-specific first.
+    pub fn cloc_advice_for_language(&self, language: &str) -> &str {
+        match language {
+            "rust" => self.rust.cloc_advice.as_deref(),
+            "go" => self.go.cloc_advice.as_deref(),
+            "shell" => self.shell.cloc_advice.as_deref(),
+            _ => None,
+        }
+        .unwrap_or(&self.check.cloc.advice)
+    }
+}
+
 /// Rust language-specific configuration.
 #[derive(Debug, Clone, Deserialize)]
 pub struct RustConfig {
@@ -108,6 +121,10 @@ pub struct RustConfig {
     /// Lint configuration policy.
     #[serde(default)]
     pub policy: RustPolicyConfig,
+
+    /// Custom cloc advice for source files (None = use generic default).
+    #[serde(default)]
+    pub cloc_advice: Option<String>,
 }
 
 impl Default for RustConfig {
@@ -116,6 +133,7 @@ impl Default for RustConfig {
             cfg_test_split: Self::default_cfg_test_split(),
             suppress: SuppressConfig::default(),
             policy: RustPolicyConfig::default(),
+            cloc_advice: None,
         }
     }
 }
@@ -351,7 +369,12 @@ impl ClocConfig {
     }
 
     fn default_advice() -> String {
-        "Can the code be made more concise? If not, split large source files into sibling modules or submodules in a folder; consider refactoring to be more unit testable.".to_string()
+        "Can the code be made more concise?\n\n\
+         If not, split large source files into sibling modules or submodules in a folder;\n\
+         consider refactoring to be more unit testable.\n\n\
+         Avoid picking and removing individual lines to satisfy the linter,\n\
+         prefer properly refactoring out testable code blocks."
+            .to_string()
     }
 
     fn default_advice_test() -> String {

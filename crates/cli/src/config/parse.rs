@@ -35,11 +35,16 @@ pub(super) fn parse_rust_config(value: Option<&toml::Value>) -> RustConfig {
 
     let suppress = parse_suppress_config(t.get("suppress"));
     let policy = parse_policy_config(t.get("policy"));
+    let cloc_advice = t
+        .get("cloc_advice")
+        .and_then(|v| v.as_str())
+        .map(String::from);
 
     RustConfig {
         cfg_test_split,
         suppress,
         policy,
+        cloc_advice,
     }
 }
 
@@ -58,11 +63,17 @@ pub(super) fn parse_shell_config(value: Option<&toml::Value>) -> ShellConfig {
     // Parse policy config
     let policy = parse_shell_policy_config(t.get("policy"));
 
+    let cloc_advice = t
+        .get("cloc_advice")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+
     ShellConfig {
         source,
         tests,
         suppress,
         policy,
+        cloc_advice,
     }
 }
 
@@ -135,11 +146,17 @@ pub(super) fn parse_go_config(value: Option<&toml::Value>) -> GoConfig {
     // Parse policy config
     let policy = parse_go_policy_config(t.get("policy"));
 
+    let cloc_advice = t
+        .get("cloc_advice")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+
     GoConfig {
         source,
         tests,
         suppress,
         policy,
+        cloc_advice,
     }
 }
 

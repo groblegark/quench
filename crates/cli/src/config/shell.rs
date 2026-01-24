@@ -22,6 +22,10 @@ pub struct ShellConfig {
     /// Lint configuration policy.
     #[serde(default)]
     pub policy: ShellPolicyConfig,
+
+    /// Custom cloc advice for source files (None = use generic default).
+    #[serde(default)]
+    pub cloc_advice: Option<String>,
 }
 
 impl Default for ShellConfig {
@@ -31,6 +35,7 @@ impl Default for ShellConfig {
             tests: Self::default_tests(),
             suppress: ShellSuppressConfig::default(),
             policy: ShellPolicyConfig::default(),
+            cloc_advice: None,
         }
     }
 }

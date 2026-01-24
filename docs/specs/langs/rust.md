@@ -320,6 +320,9 @@ Multiple test suites contribute to coverage via LLVM profile merging.
 
 cfg_test_split = true            # Count #[cfg(test)] as test LOC
 
+# Custom cloc advice for Rust source files (overrides generic default)
+# cloc_advice = "Custom advice for oversized Rust files..."
+
 # Build targets (default: all [[bin]] entries)
 # targets = ["myapp", "myserver"]
 

@@ -22,6 +22,10 @@ pub struct GoConfig {
     /// Lint configuration policy.
     #[serde(default)]
     pub policy: GoPolicyConfig,
+
+    /// Custom cloc advice for source files (None = use generic default).
+    #[serde(default)]
+    pub cloc_advice: Option<String>,
 }
 
 impl Default for GoConfig {
@@ -31,6 +35,7 @@ impl Default for GoConfig {
             tests: Self::default_tests(),
             suppress: GoSuppressConfig::default(),
             policy: GoPolicyConfig::default(),
+            cloc_advice: None,
         }
     }
 }

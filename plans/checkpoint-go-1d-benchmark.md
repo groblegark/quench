@@ -1,6 +1,6 @@
 # Checkpoint Go-1D: Benchmark and Identify Bottlenecks
 
-**Root Feature:** Go Adapter
+**Root Feature:** `quench-6449`
 
 ## Overview
 
