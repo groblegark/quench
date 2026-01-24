@@ -1,5 +1,7 @@
 # Checkpoint 15F: Quick Wins - Ratcheting
 
+**Root Feature:** `quench-0765`
+
 ## Overview
 
 This checkpoint delivers high-value, low-risk improvements to the ratcheting system. The ratchet infrastructure is complete (baseline I/O, metrics comparison, config), but several polish features will improve usability for both agents and human developers.
