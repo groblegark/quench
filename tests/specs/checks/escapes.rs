@@ -96,9 +96,9 @@ fn escapes_comment_action_passes_when_comment_on_same_line() {
 /// > On preceding lines, searching upward until a non-blank, non-comment line is found
 #[test]
 fn escapes_comment_action_passes_when_comment_on_preceding_line() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [[check.escapes.patterns]]
@@ -109,9 +109,9 @@ comment = "// SAFETY:"
 "#,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         r#"
 // SAFETY: Pointer guaranteed valid by caller
 unsafe { *ptr }
@@ -119,7 +119,7 @@ unsafe { *ptr }
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 /// Spec: docs/specs/checks/escape-hatches.md#comment
@@ -191,9 +191,9 @@ fn escapes_test_code_counted_separately_in_metrics() {
 /// > Each pattern can have custom advice
 #[test]
 fn escapes_per_pattern_advice_shown_in_violation() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [[check.escapes.patterns]]
@@ -204,14 +204,14 @@ advice = "Use .context() from anyhow instead."
 "#,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "pub fn f() { None::<i32>.unwrap(); }",
     )
     .unwrap();
 
-    let escapes = check("escapes").pwd(dir.path()).json().fails();
+    let escapes = check("escapes").pwd(temp.path()).json().fails();
     let violations = escapes.require("violations").as_array().unwrap();
 
     let advice = violations[0]
@@ -367,9 +367,9 @@ fn escapes_json_metrics_structure_complete() {
 /// > only one violation should be reported for that line.
 #[test]
 fn escapes_single_violation_per_line_even_with_pattern_in_comment() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [[check.escapes.patterns]]
@@ -379,15 +379,15 @@ action = "forbid"
 "#,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     // Pattern appears twice on same line: in code AND in comment
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "pub fn f() { None::<i32>.unwrap() } // using .unwrap() here\n",
     )
     .unwrap();
 
-    let escapes = check("escapes").pwd(dir.path()).json().fails();
+    let escapes = check("escapes").pwd(temp.path()).json().fails();
     let violations = escapes.require("violations").as_array().unwrap();
 
     // Should only have ONE violation, not two
@@ -404,9 +404,9 @@ action = "forbid"
 /// > For example, `// VIOLATION: missing // SAFETY:` should not match `// SAFETY:`.
 #[test]
 fn escapes_comment_embedded_in_text_does_not_satisfy() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [[check.escapes.patterns]]
@@ -417,16 +417,16 @@ comment = "// SAFETY:"
 "#,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     // The // SAFETY: is embedded in another comment, not at comment start
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "unsafe { }  // VIOLATION: missing // SAFETY: comment\n",
     )
     .unwrap();
 
     // This should FAIL because the embedded // SAFETY: should not count
-    let escapes = check("escapes").pwd(dir.path()).json().fails();
+    let escapes = check("escapes").pwd(temp.path()).json().fails();
     let violations = escapes.require("violations").as_array().unwrap();
 
     assert!(
@@ -446,9 +446,9 @@ comment = "// SAFETY:"
 /// > Comment pattern at start of inline comment should satisfy requirement.
 #[test]
 fn escapes_comment_at_start_of_inline_comment_satisfies() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [[check.escapes.patterns]]
@@ -459,16 +459,16 @@ comment = "// SAFETY:"
 "#,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     // The // SAFETY: is at start of the inline comment
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "unsafe { }  // SAFETY: pointer is valid\n",
     )
     .unwrap();
 
     // This should PASS
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 // =============================================================================
@@ -482,9 +482,9 @@ comment = "// SAFETY:"
 /// > documentation or explanatory comments.
 #[test]
 fn escapes_pattern_in_comment_only_does_not_trigger_violation() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [[check.escapes.patterns]]
@@ -495,10 +495,10 @@ comment = "// SAFETY:"
 "#,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     // Pattern "unsafe {" appears only in the comment, not in actual code
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         r#"
 // Don't use unsafe { } blocks without a SAFETY comment
 pub fn safe_function() -> i32 {
@@ -509,7 +509,7 @@ pub fn safe_function() -> i32 {
     .unwrap();
 
     // Should PASS - no actual unsafe block in code, only mentioned in comment
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 /// Spec: Shell pattern in comment only should not trigger violation
@@ -518,11 +518,11 @@ pub fn safe_function() -> i32 {
 /// > generate violations.
 #[test]
 fn escapes_shell_pattern_in_comment_only_does_not_trigger_violation() {
-    let dir = temp_project();
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
+    let temp = default_project();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
     // "eval" appears only in comment text, not as actual code
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         r#"#!/bin/bash
 # This variable is used with eval in the calling script
 export MY_VAR="value"
@@ -531,7 +531,7 @@ export MY_VAR="value"
     .unwrap();
 
     // Should PASS - no actual eval in code, only mentioned in comment
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 /// Spec: Pattern in code triggers violation even with same pattern in comment
@@ -540,11 +540,11 @@ export MY_VAR="value"
 /// > should still trigger a violation (unless properly justified).
 #[test]
 fn escapes_pattern_in_code_triggers_even_when_also_in_comment() {
-    let dir = temp_project();
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
+    let temp = default_project();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
     // "eval" appears in comment AND in actual code
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         r#"#!/bin/bash
 # Using eval here
 eval "$CMD"
@@ -554,7 +554,7 @@ eval "$CMD"
 
     // Should FAIL - actual eval in code without # OK: comment
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .fails()
         .stdout_has("missing_comment");
 }
@@ -569,9 +569,9 @@ eval "$CMD"
 /// > #[allow(dead_code)] with per-lint pattern requires that specific pattern.
 #[test]
 fn suppress_per_lint_pattern_respected_for_rust() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 
@@ -584,19 +584,19 @@ comment = "// NOTE(compat):"
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     // Using per-lint pattern should pass
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "// NOTE(compat): legacy API\n#[allow(dead_code)]\nfn old_function() {}",
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 /// Spec: Per-lint comment pattern rejection
@@ -604,9 +604,9 @@ comment = "// NOTE(compat):"
 /// > When per-lint pattern is configured but comment doesn't match, should fail.
 #[test]
 fn suppress_per_lint_pattern_wrong_comment_fails() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 
@@ -619,19 +619,19 @@ comment = "// NOTE(compat):"
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     // Using wrong pattern should fail
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "// Some other comment\n#[allow(dead_code)]\nfn old_function() {}",
     )
     .unwrap();
 
-    let escapes = check("escapes").pwd(dir.path()).json().fails();
+    let escapes = check("escapes").pwd(temp.path()).json().fails();
     let violations = escapes.require("violations").as_array().unwrap();
     assert!(
         violations.iter().any(|v| {
@@ -655,9 +655,9 @@ comment = "// NOTE(compat):"
 /// > When no per-lint pattern is configured for a lint code, fall back to global.
 #[test]
 fn suppress_fallback_to_global_pattern() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 
@@ -671,19 +671,19 @@ comment = "// NOTE(compat):"
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     // unused_variables has no per-lint pattern, should use global
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "// REASON: needed for testing\n#[allow(unused_variables)]\nfn test_fn() { let x = 1; }",
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 /// Spec: Per-lint pattern for Shell suppress
@@ -691,9 +691,9 @@ comment = "// NOTE(compat):"
 /// > Shell shellcheck directives also support per-lint patterns.
 #[test]
 fn suppress_per_lint_pattern_respected_for_shell() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r##"
 version = 1
 
@@ -705,10 +705,10 @@ comment = "# UNUSED_VAR:"
 "##,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
     // Using per-lint pattern should pass
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         r#"#!/bin/bash
 # UNUSED_VAR: set by external caller
 # shellcheck disable=SC2034
@@ -717,7 +717,7 @@ MY_VAR="value"
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 /// Spec: Per-lint pattern wrong comment for Shell
@@ -725,9 +725,9 @@ MY_VAR="value"
 /// > Shell per-lint pattern should reject wrong comment patterns.
 #[test]
 fn suppress_per_lint_pattern_wrong_comment_fails_shell() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r##"
 version = 1
 
@@ -739,10 +739,10 @@ comment = "# UNUSED_VAR:"
 "##,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
     // Using wrong pattern should fail
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         r#"#!/bin/bash
 # Some other reason
 # shellcheck disable=SC2034
@@ -751,7 +751,7 @@ MY_VAR="value"
     )
     .unwrap();
 
-    let escapes = check("escapes").pwd(dir.path()).json().fails();
+    let escapes = check("escapes").pwd(temp.path()).json().fails();
     let violations = escapes.require("violations").as_array().unwrap();
     assert!(
         violations.iter().any(|v| {

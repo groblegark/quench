@@ -38,15 +38,15 @@ fn shell_adapter_auto_detected_when_sh_files_in_scripts() {
 /// > shell | *.sh files in root, bin/, or scripts/
 #[test]
 fn shell_adapter_auto_detected_when_sh_files_in_bin() {
-    let dir = temp_project();
-    std::fs::create_dir_all(dir.path().join("bin")).unwrap();
+    let temp = default_project();
+    std::fs::create_dir_all(temp.path().join("bin")).unwrap();
     std::fs::write(
-        dir.path().join("bin/build"),
+        temp.path().join("bin/build"),
         "#!/bin/bash\necho 'building'\n",
     )
     .unwrap();
 
-    let result = cli().pwd(dir.path()).json().passes();
+    let result = cli().pwd(temp.path()).json().passes();
     let checks = result.checks();
 
     assert!(
@@ -61,10 +61,10 @@ fn shell_adapter_auto_detected_when_sh_files_in_bin() {
 /// > shell | *.sh files in root, bin/, or scripts/
 #[test]
 fn shell_adapter_auto_detected_when_sh_files_in_root() {
-    let dir = temp_project();
-    std::fs::write(dir.path().join("setup.sh"), "#!/bin/bash\necho 'setup'\n").unwrap();
+    let temp = default_project();
+    std::fs::write(temp.path().join("setup.sh"), "#!/bin/bash\necho 'setup'\n").unwrap();
 
-    let result = cli().pwd(dir.path()).json().passes();
+    let result = cli().pwd(temp.path()).json().passes();
     let checks = result.checks();
 
     assert!(
@@ -99,15 +99,15 @@ fn shell_adapter_default_source_pattern_matches_sh_files() {
 /// > source = ["**/*.sh", "**/*.bash"]
 #[test]
 fn shell_adapter_default_source_pattern_matches_bash_files() {
-    let dir = temp_project();
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
+    let temp = default_project();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
     std::fs::write(
-        dir.path().join("scripts/deploy.bash"),
+        temp.path().join("scripts/deploy.bash"),
         "#!/bin/bash\necho 'deploying'\n",
     )
     .unwrap();
 
-    let cloc = check("cloc").pwd(dir.path()).json().passes();
+    let cloc = check("cloc").pwd(temp.path()).json().passes();
     let metrics = cloc.require("metrics");
 
     let source_lines = metrics
@@ -122,21 +122,21 @@ fn shell_adapter_default_source_pattern_matches_bash_files() {
 /// > tests = ["tests/**/*.bats", "test/**/*.bats", "*_test.sh"]
 #[test]
 fn shell_adapter_default_test_pattern_matches_bats_files() {
-    let dir = temp_project();
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
-    std::fs::create_dir_all(dir.path().join("tests")).unwrap();
+    let temp = default_project();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
+    std::fs::create_dir_all(temp.path().join("tests")).unwrap();
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         "#!/bin/bash\necho 'building'\n",
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("tests/build.bats"),
+        temp.path().join("tests/build.bats"),
         "#!/usr/bin/env bats\n@test 'builds' { run ./scripts/build.sh; }\n",
     )
     .unwrap();
 
-    let cloc = check("cloc").pwd(dir.path()).json().passes();
+    let cloc = check("cloc").pwd(temp.path()).json().passes();
     let metrics = cloc.require("metrics");
 
     let test_lines = metrics
@@ -151,20 +151,20 @@ fn shell_adapter_default_test_pattern_matches_bats_files() {
 /// > *_test.sh files
 #[test]
 fn shell_adapter_default_test_pattern_matches_test_sh_files() {
-    let dir = temp_project();
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
+    let temp = default_project();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         "#!/bin/bash\necho 'building'\n",
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("scripts/build_test.sh"),
+        temp.path().join("scripts/build_test.sh"),
         "#!/bin/bash\n./scripts/build.sh && echo 'passed'\n",
     )
     .unwrap();
 
-    let cloc = check("cloc").pwd(dir.path()).json().passes();
+    let cloc = check("cloc").pwd(temp.path()).json().passes();
     let metrics = cloc.require("metrics");
 
     let test_lines = metrics
@@ -223,22 +223,22 @@ fn shell_adapter_eval_with_ok_comment_passes() {
 /// > set +e and eval allowed in test code without comment
 #[test]
 fn shell_adapter_escape_patterns_allowed_in_tests() {
-    let dir = temp_project();
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
-    std::fs::create_dir_all(dir.path().join("tests")).unwrap();
+    let temp = default_project();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
+    std::fs::create_dir_all(temp.path().join("tests")).unwrap();
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         "#!/bin/bash\necho 'building'\n",
     )
     .unwrap();
     // Test file with set +e and eval, no comments
     std::fs::write(
-        dir.path().join("tests/integration.bats"),
+        temp.path().join("tests/integration.bats"),
         "#!/usr/bin/env bats\nset +e\neval \"echo test\"\n@test 'works' { true; }\n",
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 // =============================================================================
@@ -269,9 +269,9 @@ fn shell_adapter_shellcheck_disable_allowed_in_tests() {
 /// > "comment" - Requires justification comment
 #[test]
 fn shell_adapter_shellcheck_disable_with_comment_when_configured() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [shell.suppress]
@@ -279,15 +279,15 @@ check = "comment"
 "#,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
     // Has justification comment before shellcheck disable
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         "#!/bin/bash\n# This variable is exported for subprocesses\n# shellcheck disable=SC2034\nUNUSED_VAR=1\n",
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 /// Spec: docs/specs/langs/shell.md#suppress
@@ -295,9 +295,9 @@ check = "comment"
 /// > [shell.suppress.source] allow = ["SC2034"]
 #[test]
 fn shell_adapter_shellcheck_allow_list_skips_check() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [shell.suppress]
@@ -307,15 +307,15 @@ allow = ["SC2034"]
 "#,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
     // SC2034 is in allow list, no comment needed
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         "#!/bin/bash\n# shellcheck disable=SC2034\nUNUSED_VAR=1\n",
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 // =============================================================================
@@ -327,11 +327,11 @@ allow = ["SC2034"]
 /// > lint_changes = "standalone" - lint config changes must be standalone PRs
 #[test]
 fn shell_adapter_lint_config_changes_with_source_fails_standalone_policy() {
-    let dir = temp_project();
+    let temp = default_project();
 
     // Setup quench.toml with standalone policy
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [shell.policy]
@@ -344,59 +344,59 @@ lint_config = [".shellcheckrc"]
     // Initialize git repo
     std::process::Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Create initial commit with source
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         "#!/bin/bash\necho 'building'\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["commit", "-m", "initial"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Add both lint config and source changes
-    std::fs::write(dir.path().join(".shellcheckrc"), "enable=all\n").unwrap();
+    std::fs::write(temp.path().join(".shellcheckrc"), "enable=all\n").unwrap();
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         "#!/bin/bash\necho 'building'\necho 'more'\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Check with --base HEAD should detect mixed changes
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--base", "HEAD"])
         .fails()
         .stdout_has("lint config")
@@ -408,11 +408,11 @@ lint_config = [".shellcheckrc"]
 /// > lint_config = [".shellcheckrc"] files that trigger standalone requirement
 #[test]
 fn shell_adapter_lint_config_standalone_passes() {
-    let dir = temp_project();
+    let temp = default_project();
 
     // Setup quench.toml with standalone policy
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [shell.policy]
@@ -425,54 +425,54 @@ lint_config = [".shellcheckrc"]
     // Initialize git repo
     std::process::Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Create initial commit
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         "#!/bin/bash\necho 'building'\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["commit", "-m", "initial"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Add ONLY lint config change (no source changes)
-    std::fs::write(dir.path().join(".shellcheckrc"), "enable=all\n").unwrap();
+    std::fs::write(temp.path().join(".shellcheckrc"), "enable=all\n").unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Should pass - only lint config changed
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--base", "HEAD"])
         .passes();
 }
@@ -482,11 +482,11 @@ lint_config = [".shellcheckrc"]
 /// > Policy is disabled when lint_changes = "none"
 #[test]
 fn shell_adapter_lint_policy_disabled_allows_mixed_changes() {
-    let dir = temp_project();
+    let temp = default_project();
 
     // Setup quench.toml with policy disabled
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [shell.policy]
@@ -498,59 +498,59 @@ lint_changes = "none"
     // Initialize git repo
     std::process::Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Create initial commit
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         "#!/bin/bash\necho 'building'\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["commit", "-m", "initial"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Add both lint config and source changes
-    std::fs::write(dir.path().join(".shellcheckrc"), "enable=all\n").unwrap();
+    std::fs::write(temp.path().join(".shellcheckrc"), "enable=all\n").unwrap();
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         "#!/bin/bash\necho 'building'\necho 'more'\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Should pass - policy is disabled
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--base", "HEAD"])
         .passes();
 }
@@ -560,11 +560,11 @@ lint_changes = "none"
 /// > Source-only changes pass the standalone policy
 #[test]
 fn shell_adapter_source_only_changes_pass_standalone_policy() {
-    let dir = temp_project();
+    let temp = default_project();
 
     // Setup quench.toml with standalone policy
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [shell.policy]
@@ -577,58 +577,58 @@ lint_config = [".shellcheckrc"]
     // Initialize git repo
     std::process::Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Create initial commit
-    std::fs::create_dir_all(dir.path().join("scripts")).unwrap();
+    std::fs::create_dir_all(temp.path().join("scripts")).unwrap();
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         "#!/bin/bash\necho 'building'\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["commit", "-m", "initial"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Add ONLY source changes (no lint config)
     std::fs::write(
-        dir.path().join("scripts/build.sh"),
+        temp.path().join("scripts/build.sh"),
         "#!/bin/bash\necho 'building'\necho 'more'\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Should pass - only source changed
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--base", "HEAD"])
         .passes();
 }

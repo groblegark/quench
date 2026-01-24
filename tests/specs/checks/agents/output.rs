@@ -2,8 +2,6 @@
 //!
 //! Reference: docs/specs/checks/agents.md
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
-
 use crate::prelude::*;
 
 // =============================================================================
@@ -63,27 +61,24 @@ fn agents_violation_type_is_valid() {
 /// > Running with --fix syncs files from sync_source.
 #[test]
 fn agents_fix_syncs_files_from_sync_source() {
-    let dir = temp_project();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let source =
+        "# Source\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n";
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
 "#,
-    )
-    .unwrap();
-    let source =
-        "# Source\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n";
-    std::fs::write(dir.path().join("CLAUDE.md"), source).unwrap();
-    std::fs::write(dir.path().join(".cursorrules"), "# Different content").unwrap();
+    );
+    temp.write("CLAUDE.md", source);
+    temp.write(".cursorrules", "# Different content");
 
     // Run with --fix
-    check("agents").pwd(dir.path()).args(&["--fix"]).passes();
+    check("agents").pwd(temp.path()).args(&["--fix"]).passes();
 
     // Verify files are now synced
-    let cursorrules = std::fs::read_to_string(dir.path().join(".cursorrules")).unwrap();
+    let cursorrules = std::fs::read_to_string(temp.path().join(".cursorrules")).unwrap();
     assert_eq!(cursorrules, source);
 }
 
@@ -118,23 +113,19 @@ fn agents_out_of_sync_text_output() {
 /// > Out of sync with differing preamble shows "(preamble)" not empty string.
 #[test]
 fn agents_out_of_sync_preamble_text_output() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-
-    // Create two files with different preambles (content before ## headings)
-    std::fs::write(
-        dir.path().join("CLAUDE.md"),
+    let temp = TempProject::empty();
+    temp.config("");
+    temp.write(
+        "CLAUDE.md",
         "# Project A\n\nFirst preamble.\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n",
-    )
-    .unwrap();
-    std::fs::write(
-        dir.path().join(".cursorrules"),
+    );
+    temp.write(
+        ".cursorrules",
         "# Project B\n\nDifferent preamble.\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n",
-    )
-    .unwrap();
+    );
 
     check("agents")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .fails()
         .stdout_has("(preamble)")
         .stdout_lacks("Section \"\"");
@@ -187,24 +178,21 @@ fn agents_file_too_large_text_output() {
 /// > Running with --fix shows FIXED status when files are synced.
 #[test]
 fn agents_fix_shows_fixed_status() {
-    let dir = temp_project();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let source =
+        "# Source\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n";
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
 "#,
-    )
-    .unwrap();
-    let source =
-        "# Source\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n";
-    std::fs::write(dir.path().join("CLAUDE.md"), source).unwrap();
-    std::fs::write(dir.path().join(".cursorrules"), "# Different content").unwrap();
+    );
+    temp.write("CLAUDE.md", source);
+    temp.write(".cursorrules", "# Different content");
 
     check("agents")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--fix"])
         .passes()
         .stdout_has("FIXED")
@@ -216,24 +204,21 @@ sync_source = "CLAUDE.md"
 /// > JSON includes fixed:true when --fix applies changes.
 #[test]
 fn agents_fix_json_includes_fixed_field() {
-    let dir = temp_project();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let source =
+        "# Source\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n";
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
 "#,
-    )
-    .unwrap();
-    let source =
-        "# Source\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n";
-    std::fs::write(dir.path().join("CLAUDE.md"), source).unwrap();
-    std::fs::write(dir.path().join(".cursorrules"), "# Different content").unwrap();
+    );
+    temp.write("CLAUDE.md", source);
+    temp.write(".cursorrules", "# Different content");
 
     let result = check("agents")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--fix"])
         .json()
         .passes();

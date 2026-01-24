@@ -17,18 +17,18 @@ use std::time::Duration;
 /// > Cache file is created in .quench/cache.bin
 #[test]
 fn cache_file_created_after_check() {
-    let dir = temp_project();
-    fs::write(dir.path().join("test.rs"), "fn main() {}\n").unwrap();
+    let temp = default_project();
+    fs::write(temp.path().join("test.rs"), "fn main() {}\n").unwrap();
 
     // Uses quench_cmd() directly - cache tests need cache enabled
     quench_cmd()
         .args(["check"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success();
 
     assert!(
-        dir.path().join(".quench/cache.bin").exists(),
+        temp.path().join(".quench/cache.bin").exists(),
         "cache file should be created"
     );
 }
@@ -38,18 +38,18 @@ fn cache_file_created_after_check() {
 /// > --no-cache bypasses cache (no .quench directory created)
 #[test]
 fn no_cache_flag_skips_cache() {
-    let dir = temp_project();
-    fs::write(dir.path().join("test.rs"), "fn main() {}\n").unwrap();
+    let temp = default_project();
+    fs::write(temp.path().join("test.rs"), "fn main() {}\n").unwrap();
 
     // Uses quench_cmd() directly - testing --no-cache flag behavior
     quench_cmd()
         .args(["check", "--no-cache"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success();
 
     assert!(
-        !dir.path().join(".quench").exists(),
+        !temp.path().join(".quench").exists(),
         ".quench directory should not exist with --no-cache"
     );
 }
@@ -60,14 +60,14 @@ fn no_cache_flag_skips_cache() {
 /// > Format: "Cache: N hits, M misses"
 #[test]
 fn verbose_shows_cache_stats() {
-    let dir = temp_project();
-    fs::write(dir.path().join("test.rs"), "fn main() {}\n").unwrap();
+    let temp = default_project();
+    fs::write(temp.path().join("test.rs"), "fn main() {}\n").unwrap();
 
     // Uses quench_cmd() directly - cache tests need cache enabled
     // First run: cache miss
     quench_cmd()
         .args(["check", "-v"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success()
         .stderr(predicates::str::is_match(r"Cache: \d+ hits?, \d+ misses?").unwrap());
@@ -75,7 +75,7 @@ fn verbose_shows_cache_stats() {
     // Second run: cache hit
     quench_cmd()
         .args(["check", "-v"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success()
         .stderr(predicates::str::is_match(r"Cache: \d+ hits?, 0 misses?").unwrap());
@@ -87,15 +87,15 @@ fn verbose_shows_cache_stats() {
 /// > Format: "Cache: N hits, M misses"
 #[test]
 fn modified_file_causes_cache_miss() {
-    let dir = temp_project();
-    let test_file = dir.path().join("test.rs");
+    let temp = default_project();
+    let test_file = temp.path().join("test.rs");
     fs::write(&test_file, "fn main() {}\n").unwrap();
 
     // Uses quench_cmd() directly - cache tests need cache enabled
     // First run: build cache (all misses)
     quench_cmd()
         .args(["check", "-v"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success()
         .stderr(predicates::str::is_match(r"Cache: 0 hits?, \d+ misses?").unwrap());
@@ -103,7 +103,7 @@ fn modified_file_causes_cache_miss() {
     // Second run: should hit cache (all hits)
     quench_cmd()
         .args(["check", "-v"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success()
         .stderr(predicates::str::is_match(r"Cache: \d+ hits?, 0 misses?").unwrap());
@@ -115,7 +115,7 @@ fn modified_file_causes_cache_miss() {
     // Third run: should have at least one miss for the touched file
     quench_cmd()
         .args(["check", "-v"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success()
         .stderr(predicates::str::is_match(r"Cache: \d+ hits?, [1-9]\d* misses?").unwrap());
@@ -127,14 +127,14 @@ fn modified_file_causes_cache_miss() {
 /// > Format: "Cache: N hits, M misses"
 #[test]
 fn config_change_invalidates_cache() {
-    let dir = temp_project();
-    fs::write(dir.path().join("test.rs"), "fn main() {}\n").unwrap();
+    let temp = default_project();
+    fs::write(temp.path().join("test.rs"), "fn main() {}\n").unwrap();
 
     // Uses quench_cmd() directly - cache tests need cache enabled
     // First run: build cache with default config
     quench_cmd()
         .args(["check", "-v"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success()
         .stderr(predicates::str::is_match(r"Cache: 0 hits?, \d+ misses?").unwrap());
@@ -142,14 +142,14 @@ fn config_change_invalidates_cache() {
     // Second run: should hit cache
     quench_cmd()
         .args(["check", "-v"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success()
         .stderr(predicates::str::is_match(r"Cache: \d+ hits?, 0 misses?").unwrap());
 
     // Change config (this changes config hash)
     fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"version = 1
 [check.cloc]
 max_lines = 500
@@ -160,7 +160,7 @@ max_lines = 500
     // Third run: should miss due to config change (cache invalidated)
     quench_cmd()
         .args(["check", "-v"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success()
         .stderr(predicates::str::is_match(r"Cache: 0 hits?, \d+ misses?").unwrap());
@@ -172,19 +172,19 @@ max_lines = 500
 /// > Format: "Cache: N hits, M misses"
 #[test]
 fn cache_persists_across_invocations() {
-    let dir = temp_project();
-    fs::write(dir.path().join("test.rs"), "fn main() {}\n").unwrap();
+    let temp = default_project();
+    fs::write(temp.path().join("test.rs"), "fn main() {}\n").unwrap();
 
     // Uses quench_cmd() directly - cache tests need cache enabled
     // First run: build cache
     quench_cmd()
         .args(["check"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success();
 
     // Verify cache file exists
-    let cache_path = dir.path().join(".quench/cache.bin");
+    let cache_path = temp.path().join(".quench/cache.bin");
     assert!(cache_path.exists());
 
     // Get initial cache file size
@@ -194,7 +194,7 @@ fn cache_persists_across_invocations() {
     // Second run: should use persisted cache (all hits)
     quench_cmd()
         .args(["check", "-v"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success()
         .stderr(predicates::str::is_match(r"Cache: \d+ hits?, 0 misses?").unwrap());

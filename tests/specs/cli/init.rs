@@ -7,18 +7,16 @@ use crate::prelude::*;
 /// > quench init --profile shell - Shell project defaults
 #[test]
 fn init_shell_profile_generates_config() {
-    let dir = temp_project();
-    // Remove the default quench.toml created by temp_project()
-    std::fs::remove_file(dir.path().join("quench.toml")).unwrap();
+    let temp = TempProject::empty();
 
     quench_cmd()
         .args(["init", "--profile", "shell"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success()
         .stdout(predicates::str::contains("Created quench.toml"));
 
-    let config = std::fs::read_to_string(dir.path().join("quench.toml")).unwrap();
+    let config = std::fs::read_to_string(temp.path().join("quench.toml")).unwrap();
     assert!(
         config.contains("[shell]"),
         "config should have [shell] section"
@@ -38,16 +36,15 @@ fn init_shell_profile_generates_config() {
 /// > Shell profile includes escape patterns for set +e, eval, rm -rf
 #[test]
 fn init_shell_profile_includes_escape_patterns() {
-    let dir = temp_project();
-    std::fs::remove_file(dir.path().join("quench.toml")).unwrap();
+    let temp = TempProject::empty();
 
     quench_cmd()
         .args(["init", "--profile", "shell"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success();
 
-    let config = std::fs::read_to_string(dir.path().join("quench.toml")).unwrap();
+    let config = std::fs::read_to_string(temp.path().join("quench.toml")).unwrap();
     assert!(
         config.contains("set \\\\+e") || config.contains("set \\+e"),
         "config should have set +e escape pattern"
@@ -67,17 +64,16 @@ fn init_shell_profile_includes_escape_patterns() {
 /// > quench init --profile rust,shell - Multi-language project
 #[test]
 fn init_combined_profiles_generates_both() {
-    let dir = temp_project();
-    std::fs::remove_file(dir.path().join("quench.toml")).unwrap();
+    let temp = TempProject::empty();
 
     quench_cmd()
         .args(["init", "--profile", "rust,shell"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success()
         .stdout(predicates::str::contains("rust, shell"));
 
-    let config = std::fs::read_to_string(dir.path().join("quench.toml")).unwrap();
+    let config = std::fs::read_to_string(temp.path().join("quench.toml")).unwrap();
     assert!(
         config.contains("[rust]"),
         "config should have [rust] section"
@@ -93,12 +89,11 @@ fn init_combined_profiles_generates_both() {
 /// > Shell profile output message includes profile name
 #[test]
 fn init_shell_profile_message() {
-    let dir = temp_project();
-    std::fs::remove_file(dir.path().join("quench.toml")).unwrap();
+    let temp = TempProject::empty();
 
     quench_cmd()
         .args(["init", "--profile", "shell"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .assert()
         .success()
         .stdout(predicates::str::contains("shell"));

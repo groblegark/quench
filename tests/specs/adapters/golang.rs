@@ -288,11 +288,11 @@ fn nolint_without_custom_pattern_fails() {
 /// > `lint_changes = "standalone"` requires lint config in separate PRs.
 #[test]
 fn lint_config_changes_with_source_fails_standalone_policy() {
-    let dir = temp_project();
+    let temp = default_project();
 
     // Setup quench.toml with standalone policy
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [golang.policy]
@@ -304,7 +304,7 @@ lint_config = [".golangci.yml"]
 
     // Setup go.mod
     std::fs::write(
-        dir.path().join("go.mod"),
+        temp.path().join("go.mod"),
         "module example.com/test\n\ngo 1.21\n",
     )
     .unwrap();
@@ -312,62 +312,62 @@ lint_config = [".golangci.yml"]
     // Initialize git repo
     std::process::Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Create initial commit with source
     std::fs::write(
-        dir.path().join("main.go"),
+        temp.path().join("main.go"),
         "package main\n\nfunc main() {}\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["commit", "-m", "initial"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Add both lint config and source changes
     std::fs::write(
-        dir.path().join(".golangci.yml"),
+        temp.path().join(".golangci.yml"),
         "linters:\n  enable:\n    - errcheck\n",
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("main.go"),
+        temp.path().join("main.go"),
         "package main\n\nfunc main() {}\nfunc helper() {}\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Check with --base HEAD should detect mixed changes
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--base", "HEAD"])
         .fails()
         .stdout_has("lint config")
@@ -379,11 +379,11 @@ lint_config = [".golangci.yml"]
 /// > Lint config changes only (no source) passes standalone policy.
 #[test]
 fn lint_config_standalone_passes() {
-    let dir = temp_project();
+    let temp = default_project();
 
     // Setup quench.toml with standalone policy
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [golang.policy]
@@ -395,7 +395,7 @@ lint_config = [".golangci.yml"]
 
     // Setup go.mod
     std::fs::write(
-        dir.path().join("go.mod"),
+        temp.path().join("go.mod"),
         "module example.com/test\n\ngo 1.21\n",
     )
     .unwrap();
@@ -403,57 +403,57 @@ lint_config = [".golangci.yml"]
     // Initialize git repo
     std::process::Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Create initial commit
     std::fs::write(
-        dir.path().join("main.go"),
+        temp.path().join("main.go"),
         "package main\n\nfunc main() {}\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["commit", "-m", "initial"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Add ONLY lint config change (no source changes)
     std::fs::write(
-        dir.path().join(".golangci.yml"),
+        temp.path().join(".golangci.yml"),
         "linters:\n  enable:\n    - errcheck\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Should pass - only lint config changed
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--base", "HEAD"])
         .passes();
 }

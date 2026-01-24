@@ -71,10 +71,10 @@ fn text_output_summary_lists_checks_by_status() {
 /// > Stub checks (not yet implemented) are omitted from the summary entirely.
 #[test]
 fn text_output_passing_summary_only() {
-    let dir = temp_project();
+    let temp = default_project();
     // Only non-stub checks appear; currently cloc, escapes, and agents are implemented
     cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--no-git"])
         .passes()
         .stdout_has("PASS: cloc, escapes, agents\n");
@@ -114,8 +114,8 @@ fn json_output_validates_against_schema() {
 /// > JSON has required fields: passed, checks
 #[test]
 fn json_output_has_required_fields() {
-    let dir = temp_project();
-    let result = cli().pwd(dir.path()).args(&["--no-git"]).json().passes();
+    let temp = default_project();
+    let result = cli().pwd(temp.path()).args(&["--no-git"]).json().passes();
     let json = result.value();
     assert!(json.get("passed").is_some(), "should have 'passed' field");
     assert!(json.get("checks").is_some(), "should have 'checks' array");
@@ -126,8 +126,8 @@ fn json_output_has_required_fields() {
 /// > JSON timestamp is ISO 8601 format
 #[test]
 fn json_output_timestamp_iso8601() {
-    let dir = temp_project();
-    let result = cli().pwd(dir.path()).args(&["--no-git"]).json().passes();
+    let temp = default_project();
+    let result = cli().pwd(temp.path()).args(&["--no-git"]).json().passes();
     let json = result.value();
 
     let ts = json
@@ -189,9 +189,9 @@ fn json_output_violation_has_required_fields() {
 /// > Exit code 0 when all checks pass
 #[test]
 fn exit_code_0_all_checks_pass() {
-    let dir = temp_project();
+    let temp = default_project();
     // Use --no-git to avoid skip in non-git directory
-    cli().pwd(dir.path()).args(&["--no-git"]).passes();
+    cli().pwd(temp.path()).args(&["--no-git"]).passes();
 }
 
 /// Spec: docs/specs/03-output.md#exit-codes
@@ -329,8 +329,8 @@ fn limit_message_when_truncated() {
 /// > --config-only validates config and exits without running checks
 #[test]
 fn config_flag_validates_and_exits() {
-    let dir = temp_project();
-    cli().pwd(dir.path()).args(&["--config-only"]).passes();
+    let temp = default_project();
+    cli().pwd(temp.path()).args(&["--config-only"]).passes();
 }
 
 /// Spec: docs/specs/01-cli.md#commands (implied)
@@ -350,10 +350,10 @@ fn config_flag_invalid_returns_code_2() {
 /// > QUENCH_LOG=debug emits diagnostics to stderr
 #[test]
 fn quench_log_debug_emits_diagnostics() {
-    let dir = temp_project();
+    let temp = default_project();
     // stderr should not be empty when debug logging is enabled
     cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--no-git"])
         .env("QUENCH_LOG", "debug")
         .passes()

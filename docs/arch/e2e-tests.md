@@ -68,8 +68,8 @@ fn check(name: &str) -> CheckBuilder<Text, Single>;
 /// All-checks builder
 fn cli() -> CheckBuilder<Text, All>;
 
-/// Create temp project with minimal quench.toml
-fn temp_project() -> TempDir;
+/// Create temp project with quench.toml and CLAUDE.md defaults
+fn default_project() -> TempProject;
 ```
 
 ### CheckBuilder
@@ -247,18 +247,22 @@ For config parsing or error case specs:
 /// Spec: docs/specs/02-config.md#validation
 #[test]
 fn rejects_invalid_version() {
-    let dir = temp_project();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        "version = 999\n"
-    ).unwrap();
+    let temp = default_project();
+    temp.config("version = 999");
 
     check("cloc")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .fails()
         .with_error("unsupported config version");
 }
 ```
+
+TempProject methods:
+- `TempProject::empty()` - No default files
+- `TempProject::with_defaults()` - Has quench.toml + CLAUDE.md
+- `temp.config(content)` - Write quench.toml (auto-adds `version = 1` if missing)
+- `temp.write(path, content)` - Write file (auto-creates parent dirs)
+- `temp.path()` - Get the temp directory path
 
 ## Spec Documentation
 

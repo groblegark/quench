@@ -256,9 +256,9 @@ fn eslint_disable_with_comment_passes() {
 #[test]
 #[ignore = "TODO: Phase 496 - JavaScript Adapter Suppress"]
 fn eslint_disable_next_line_with_comment_passes() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [javascript.suppress]
@@ -267,13 +267,13 @@ check = "comment"
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("package.json"),
+        temp.path().join("package.json"),
         r#"{"name": "test", "version": "1.0.0"}"#,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/index.ts"),
+        temp.path().join("src/index.ts"),
         r#"
 // Legacy code requires this pattern
 // eslint-disable-next-line no-console
@@ -282,7 +282,7 @@ console.log('debug');
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 // =============================================================================
@@ -329,11 +329,11 @@ fn eslint_disable_in_test_file_passes_without_comment() {
 #[test]
 #[ignore = "TODO: Phase 496 - JavaScript Adapter Suppress"]
 fn lint_config_changes_with_source_fails_standalone_policy() {
-    let dir = temp_project();
+    let temp = default_project();
 
     // Setup quench.toml with standalone policy
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [javascript.policy]
@@ -345,7 +345,7 @@ lint_config = ["eslint.config.js"]
 
     // Setup package.json
     std::fs::write(
-        dir.path().join("package.json"),
+        temp.path().join("package.json"),
         r#"{"name": "test", "version": "1.0.0"}"#,
     )
     .unwrap();
@@ -353,59 +353,59 @@ lint_config = ["eslint.config.js"]
     // Initialize git repo
     std::process::Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Create initial commit with source
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/index.ts"),
+        temp.path().join("src/index.ts"),
         "export function main() {}\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["commit", "-m", "initial"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Add both lint config and source changes
-    std::fs::write(dir.path().join("eslint.config.js"), "export default [];\n").unwrap();
+    std::fs::write(temp.path().join("eslint.config.js"), "export default [];\n").unwrap();
     std::fs::write(
-        dir.path().join("src/index.ts"),
+        temp.path().join("src/index.ts"),
         "export function main() {}\nexport function helper() {}\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Check with --base HEAD should detect mixed changes
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--base", "HEAD"])
         .fails()
         .stdout_has("lint config")
@@ -418,11 +418,11 @@ lint_config = ["eslint.config.js"]
 #[test]
 #[ignore = "TODO: Phase 496 - JavaScript Adapter Suppress"]
 fn lint_config_standalone_passes() {
-    let dir = temp_project();
+    let temp = default_project();
 
     // Setup quench.toml with standalone policy
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [javascript.policy]
@@ -434,7 +434,7 @@ lint_config = ["eslint.config.js"]
 
     // Setup package.json
     std::fs::write(
-        dir.path().join("package.json"),
+        temp.path().join("package.json"),
         r#"{"name": "test", "version": "1.0.0"}"#,
     )
     .unwrap();
@@ -442,54 +442,54 @@ lint_config = ["eslint.config.js"]
     // Initialize git repo
     std::process::Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Create initial commit
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/index.ts"),
+        temp.path().join("src/index.ts"),
         "export function main() {}\n",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["commit", "-m", "initial"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Add ONLY lint config change (no source changes)
-    std::fs::write(dir.path().join("eslint.config.js"), "export default [];\n").unwrap();
+    std::fs::write(temp.path().join("eslint.config.js"), "export default [];\n").unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Should pass - only lint config changed
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--base", "HEAD"])
         .passes();
 }

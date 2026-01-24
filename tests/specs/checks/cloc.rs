@@ -285,9 +285,9 @@ fn cloc_test_violation_has_default_advice() {
 /// > advice = "..." - custom advice for source file violations
 #[test]
 fn cloc_uses_custom_advice_for_source() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [check.cloc]
@@ -296,14 +296,14 @@ advice = "Custom source advice here."
 "#,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/big.rs"),
+        temp.path().join("src/big.rs"),
         "fn a() {}\nfn b() {}\nfn c() {}\nfn d() {}\nfn e() {}\nfn f() {}\n",
     )
     .unwrap();
 
-    let cloc = check("cloc").pwd(dir.path()).json().fails();
+    let cloc = check("cloc").pwd(temp.path()).json().fails();
     let violations = cloc.require("violations").as_array().unwrap();
 
     let advice = violations[0]
@@ -318,9 +318,9 @@ advice = "Custom source advice here."
 /// > advice_test = "..." - custom advice for test file violations
 #[test]
 fn cloc_uses_custom_advice_for_test() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [check.cloc]
@@ -329,14 +329,14 @@ advice_test = "Custom test advice here."
 "#,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("tests")).unwrap();
+    std::fs::create_dir_all(temp.path().join("tests")).unwrap();
     std::fs::write(
-        dir.path().join("tests/big_test.rs"),
+        temp.path().join("tests/big_test.rs"),
         "fn a() {}\nfn b() {}\nfn c() {}\nfn d() {}\nfn e() {}\nfn f() {}\n",
     )
     .unwrap();
 
-    let cloc = check("cloc").pwd(dir.path()).json().fails();
+    let cloc = check("cloc").pwd(temp.path()).json().fails();
     let violations = cloc.require("violations").as_array().unwrap();
 
     let advice = violations[0]
@@ -484,9 +484,9 @@ fn cloc_default_metric_is_total_lines() {
 /// > metric = "nonblank" uses non-blank lines for threshold
 #[test]
 fn cloc_metric_nonblank_uses_nonblank_for_threshold() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [check.cloc]
@@ -496,14 +496,14 @@ metric = "nonblank"
     )
     .unwrap();
     // Create a file with 10 total lines but only 6 non-blank
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "fn a() {}\n\nfn b() {}\n\nfn c() {}\n\nfn d() {}\n\nfn e() {}\n\nfn f() {}\n",
     )
     .unwrap();
 
-    let cloc = check("cloc").pwd(dir.path()).json().fails();
+    let cloc = check("cloc").pwd(temp.path()).json().fails();
     let violations = cloc.require("violations").as_array().unwrap();
     let v = &violations[0];
 

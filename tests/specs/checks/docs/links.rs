@@ -66,16 +66,16 @@ fn broken_link_includes_file_and_line() {
 #[test]
 #[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn relative_path_links_validated() {
-    let dir = temp_project();
-    std::fs::create_dir_all(dir.path().join("docs/specs")).unwrap();
+    let temp = default_project();
+    std::fs::create_dir_all(temp.path().join("docs/specs")).unwrap();
     std::fs::write(
-        dir.path().join("docs/specs/overview.md"),
+        temp.path().join("docs/specs/overview.md"),
         "See [config](../config.md) for details.\n",
     )
     .unwrap();
     // ../config.md doesn't exist relative to docs/specs/overview.md
     check("docs")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .fails()
         .stdout_has("config.md");
 }

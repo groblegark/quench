@@ -23,8 +23,8 @@ use yare::parameterized;
 /// > Built-in checks: cloc, escapes, agents, docs, tests, git, build, license
 #[test]
 fn check_names_are_exactly_8_known_checks() {
-    let dir = temp_project();
-    let result = cli().pwd(dir.path()).json().passes();
+    let temp = default_project();
+    let result = cli().pwd(temp.path()).json().passes();
     let checks = result.checks();
 
     let names: Vec<&str> = checks
@@ -84,9 +84,9 @@ fn check_toggles_shown_in_help() {
     license = { "license" },
 )]
 fn enable_flag_runs_only_that_check(check_name: &str) {
-    let dir = temp_project();
+    let temp = default_project();
     let result = cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&[&format!("--{}", check_name)])
         .json()
         .passes();
@@ -114,9 +114,9 @@ fn enable_flag_runs_only_that_check(check_name: &str) {
     license = { "license" },
 )]
 fn disable_flag_skips_that_check(check_name: &str) {
-    let dir = temp_project();
+    let temp = default_project();
     let result = cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&[&format!("--no-{}", check_name)])
         .json()
         .passes();
@@ -144,9 +144,9 @@ fn disable_flag_skips_that_check(check_name: &str) {
 /// > Multiple enable flags combine: --cloc --escapes runs both checks
 #[test]
 fn multiple_enable_flags_run_multiple_checks() {
-    let dir = temp_project();
+    let temp = default_project();
     let result = cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--cloc", "--escapes"])
         .json()
         .passes();
@@ -162,9 +162,9 @@ fn multiple_enable_flags_run_multiple_checks() {
 /// > Multiple disable flags combine: --no-docs --no-tests skips both
 #[test]
 fn multiple_disable_flags_skip_multiple_checks() {
-    let dir = temp_project();
+    let temp = default_project();
     let result = cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--no-docs", "--no-tests"])
         .json()
         .passes();
@@ -180,9 +180,9 @@ fn multiple_disable_flags_skip_multiple_checks() {
 /// > quench check --no-cloc --no-escapes: Skip multiple checks
 #[test]
 fn no_cloc_no_escapes_skips_both() {
-    let dir = temp_project();
+    let temp = default_project();
     let result = cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--no-cloc", "--no-escapes"])
         .json()
         .passes();
@@ -197,9 +197,9 @@ fn no_cloc_no_escapes_skips_both() {
 /// > All checks can be disabled except one
 #[test]
 fn all_checks_disabled_except_one() {
-    let dir = temp_project();
+    let temp = default_project();
     let result = cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&[
             "--no-cloc",
             "--no-escapes",
@@ -276,8 +276,8 @@ fn check_failure_doesnt_block_other_checks() {
 #[test]
 fn skipped_check_shows_error_but_continues() {
     // Don't initialize git - git check should skip
-    let dir = temp_project();
-    let result = cli().pwd(dir.path()).json().passes();
+    let temp = default_project();
+    let result = cli().pwd(temp.path()).json().passes();
     let checks = result.checks();
 
     // Find git check
@@ -312,10 +312,10 @@ fn skipped_check_shows_error_but_continues() {
 #[test]
 fn skipped_check_text_output_shows_reason() {
     // Don't initialize git - git check should skip
-    let dir = temp_project();
+    let temp = default_project();
     // Format: "git: SKIP" on its own line (matching FAIL format)
     cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .passes()
         .stdout_has(predicates::str::is_match(r"(?m)^git: SKIP$").unwrap());
 }
@@ -325,8 +325,8 @@ fn skipped_check_text_output_shows_reason() {
 /// > Skipped check has `skipped: true` and `error` field in JSON
 #[test]
 fn skipped_check_json_has_required_fields() {
-    let dir = temp_project();
-    let result = cli().pwd(dir.path()).json().passes();
+    let temp = default_project();
+    let result = cli().pwd(temp.path()).json().passes();
 
     // Find any skipped check
     let skipped: Vec<_> = result

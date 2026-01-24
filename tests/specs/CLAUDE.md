@@ -71,16 +71,30 @@ check("cloc").on("cloc/oversized-source").fails().stdout_has("big.rs");
 let cloc = check("cloc").on("cloc/basic").json().passes();
 assert!(cloc.require("metrics").get("ratio").is_some());
 
+// Violation helpers on CheckJson
+assert!(cloc.has_violation("file_too_large"));
+let v = cloc.require_violation("file_too_large");
+let vs = cloc.violations_of_type("file_too_large");
+assert!(cloc.has_violation_for_file("big.rs"));
+
 // All checks -> ChecksJson
 cli().on("output-test").exits(1);
-cli().pwd(dir.path()).args(&["--no-git"]).passes();
+cli().pwd(temp.path()).args(&["--no-git"]).passes();
 cli().on("output-test").env("CLAUDE_CODE", "1").exits(1).stdout_lacks("\x1b[");
 let result = cli().on("output-test").json().fails();
 assert!(result.checks().len() > 0);
 
-// Temp directories
-let dir = temp_project();
-check("cloc").pwd(dir.path()).passes();
+// Temp directories (with defaults: quench.toml + CLAUDE.md)
+let temp = default_project();
+temp.config("[check.cloc]\nmax_lines = 5");
+temp.write("src/lib.rs", "fn main() {}");
+check("cloc").pwd(temp.path()).fails();
+
+// Empty temp directory (for init tests)
+let temp = TempProject::empty();
+temp.config("[check.agents]\nrequired = [\"CLAUDE.md\"]");
+temp.write("CLAUDE.md", "# Project\n...");
+check("agents").pwd(temp.path()).passes();
 ```
 
 ## Running Specs

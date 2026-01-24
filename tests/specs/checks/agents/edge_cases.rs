@@ -2,8 +2,6 @@
 //!
 //! These tests verify graceful handling of edge cases discovered during dogfooding.
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
-
 use crate::prelude::*;
 
 /// Edge case: sync_source file doesn't exist
@@ -12,30 +10,22 @@ use crate::prelude::*;
 /// > the check should not panic and should skip syncing gracefully.
 #[test]
 fn agents_sync_source_missing_gracefully_handles() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
 sections.required = []
 required = [".cursorrules"]
 "#,
-    )
-    .unwrap();
-
+    );
     // Only create .cursorrules, not CLAUDE.md (the sync source)
-    std::fs::write(
-        dir.path().join(".cursorrules"),
-        "# Target\n\nSome content.\n",
-    )
-    .unwrap();
+    temp.write(".cursorrules", "# Target\n\nSome content.\n");
 
     // Should not panic - sync is skipped when source doesn't exist
     // The check passes because .cursorrules exists and no sync source means no sync
-    let result = check("agents").pwd(dir.path()).json().passes();
+    let result = check("agents").pwd(temp.path()).json().passes();
     // Just verify we get a result without panic
     assert!(result.raw_json().contains("agents"));
 }
@@ -46,24 +36,20 @@ required = [".cursorrules"]
 /// > in_sync should be true in metrics.
 #[test]
 fn agents_identical_files_reports_in_sync() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let content =
+        "# Project\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n";
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
 "#,
-    )
-    .unwrap();
+    );
+    temp.write("CLAUDE.md", content);
+    temp.write(".cursorrules", content);
 
-    let content =
-        "# Project\n\n## Directory Structure\n\nLayout.\n\n## Landing the Plane\n\n- Done\n";
-    std::fs::write(dir.path().join("CLAUDE.md"), content).unwrap();
-    std::fs::write(dir.path().join(".cursorrules"), content).unwrap();
-
-    let result = check("agents").pwd(dir.path()).json().passes();
+    let result = check("agents").pwd(temp.path()).json().passes();
     let metrics = result.require("metrics");
 
     assert_eq!(
@@ -79,27 +65,18 @@ sync_source = "CLAUDE.md"
 /// > required sections are configured.
 #[test]
 fn agents_empty_file_validates_sections() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 required = ["CLAUDE.md"]
 sections.required = ["Directory Structure"]
 "#,
-    )
-    .unwrap();
+    );
+    temp.write("CLAUDE.md", "");
 
-    // Create an empty agent file
-    std::fs::write(dir.path().join("CLAUDE.md"), "").unwrap();
-
-    let result = check("agents").pwd(dir.path()).json().fails();
-    let violations = result.require("violations").as_array().unwrap();
-
+    let result = check("agents").pwd(temp.path()).json().fails();
     assert!(
-        violations
-            .iter()
-            .any(|v| v.get("type").and_then(|t| t.as_str()) == Some("missing_section")),
+        result.has_violation("missing_section"),
         "empty file should fail section validation"
     );
 }
@@ -109,27 +86,18 @@ sections.required = ["Directory Structure"]
 /// > A file with only whitespace should be treated similarly to an empty file.
 #[test]
 fn agents_whitespace_only_file_validates_sections() {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 required = ["CLAUDE.md"]
 sections.required = ["Directory Structure"]
 "#,
-    )
-    .unwrap();
+    );
+    temp.write("CLAUDE.md", "   \n\n   \n");
 
-    // Create a whitespace-only agent file
-    std::fs::write(dir.path().join("CLAUDE.md"), "   \n\n   \n").unwrap();
-
-    let result = check("agents").pwd(dir.path()).json().fails();
-    let violations = result.require("violations").as_array().unwrap();
-
+    let result = check("agents").pwd(temp.path()).json().fails();
     assert!(
-        violations
-            .iter()
-            .any(|v| v.get("type").and_then(|t| t.as_str()) == Some("missing_section")),
+        result.has_violation("missing_section"),
         "whitespace-only file should fail section validation"
     );
 }

@@ -9,8 +9,6 @@
 //!
 //! Reference: docs/specs/01-cli.md#output-flags
 
-#![allow(clippy::unwrap_used, clippy::expect_used)]
-
 use crate::prelude::*;
 
 /// Valid source content with required sections.
@@ -30,9 +28,9 @@ const TARGET: &str = "# Target\n\n## Different\n\nContent B\n";
 /// > Using --dry-run without --fix is an error.
 #[test]
 fn dry_run_without_fix_is_error() {
-    let dir = temp_project();
+    let temp = default_project();
     cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--dry-run"])
         .exits(2) // Configuration error
         .stderr_has("--dry-run requires --fix");
@@ -47,22 +45,19 @@ fn dry_run_without_fix_is_error() {
 /// > --dry-run shows files that would be modified without modifying them.
 #[test]
 fn dry_run_shows_files_that_would_be_modified() {
-    let dir = temp_project();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
 "#,
-    )
-    .unwrap();
-    std::fs::write(dir.path().join("CLAUDE.md"), SOURCE).unwrap();
-    std::fs::write(dir.path().join(".cursorrules"), TARGET).unwrap();
+    );
+    temp.write("CLAUDE.md", SOURCE);
+    temp.write(".cursorrules", TARGET);
 
     cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--fix", "--dry-run"])
         .passes()
         .stdout_has(".cursorrules");
@@ -73,24 +68,21 @@ sync_source = "CLAUDE.md"
 /// > --dry-run shows diff of proposed changes.
 #[test]
 fn dry_run_shows_diff_of_changes() {
-    let dir = temp_project();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
 sections.required = []
 "#,
-    )
-    .unwrap();
-    std::fs::write(dir.path().join("CLAUDE.md"), SOURCE).unwrap();
-    std::fs::write(dir.path().join(".cursorrules"), TARGET).unwrap();
+    );
+    temp.write("CLAUDE.md", SOURCE);
+    temp.write(".cursorrules", TARGET);
 
     // Diff output should show both old and new content
     cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--fix", "--dry-run"])
         .passes()
         .stdout_has("Content B") // Old content (being removed)
@@ -106,22 +98,19 @@ sections.required = []
 /// > --dry-run exits 0 even when fixes are needed.
 #[test]
 fn dry_run_exits_0_when_fixes_needed() {
-    let dir = temp_project();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
 "#,
-    )
-    .unwrap();
-    std::fs::write(dir.path().join("CLAUDE.md"), SOURCE).unwrap();
-    std::fs::write(dir.path().join(".cursorrules"), TARGET).unwrap();
+    );
+    temp.write("CLAUDE.md", SOURCE);
+    temp.write(".cursorrules", TARGET);
 
     // Files are out of sync, fixes are needed, but --dry-run exits 0
-    cli().pwd(dir.path()).args(&["--fix", "--dry-run"]).passes(); // passes() expects exit code 0
+    cli().pwd(temp.path()).args(&["--fix", "--dry-run"]).passes(); // passes() expects exit code 0
 }
 
 // =============================================================================
@@ -133,25 +122,22 @@ sync_source = "CLAUDE.md"
 /// > --dry-run does not modify any files.
 #[test]
 fn dry_run_does_not_modify_files() {
-    let dir = temp_project();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
 "#,
-    )
-    .unwrap();
-    std::fs::write(dir.path().join("CLAUDE.md"), SOURCE).unwrap();
-    std::fs::write(dir.path().join(".cursorrules"), TARGET).unwrap();
+    );
+    temp.write("CLAUDE.md", SOURCE);
+    temp.write(".cursorrules", TARGET);
 
     // Run with --dry-run
-    cli().pwd(dir.path()).args(&["--fix", "--dry-run"]).passes();
+    cli().pwd(temp.path()).args(&["--fix", "--dry-run"]).passes();
 
     // Verify .cursorrules was NOT modified
-    let content = std::fs::read_to_string(dir.path().join(".cursorrules")).unwrap();
+    let content = std::fs::read_to_string(temp.path().join(".cursorrules")).unwrap();
     assert_eq!(content, TARGET, "file should not be modified");
 }
 
@@ -164,24 +150,21 @@ sync_source = "CLAUDE.md"
 /// > When files are already in sync, dry-run should show PASS with no preview.
 #[test]
 fn dry_run_no_changes_shows_clean() {
-    let dir = temp_project();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
 "#,
-    )
-    .unwrap();
+    );
     // Both files have the same content
-    std::fs::write(dir.path().join("CLAUDE.md"), SOURCE).unwrap();
-    std::fs::write(dir.path().join(".cursorrules"), SOURCE).unwrap();
+    temp.write("CLAUDE.md", SOURCE);
+    temp.write(".cursorrules", SOURCE);
 
     // Dry-run should pass with no preview needed
     cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--fix", "--dry-run"])
         .passes()
         .stdout_lacks("Would sync"); // No preview shown
@@ -192,23 +175,20 @@ sync_source = "CLAUDE.md"
 /// > JSON output in dry-run mode should include previews in fix_summary.
 #[test]
 fn dry_run_json_output_includes_previews() {
-    let dir = temp_project();
-    std::fs::write(
-        dir.path().join("quench.toml"),
-        r#"version = 1
-[check.agents]
+    let temp = TempProject::empty();
+    temp.config(
+        r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 sync_source = "CLAUDE.md"
 sections.required = []
 "#,
-    )
-    .unwrap();
-    std::fs::write(dir.path().join("CLAUDE.md"), SOURCE).unwrap();
-    std::fs::write(dir.path().join(".cursorrules"), TARGET).unwrap();
+    );
+    temp.write("CLAUDE.md", SOURCE);
+    temp.write(".cursorrules", TARGET);
 
     let result = cli()
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--fix", "--dry-run"])
         .json()
         .passes();

@@ -8,6 +8,7 @@ pub use assert_cmd::prelude::*;
 pub use predicates;
 pub use predicates::prelude::{Predicate, PredicateBooleanExt};
 use std::marker::PhantomData;
+use std::path::Path;
 use std::process::Command;
 
 /// Trait for converting into a string predicate.
@@ -244,6 +245,64 @@ impl CheckJson {
             .get(key)
             .unwrap_or_else(|| panic!("expected '{}' in check JSON", key))
     }
+
+    // =========================================================================
+    // Violation Helpers
+    // =========================================================================
+
+    /// Get all violations as a slice
+    pub fn violations(&self) -> &[serde_json::Value] {
+        self.get("violations")
+            .and_then(|v| v.as_array())
+            .map(|v| v.as_slice())
+            .unwrap_or(&[])
+    }
+
+    /// Returns true if any violation has this type
+    pub fn has_violation(&self, vtype: &str) -> bool {
+        self.violations()
+            .iter()
+            .any(|v| v.get("type").and_then(|t| t.as_str()) == Some(vtype))
+    }
+
+    /// Panics if no violation of this type exists, returns it otherwise
+    pub fn require_violation(&self, vtype: &str) -> &serde_json::Value {
+        self.violations()
+            .iter()
+            .find(|v| v.get("type").and_then(|t| t.as_str()) == Some(vtype))
+            .unwrap_or_else(|| panic!("expected violation of type '{}'", vtype))
+    }
+
+    /// Get all violations of a specific type
+    pub fn violations_of_type(&self, vtype: &str) -> Vec<&serde_json::Value> {
+        self.violations()
+            .iter()
+            .filter(|v| v.get("type").and_then(|t| t.as_str()) == Some(vtype))
+            .collect()
+    }
+
+    /// Returns true if any violation references this file (by suffix match)
+    pub fn has_violation_for_file(&self, file_suffix: &str) -> bool {
+        self.violations().iter().any(|v| {
+            v.get("file")
+                .and_then(|f| f.as_str())
+                .map(|f| f.ends_with(file_suffix))
+                .unwrap_or(false)
+        })
+    }
+
+    /// Panics if no violation references this file, returns it otherwise
+    pub fn require_violation_for_file(&self, file_suffix: &str) -> &serde_json::Value {
+        self.violations()
+            .iter()
+            .find(|v| {
+                v.get("file")
+                    .and_then(|f| f.as_str())
+                    .map(|f| f.ends_with(file_suffix))
+                    .unwrap_or(false)
+            })
+            .unwrap_or_else(|| panic!("expected violation for file ending with '{}'", file_suffix))
+    }
 }
 
 /// All checks JSON output
@@ -467,15 +526,80 @@ pub fn fixture(name: &str) -> std::path::PathBuf {
 }
 
 /// Creates a temp directory with quench.toml and minimal CLAUDE.md
-pub fn temp_project() -> tempfile::TempDir {
-    let dir = tempfile::tempdir().unwrap();
-    std::fs::write(dir.path().join("quench.toml"), "version = 1\n").unwrap();
-    std::fs::write(
-        dir.path().join("CLAUDE.md"),
-        "# Project\n\n## Directory Structure\n\nMinimal.\n\n## Landing the Plane\n\n- Done\n",
-    )
-    .unwrap();
-    dir
+pub fn default_project() -> TempProject {
+    TempProject::with_defaults()
+}
+
+// =============================================================================
+// TempProject
+// =============================================================================
+
+/// Temporary test project directory with helper methods.
+///
+/// Reduces boilerplate by:
+/// - Auto-creating parent directories
+/// - Adding `version = 1` prefix to config
+/// - Panicking on errors (we're in tests)
+///
+/// # Examples
+///
+/// ```ignore
+/// // Project with defaults
+/// let temp = default_project();
+/// temp.config("[check.cloc]\nmax_lines = 5");
+/// temp.write("src/lib.rs", "fn main() {}");
+/// check("cloc").pwd(temp.path()).fails();
+///
+/// // Empty project (for init tests)
+/// let temp = TempProject::empty();
+/// quench_cmd().args(["init"]).current_dir(temp.path());
+/// ```
+pub struct TempProject {
+    dir: tempfile::TempDir,
+}
+
+impl TempProject {
+    /// Create an empty project with no files
+    pub fn empty() -> Self {
+        Self {
+            dir: tempfile::tempdir().unwrap(),
+        }
+    }
+
+    /// Create a project with default quench.toml and CLAUDE.md
+    pub fn with_defaults() -> Self {
+        let temp = Self::empty();
+        temp.write("quench.toml", "version = 1\n");
+        temp.write(
+            "CLAUDE.md",
+            "# Project\n\n## Directory Structure\n\nMinimal.\n\n## Landing the Plane\n\n- Done\n",
+        );
+        temp
+    }
+
+    /// Get the project path
+    pub fn path(&self) -> &Path {
+        self.dir.path()
+    }
+
+    /// Write quench.toml (auto-prefixes with `version = 1` if not present)
+    pub fn config(&self, content: &str) {
+        let content = if content.contains("version") {
+            content.to_string()
+        } else {
+            format!("version = 1\n{}", content)
+        };
+        std::fs::write(self.dir.path().join("quench.toml"), content).unwrap();
+    }
+
+    /// Write a file at the given path (parent directories created automatically)
+    pub fn write(&self, path: impl AsRef<Path>, content: &str) {
+        let full_path = self.dir.path().join(path.as_ref());
+        if let Some(parent) = full_path.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        std::fs::write(full_path, content).unwrap();
+    }
 }
 
 /// Extract check names from JSON output

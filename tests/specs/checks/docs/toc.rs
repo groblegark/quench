@@ -39,15 +39,15 @@ fn broken_toc_path_generates_violation() {
 #[test]
 #[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn toc_box_drawing_format_supported() {
-    let dir = temp_project();
-    std::fs::create_dir_all(dir.path().join("docs/specs")).unwrap();
+    let temp = default_project();
+    std::fs::create_dir_all(temp.path().join("docs/specs")).unwrap();
     std::fs::write(
-        dir.path().join("docs/specs/overview.md"),
+        temp.path().join("docs/specs/overview.md"),
         "# Overview\n\n## Purpose\n\nTest.\n",
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("docs/CLAUDE.md"),
+        temp.path().join("docs/CLAUDE.md"),
         r#"# Docs
 
 ## File Structure
@@ -62,7 +62,7 @@ docs/specs/
     .unwrap();
     // config.md doesn't exist - should fail
     check("docs")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .fails()
         .stdout_has("config.md");
 }
@@ -73,15 +73,15 @@ docs/specs/
 #[test]
 #[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn toc_indentation_format_supported() {
-    let dir = temp_project();
-    std::fs::create_dir_all(dir.path().join("docs/specs")).unwrap();
+    let temp = default_project();
+    std::fs::create_dir_all(temp.path().join("docs/specs")).unwrap();
     std::fs::write(
-        dir.path().join("docs/specs/overview.md"),
+        temp.path().join("docs/specs/overview.md"),
         "# Overview\n\n## Purpose\n\nTest.\n",
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("docs/CLAUDE.md"),
+        temp.path().join("docs/CLAUDE.md"),
         r#"# Docs
 
 ## File Structure
@@ -96,7 +96,7 @@ docs/specs/
     .unwrap();
     // missing.md doesn't exist - should fail
     check("docs")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .fails()
         .stdout_has("missing.md");
 }
@@ -108,12 +108,12 @@ docs/specs/
 #[test]
 #[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn toc_path_resolution_order() {
-    let dir = temp_project();
+    let temp = default_project();
     // Create file at project root
-    std::fs::write(dir.path().join("README.md"), "# README\n").unwrap();
-    std::fs::create_dir_all(dir.path().join("docs")).unwrap();
+    std::fs::write(temp.path().join("README.md"), "# README\n").unwrap();
+    std::fs::create_dir_all(temp.path().join("docs")).unwrap();
     std::fs::write(
-        dir.path().join("docs/CLAUDE.md"),
+        temp.path().join("docs/CLAUDE.md"),
         r#"# Docs
 
 ## File Structure
@@ -125,5 +125,5 @@ README.md
     )
     .unwrap();
     // Should resolve README.md from project root
-    check("docs").pwd(dir.path()).passes();
+    check("docs").pwd(temp.path()).passes();
 }

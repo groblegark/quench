@@ -129,9 +129,9 @@ fn rust_adapter_cfg_test_blocks_counted_as_test_loc() {
 /// > Configurable: cfg_test_split = true (default)
 #[test]
 fn rust_adapter_cfg_test_split_can_be_disabled() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [rust]
@@ -140,13 +140,13 @@ cfg_test_split = false
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         r#"
 pub fn add(a: i32, b: i32) -> i32 { a + b }
 
@@ -159,7 +159,7 @@ mod tests {
     )
     .unwrap();
 
-    let cloc = check("cloc").pwd(dir.path()).json().passes();
+    let cloc = check("cloc").pwd(temp.path()).json().passes();
     let metrics = cloc.require("metrics");
 
     // With cfg_test_split = false, all lines should be counted as source
@@ -245,21 +245,21 @@ fn rust_adapter_unsafe_with_safety_comment_passes() {
 /// > mem::transmute | comment | // SAFETY:
 #[test]
 fn rust_adapter_transmute_without_safety_comment_fails() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "use std::mem; pub fn f() -> u64 { unsafe { mem::transmute(1i64) } }",
     )
     .unwrap();
 
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .fails()
         .stdout_has("// SAFETY:");
 }
@@ -273,9 +273,9 @@ fn rust_adapter_transmute_without_safety_comment_fails() {
 /// > "comment" - Requires justification comment (default for source)
 #[test]
 fn rust_adapter_allow_without_comment_fails_when_configured() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [rust.suppress]
@@ -284,19 +284,19 @@ check = "comment"
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "#[allow(dead_code)]\nfn unused() {}",
     )
     .unwrap();
 
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .fails()
         .stdout_has("#[allow");
 }
@@ -306,9 +306,9 @@ check = "comment"
 /// > "comment" - Requires justification comment
 #[test]
 fn rust_adapter_allow_with_comment_passes() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [rust.suppress]
@@ -317,19 +317,19 @@ check = "comment"
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     // dead_code default patterns include "// KEEP UNTIL:" and "// NOTE(compat):"
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "// KEEP UNTIL: v2.0 removes this API\n#[allow(dead_code)]\nfn unused() {}",
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 /// Spec: docs/specs/langs/rust.md#suppress
@@ -337,9 +337,9 @@ check = "comment"
 /// > [rust.suppress.test] check = "allow" - tests can suppress freely
 #[test]
 fn rust_adapter_allow_in_test_code_always_passes() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [rust.suppress]
@@ -350,18 +350,18 @@ check = "allow"
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("tests")).unwrap();
+    std::fs::create_dir_all(temp.path().join("tests")).unwrap();
     std::fs::write(
-        dir.path().join("tests/test.rs"),
+        temp.path().join("tests/test.rs"),
         "#[allow(unused)]\n#[test]\nfn test_something() {}",
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 /// Spec: docs/specs/langs/rust.md#suppress
@@ -369,9 +369,9 @@ check = "allow"
 /// > allow = ["dead_code"] - no comment needed for specific codes
 #[test]
 fn rust_adapter_allow_list_skips_comment_check() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [rust.suppress]
@@ -382,18 +382,18 @@ allow = ["dead_code"]
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "#[allow(dead_code)]\nfn unused() {}", // No comment, but dead_code is in allow list
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 /// Spec: docs/specs/langs/rust.md#suppress
@@ -401,9 +401,9 @@ allow = ["dead_code"]
 /// > forbid = ["unsafe_code"] - never allowed
 #[test]
 fn rust_adapter_forbid_list_always_fails() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [rust.suppress.source]
@@ -412,18 +412,18 @@ forbid = ["unsafe_code"]
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "// Even with comment, forbidden\n#[allow(unsafe_code)]\nfn allow_unsafe() {}",
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).fails();
+    check("escapes").pwd(temp.path()).fails();
 }
 
 /// Spec: docs/specs/langs/rust.md#suppress
@@ -432,9 +432,9 @@ forbid = ["unsafe_code"]
 /// > Regression test for: source.check override ignored in early return
 #[test]
 fn rust_adapter_source_check_override_applied_when_base_is_allow() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [rust.suppress]
@@ -445,19 +445,19 @@ check = "comment"
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "#[allow(dead_code)]\nfn unused() {}", // No comment - should fail with source.check = "comment"
     )
     .unwrap();
 
     // Should fail because source files require comments, even though base is "allow"
-    check("escapes").pwd(dir.path()).fails();
+    check("escapes").pwd(temp.path()).fails();
 }
 
 /// Spec: docs/specs/langs/rust.md#supported-patterns
@@ -492,9 +492,9 @@ fn rust_adapter_inner_allow_without_comment_fails_when_configured() {
 /// > They follow the same comment requirement rules as outer attributes.
 #[test]
 fn rust_adapter_inner_allow_with_comment_passes() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [rust.suppress]
@@ -503,19 +503,19 @@ check = "comment"
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     // dead_code default patterns include "// NOTE(compat):"
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "// NOTE(compat): Module-wide suppression for backwards compatibility\n#![allow(dead_code)]\n\nfn helper() {}",
     )
     .unwrap();
 
-    check("escapes").pwd(dir.path()).passes();
+    check("escapes").pwd(temp.path()).passes();
 }
 
 /// Spec: docs/specs/langs/rust.md#supported-patterns
@@ -523,9 +523,9 @@ check = "comment"
 /// > Inner expect attributes are also supported
 #[test]
 fn rust_adapter_inner_expect_without_comment_fails() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [rust.suppress]
@@ -534,20 +534,20 @@ check = "comment"
     )
     .unwrap();
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "#![expect(unused)]\n\nfn f() {}",
     )
     .unwrap();
 
     // Violation output normalizes to #[expect(...)] format
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .fails()
         .stdout_has("#[expect(unused)");
 }
@@ -574,11 +574,11 @@ fn rust_adapter_allow_in_macro_rules_detected() {
 /// > lint_changes = "standalone" - lint config changes must be standalone PRs
 #[test]
 fn rust_adapter_lint_config_changes_with_source_fails_standalone_policy() {
-    let dir = temp_project();
+    let temp = default_project();
 
     // Setup quench.toml with standalone policy
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [rust.policy]
@@ -590,7 +590,7 @@ lint_config = ["rustfmt.toml"]
 
     // Setup Cargo.toml
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
     )
     .unwrap();
@@ -598,55 +598,55 @@ lint_config = ["rustfmt.toml"]
     // Initialize git repo
     std::process::Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Create initial commit with source
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
-    std::fs::write(dir.path().join("src/lib.rs"), "pub fn f() {}").unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
+    std::fs::write(temp.path().join("src/lib.rs"), "pub fn f() {}").unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["commit", "-m", "initial"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Add both lint config and source changes
-    std::fs::write(dir.path().join("rustfmt.toml"), "max_width = 100\n").unwrap();
+    std::fs::write(temp.path().join("rustfmt.toml"), "max_width = 100\n").unwrap();
     std::fs::write(
-        dir.path().join("src/lib.rs"),
+        temp.path().join("src/lib.rs"),
         "pub fn f() {}\npub fn g() {}",
     )
     .unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Check with --base HEAD should detect mixed changes
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--base", "HEAD"])
         .fails()
         .stdout_has("lint config")
@@ -658,11 +658,11 @@ lint_config = ["rustfmt.toml"]
 /// > lint_config = ["rustfmt.toml", ...] files that trigger standalone requirement
 #[test]
 fn rust_adapter_lint_config_standalone_passes() {
-    let dir = temp_project();
+    let temp = default_project();
 
     // Setup quench.toml with standalone policy
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [rust.policy]
@@ -674,7 +674,7 @@ lint_config = ["rustfmt.toml"]
 
     // Setup Cargo.toml
     std::fs::write(
-        dir.path().join("Cargo.toml"),
+        temp.path().join("Cargo.toml"),
         "[package]\nname = \"test\"\nversion = \"0.1.0\"\n",
     )
     .unwrap();
@@ -682,50 +682,50 @@ lint_config = ["rustfmt.toml"]
     // Initialize git repo
     std::process::Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Create initial commit
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
-    std::fs::write(dir.path().join("src/lib.rs"), "pub fn f() {}").unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
+    std::fs::write(temp.path().join("src/lib.rs"), "pub fn f() {}").unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     std::process::Command::new("git")
         .args(["commit", "-m", "initial"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Add ONLY lint config change (no source changes)
-    std::fs::write(dir.path().join("rustfmt.toml"), "max_width = 100\n").unwrap();
+    std::fs::write(temp.path().join("rustfmt.toml"), "max_width = 100\n").unwrap();
 
     std::process::Command::new("git")
         .args(["add", "-A"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Should pass - only lint config changed
     check("escapes")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--base", "HEAD"])
         .passes();
 }

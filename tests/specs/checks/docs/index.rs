@@ -44,9 +44,9 @@ fn unreachable_spec_file_generates_violation_linked_mode() {
 #[test]
 #[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn exists_mode_only_checks_index_exists() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [check.docs]
@@ -55,14 +55,14 @@ index = "exists"
 "#,
     )
     .unwrap();
-    std::fs::create_dir_all(dir.path().join("docs/specs")).unwrap();
-    std::fs::write(dir.path().join("docs/specs/CLAUDE.md"), "# Specs Index\n").unwrap();
+    std::fs::create_dir_all(temp.path().join("docs/specs")).unwrap();
+    std::fs::write(temp.path().join("docs/specs/CLAUDE.md"), "# Specs Index\n").unwrap();
     std::fs::write(
-        dir.path().join("docs/specs/orphan.md"),
+        temp.path().join("docs/specs/orphan.md"),
         "# Orphan (not linked)\n",
     )
     .unwrap();
 
     // In exists mode, orphan.md is not flagged as unreachable
-    check("docs").pwd(dir.path()).passes();
+    check("docs").pwd(temp.path()).passes();
 }

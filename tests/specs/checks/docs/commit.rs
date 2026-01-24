@@ -18,9 +18,9 @@ use std::process::Command;
 #[test]
 #[ignore = "TODO: Phase 603 - Docs Check CI Mode"]
 fn feature_commit_without_doc_change_generates_violation_ci_mode() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [check.docs.commit]
@@ -32,55 +32,55 @@ check = "error"
     // Initialize git repo
     Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Create initial commit on main
     Command::new("git")
         .args(["add", "."])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["commit", "-m", "chore: initial commit"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Create feature branch
     Command::new("git")
         .args(["checkout", "-b", "feature/new-thing"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Add feature commit without docs
-    std::fs::create_dir_all(dir.path().join("src")).unwrap();
-    std::fs::write(dir.path().join("src/feature.rs"), "pub fn new_feature() {}").unwrap();
+    std::fs::create_dir_all(temp.path().join("src")).unwrap();
+    std::fs::write(temp.path().join("src/feature.rs"), "pub fn new_feature() {}").unwrap();
     Command::new("git")
         .args(["add", "."])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["commit", "-m", "feat: add new feature"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     check("docs")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--ci"])
         .fails()
         .stdout_has("feature commits without documentation");
@@ -92,9 +92,9 @@ check = "error"
 #[test]
 #[ignore = "TODO: Phase 603 - Docs Check CI Mode"]
 fn area_mapping_restricts_doc_requirement_to_specific_paths() {
-    let dir = temp_project();
+    let temp = default_project();
     std::fs::write(
-        dir.path().join("quench.toml"),
+        temp.path().join("quench.toml"),
         r#"
 version = 1
 [check.docs.commit]
@@ -110,58 +110,58 @@ source = "src/api/**"
     // Initialize git repo with main branch
     Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Initial commit
     Command::new("git")
         .args(["add", "."])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["commit", "-m", "chore: initial"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // Feature branch with api scope
     Command::new("git")
         .args(["checkout", "-b", "feature/api-endpoint"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
-    std::fs::create_dir_all(dir.path().join("src/api")).unwrap();
+    std::fs::create_dir_all(temp.path().join("src/api")).unwrap();
     std::fs::write(
-        dir.path().join("src/api/endpoint.rs"),
+        temp.path().join("src/api/endpoint.rs"),
         "pub fn endpoint() {}",
     )
     .unwrap();
     Command::new("git")
         .args(["add", "."])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["commit", "-m", "feat(api): add endpoint"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     check("docs")
-        .pwd(dir.path())
+        .pwd(temp.path())
         .args(&["--ci"])
         .fails()
         .stdout_has("feat(api)")
@@ -174,52 +174,52 @@ source = "src/api/**"
 #[test]
 #[ignore = "TODO: Phase 603 - Docs Check CI Mode"]
 fn commit_checking_disabled_by_default() {
-    let dir = temp_project();
+    let temp = default_project();
     // No [check.docs.commit] section - should be disabled
 
     // Initialize git repo
     Command::new("git")
         .args(["init"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["config", "user.email", "test@test.com"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["config", "user.name", "Test"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["add", "."])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["commit", "-m", "chore: initial"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["checkout", "-b", "feature/thing"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
-    std::fs::write(dir.path().join("new.rs"), "fn new() {}").unwrap();
+    std::fs::write(temp.path().join("new.rs"), "fn new() {}").unwrap();
     Command::new("git")
         .args(["add", "."])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
     Command::new("git")
         .args(["commit", "-m", "feat: new thing"])
-        .current_dir(dir.path())
+        .current_dir(temp.path())
         .output()
         .unwrap();
 
     // With commit checking disabled, should pass even without docs
-    check("docs").pwd(dir.path()).args(&["--ci"]).passes();
+    check("docs").pwd(temp.path()).args(&["--ci"]).passes();
 }
