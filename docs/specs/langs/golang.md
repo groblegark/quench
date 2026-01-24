@@ -8,7 +8,7 @@ Detected when `go.mod` exists in project root.
 
 ## Profile Defaults
 
-When using [`quench init --profile golang`](../01-cli.md#profile-selection-recommended) (or `--profile go`), the following opinionated defaults are configured:
+When using [`quench init --with golang`](../01-cli.md#explicit-profiles) (or `--with go`), the following opinionated defaults are configured:
 
 ```toml
 [golang]
@@ -305,6 +305,10 @@ Coverage is aggregated across all packages and test runs.
 # Build metrics (CI mode) - see [check.build] for thresholds
 binary_size = true
 build_time = true
+
+[golang.cloc]
+check = "error"                  # error | warn | off
+# advice = "..."                 # Custom advice for oversized Go files
 
 [golang.suppress]
 check = "comment"

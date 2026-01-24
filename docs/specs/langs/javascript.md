@@ -11,7 +11,7 @@ Detected when any of these exist in project root:
 
 ## Profile Defaults
 
-When using [`quench init --profile javascript`](../01-cli.md#profile-selection-recommended) (or `--profile js` / `--profile typescript` / `--profile ts`), the following opinionated defaults are configured:
+When using [`quench init --with javascript`](../01-cli.md#explicit-profiles) (or `--with js` / `--with typescript` / `--with ts`), the following opinionated defaults are configured:
 
 ```toml
 [javascript]
@@ -338,6 +338,10 @@ These satisfy test correlation requirements, indicating planned test implementat
 # Build metrics (CI mode) - see [check.build] for thresholds
 bundle_size = true
 build_time = true
+
+[javascript.cloc]
+check = "error"                  # error | warn | off
+# advice = "..."                 # Custom advice for oversized JS/TS files
 
 [javascript.suppress]
 check = "comment"

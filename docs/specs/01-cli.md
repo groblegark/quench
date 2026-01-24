@@ -176,19 +176,19 @@ quench init                   # Auto-detect and create quench.toml
 quench init --force           # Overwrite existing
 ```
 
-### Profile Selection (Recommended)
+### Explicit Profiles
 
-Use `--profile` to initialize with opinionated defaults for specific languages and agents:
+Use `--with` to initialize with opinionated defaults for specific languages and agents:
 
 ```bash
-quench init --profile rust              # Rust project defaults
-quench init --profile golang            # Go project defaults
-quench init --profile shell             # Shell project defaults
-quench init --profile rust,shell        # Multi-language project
-quench init --profile golang,rust       # Multi-language project
-quench init --profile claude            # Claude Code agent defaults
-quench init --profile cursor            # Cursor IDE agent defaults
-quench init --profile golang,claude     # Combined language + agent
+quench init --with rust              # Rust project defaults
+quench init --with golang            # Go project defaults
+quench init --with shell             # Shell project defaults
+quench init --with rust,shell        # Multi-language project
+quench init --with golang,rust       # Multi-language project
+quench init --with claude            # Claude Code agent defaults
+quench init --with cursor            # Cursor IDE agent defaults
+quench init --with golang,claude     # Combined language + agent
 ```
 
 | Profile | Description |
@@ -199,7 +199,7 @@ quench init --profile golang,claude     # Combined language + agent
 | `claude` | CLAUDE.md with required sections, sync setup |
 | `cursor` | .cursorrules with required sections, sync setup |
 
-**Auto-detection**: When no `--profile` is specified, quench detects:
+**Auto-detection**: When no `--with` is specified, quench detects:
 - Languages from project root (Cargo.toml → rust, go.mod → golang, *.sh → shell)
 - Agent files from existing files (CLAUDE.md, .cursorrules)
 

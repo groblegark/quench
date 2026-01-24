@@ -5,7 +5,7 @@ Language adapters provide language-specific behavior for checks.
 ## Overview
 
 Adapters enhance generic checks with language-specific knowledge:
-- **LOC**: Separate inline test code (e.g., `#[cfg(test)]` in Rust)
+- **CLOC**: Separate inline test code (e.g., `#[cfg(test)]` in Rust), language-specific advice
 - **Escapes**: Language-specific default patterns
 - **Test detection**: Language conventions for test files
 
@@ -40,6 +40,9 @@ cfg_test_split = "count"         # count | require | off (default: "count")
 binary_size = true
 build_time = true
 
+[rust.cloc]
+check = "error"                  # error | warn | off
+
 [rust.suppress]
 check = "comment"                # forbid | comment | allow
 
@@ -63,10 +66,14 @@ See [langs/golang.md](langs/golang.md) for full Go configuration.
 binary_size = true
 build_time = true
 
+[golang.cloc]
+check = "error"                  # error | warn | off
+
 [golang.suppress]
 check = "comment"                # forbid | comment | allow
 
 [golang.policy]
+check = "error"                  # error | warn | off
 lint_changes = "standalone"
 ```
 
@@ -86,10 +93,14 @@ See [langs/javascript.md](langs/javascript.md) for full JavaScript/TypeScript co
 bundle_size = true
 build_time = true
 
+[javascript.cloc]
+check = "error"                  # error | warn | off
+
 [javascript.suppress]
-check = "comment"              # forbid | comment | allow
+check = "comment"                # forbid | comment | allow
 
 [javascript.policy]
+check = "error"                  # error | warn | off
 lint_changes = "standalone"
 ```
 
@@ -108,10 +119,14 @@ See [langs/shell.md](langs/shell.md) for full Shell configuration.
 # source = ["**/*.sh", "**/*.bash"]
 # tests = ["tests/**/*.bats", "test/**/*.bats", "**/*_test.sh"]
 
+[shell.cloc]
+check = "error"                  # error | warn | off
+
 [shell.suppress]
-check = "forbid"               # forbid | comment | allow
+check = "forbid"                 # forbid | comment | allow
 
 [shell.policy]
+check = "error"                  # error | warn | off
 lint_changes = "standalone"
 ```
 

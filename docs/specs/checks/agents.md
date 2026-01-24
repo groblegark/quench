@@ -60,7 +60,7 @@ files = ["CLAUDE.md", ".cursorrules"]
 
 ## Profile Defaults
 
-When using [`quench init --profile claude`](../01-cli.md#profile-selection-recommended) or `--profile cursor`, opinionated defaults are configured for agent file validation.
+When using [`quench init --with claude`](../01-cli.md#explicit-profiles) or `--with cursor`, opinionated defaults are configured for agent file validation.
 
 ### Claude Profile
 

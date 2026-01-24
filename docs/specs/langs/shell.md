@@ -8,7 +8,7 @@ Detected when `*.sh` files exist in project root, `bin/`, or `scripts/`.
 
 ## Profile Defaults
 
-When using [`quench init --profile shell`](../01-cli.md#profile-selection-recommended),
+When using [`quench init --with shell`](../01-cli.md#explicit-profiles),
 the following opinionated defaults are configured:
 
 ```toml
@@ -158,6 +158,10 @@ Coverage targets resolve against `[shell].source` patterns.
 # Source/test patterns (defaults shown)
 # source = ["**/*.sh", "**/*.bash"]
 # tests = ["tests/**/*.bats", "test/**/*.bats", "**/*_test.sh"]
+
+[shell.cloc]
+check = "error"                  # error | warn | off
+# advice = "..."                 # Custom advice for oversized shell scripts
 
 [shell.suppress]
 check = "forbid"

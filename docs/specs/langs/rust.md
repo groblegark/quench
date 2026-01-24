@@ -8,7 +8,7 @@ Detected when `Cargo.toml` exists in project root.
 
 ## Profile Defaults
 
-When using [`quench init --profile rust`](../01-cli.md#profile-selection-recommended), the following opinionated defaults are configured:
+When using [`quench init --with rust`](../01-cli.md#explicit-profiles), the following opinionated defaults are configured:
 
 ```toml
 [rust]
@@ -441,15 +441,16 @@ Multiple test suites contribute to coverage via LLVM profile merging.
 cfg_test_split = "count"         # count | require | off (default: "count")
                                  # Boolean still works: true="count", false="off"
 
-# Custom cloc advice for Rust source files (overrides generic default)
-# cloc_advice = "Custom advice for oversized Rust files..."
-
 # Build targets (default: all [[bin]] entries)
 # targets = ["myapp", "myserver"]
 
 # Build metrics (CI mode) - see [check.build] for thresholds
 binary_size = true
 build_time = true
+
+[rust.cloc]
+check = "error"                  # error | warn | off
+# advice = "..."                 # Custom advice for oversized Rust files
 
 [rust.suppress]
 check = "comment"

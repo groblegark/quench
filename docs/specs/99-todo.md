@@ -337,7 +337,7 @@ When a root config defines workspace members, `quench check` runs each member wi
 
 ## Language Server Protocol (LSP)
 
-Expose Quench checks as an LSP server for IDE integration.
+Expose Quench checks as an LSP server for IDE integration (e.g. vscode, cursor).
 
 ### Use Cases
 
@@ -361,18 +361,6 @@ Expose Quench checks as an LSP server for IDE integration.
 - Cache analysis results per file
 - Lazy-load checks (only run requested checks)
 - Use same parallelization as CLI
-
-### Configuration
-
-LSP server inherits from project's `quench.toml`:
-
-```toml
-[lsp]
-enabled = true                  # default: false for now (future feature)
-debounce_ms = 500              # delay before analyzing after keystroke
-max_violations = 50            # show up to N violations per file
-auto_fix_on_save = false       # optional: auto-apply fixes on save
-```
 
 ### Diagnostics Format
 
