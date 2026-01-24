@@ -80,13 +80,7 @@ The `looks_like_tree()` check requires at least 2 tree-like lines, which is met 
    }
    ```
 
-3. **Context-aware detection**: Check if block starts with known output patterns:
-   ```rust
-   // If first line looks like "command: FAIL" or contains ":", skip block
-   if block.lines.first().map_or(false, |l| l.contains(": FAIL") || ...) {
-       return false;
-   }
-   ```
+3. **Ensure failure provides advice for non-TOC**: "How should I mark this correctly"
 
 ### Files Involved
 
