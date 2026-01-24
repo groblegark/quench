@@ -10,9 +10,9 @@
 //! - Basic metrics output
 
 pub mod config;
-mod content;
+pub mod content;
 mod detection;
-mod sections;
+pub mod sections;
 mod sync;
 
 use serde_json::json;

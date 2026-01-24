@@ -11,6 +11,7 @@
 //! Reference: docs/specs/checks/docs.md
 
 mod commit;
+mod content;
 mod index;
 mod links;
 mod output;

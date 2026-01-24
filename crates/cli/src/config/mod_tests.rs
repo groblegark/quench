@@ -689,3 +689,185 @@ patterns = ["*.snapshot"]
     let config = parse(content, &path).unwrap();
     assert_eq!(config.project.ignore.patterns, vec!["*.snapshot"]);
 }
+
+// Specs content validation config tests
+
+#[test]
+fn specs_default_content_rules() {
+    let path = PathBuf::from("quench.toml");
+    let content = "version = 1\n";
+    let config = parse(content, &path).unwrap();
+
+    // Specs defaults: tables, box_diagrams, mermaid all allowed
+    assert_eq!(config.check.docs.specs.tables, ContentRule::Allow);
+    assert_eq!(config.check.docs.specs.box_diagrams, ContentRule::Allow);
+    assert_eq!(config.check.docs.specs.mermaid, ContentRule::Allow);
+}
+
+#[test]
+fn specs_default_size_limits() {
+    let path = PathBuf::from("quench.toml");
+    let content = "version = 1\n";
+    let config = parse(content, &path).unwrap();
+
+    // Specs defaults: 1000 max lines, 20000 max tokens
+    assert_eq!(config.check.docs.specs.max_lines, Some(1000));
+    assert_eq!(config.check.docs.specs.max_tokens, Some(20000));
+}
+
+#[test]
+fn specs_tables_forbid() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[check.docs.specs]
+tables = "forbid"
+"#;
+    let config = parse(content, &path).unwrap();
+    assert_eq!(config.check.docs.specs.tables, ContentRule::Forbid);
+}
+
+#[test]
+fn specs_box_diagrams_forbid() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[check.docs.specs]
+box_diagrams = "forbid"
+"#;
+    let config = parse(content, &path).unwrap();
+    assert_eq!(config.check.docs.specs.box_diagrams, ContentRule::Forbid);
+}
+
+#[test]
+fn specs_mermaid_forbid() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[check.docs.specs]
+mermaid = "forbid"
+"#;
+    let config = parse(content, &path).unwrap();
+    assert_eq!(config.check.docs.specs.mermaid, ContentRule::Forbid);
+}
+
+#[test]
+fn specs_custom_max_lines() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[check.docs.specs]
+max_lines = 500
+"#;
+    let config = parse(content, &path).unwrap();
+    assert_eq!(config.check.docs.specs.max_lines, Some(500));
+}
+
+#[test]
+fn specs_max_lines_disabled() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[check.docs.specs]
+max_lines = false
+"#;
+    let config = parse(content, &path).unwrap();
+    assert_eq!(config.check.docs.specs.max_lines, None);
+}
+
+#[test]
+fn specs_max_tokens_disabled() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[check.docs.specs]
+max_tokens = false
+"#;
+    let config = parse(content, &path).unwrap();
+    assert_eq!(config.check.docs.specs.max_tokens, None);
+}
+
+#[test]
+fn specs_sections_required_simple() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[check.docs.specs]
+sections.required = ["Purpose", "Overview"]
+"#;
+    let config = parse(content, &path).unwrap();
+    assert_eq!(config.check.docs.specs.sections.required.len(), 2);
+    assert_eq!(config.check.docs.specs.sections.required[0].name, "Purpose");
+    assert_eq!(
+        config.check.docs.specs.sections.required[1].name,
+        "Overview"
+    );
+}
+
+#[test]
+fn specs_sections_required_extended() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[[check.docs.specs.sections.required]]
+name = "Purpose"
+advice = "Explain why this spec exists"
+"#;
+    let config = parse(content, &path).unwrap();
+    assert_eq!(config.check.docs.specs.sections.required.len(), 1);
+    assert_eq!(config.check.docs.specs.sections.required[0].name, "Purpose");
+    assert_eq!(
+        config.check.docs.specs.sections.required[0].advice,
+        Some("Explain why this spec exists".to_string())
+    );
+}
+
+#[test]
+fn specs_sections_forbid() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[check.docs.specs]
+sections.forbid = ["TODO", "Draft*"]
+"#;
+    let config = parse(content, &path).unwrap();
+    assert_eq!(config.check.docs.specs.sections.forbid.len(), 2);
+    assert!(
+        config
+            .check
+            .docs
+            .specs
+            .sections
+            .forbid
+            .contains(&"TODO".to_string())
+    );
+    assert!(
+        config
+            .check
+            .docs
+            .specs
+            .sections
+            .forbid
+            .contains(&"Draft*".to_string())
+    );
+}
+
+#[test]
+fn specs_default_sections_empty() {
+    let path = PathBuf::from("quench.toml");
+    let content = "version = 1\n";
+    let config = parse(content, &path).unwrap();
+
+    // Specs defaults: no required sections (unlike agents)
+    assert!(config.check.docs.specs.sections.required.is_empty());
+    assert!(config.check.docs.specs.sections.forbid.is_empty());
+}

@@ -6,6 +6,8 @@
 use serde::Deserialize;
 use serde::de::{self, Deserializer};
 
+use crate::config::{ContentRule, RequiredSection, deserialize_optional_usize};
+
 /// Documentation check configuration.
 #[derive(Debug, Default, Clone, Deserialize)]
 #[serde(default, deny_unknown_fields)]
@@ -133,6 +135,36 @@ pub struct SpecsConfig {
 
     /// Override index file path (auto-detect if not specified).
     pub index_file: Option<String>,
+
+    /// Section validation configuration.
+    #[serde(default)]
+    pub sections: SpecsSectionsConfig,
+
+    /// Markdown table enforcement (default: allow).
+    #[serde(default = "ContentRule::allow")]
+    pub tables: ContentRule,
+
+    /// Box diagram enforcement (default: allow).
+    #[serde(default = "ContentRule::allow")]
+    pub box_diagrams: ContentRule,
+
+    /// Mermaid block enforcement (default: allow).
+    #[serde(default = "ContentRule::allow")]
+    pub mermaid: ContentRule,
+
+    /// Maximum lines per spec file (default: 1000, None to disable).
+    #[serde(
+        default = "SpecsConfig::default_max_lines",
+        deserialize_with = "deserialize_optional_usize"
+    )]
+    pub max_lines: Option<usize>,
+
+    /// Maximum tokens per spec file (default: 20000, None to disable).
+    #[serde(
+        default = "SpecsConfig::default_max_tokens",
+        deserialize_with = "deserialize_optional_usize"
+    )]
+    pub max_tokens: Option<usize>,
 }
 
 impl Default for SpecsConfig {
@@ -143,6 +175,12 @@ impl Default for SpecsConfig {
             extension: Self::default_extension(),
             index: Self::default_index(),
             index_file: None,
+            sections: SpecsSectionsConfig::default(),
+            tables: ContentRule::allow(),
+            box_diagrams: ContentRule::allow(),
+            mermaid: ContentRule::allow(),
+            max_lines: Self::default_max_lines(),
+            max_tokens: Self::default_max_tokens(),
         }
     }
 }
@@ -159,6 +197,29 @@ impl SpecsConfig {
     pub(super) fn default_index() -> String {
         "exists".to_string()
     }
+
+    /// Default max lines per spec file (1000).
+    pub(super) fn default_max_lines() -> Option<usize> {
+        Some(1000)
+    }
+
+    /// Default max tokens per spec file (20000).
+    pub(super) fn default_max_tokens() -> Option<usize> {
+        Some(20000)
+    }
+}
+
+/// Section validation for specs (separate from agents to allow different defaults).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SpecsSectionsConfig {
+    /// Required sections (simple form: names only, or extended form with advice).
+    #[serde(default)]
+    pub required: Vec<RequiredSection>,
+
+    /// Forbidden sections (supports globs like "Draft*").
+    #[serde(default)]
+    pub forbid: Vec<String>,
 }
 
 /// Escapes check configuration.

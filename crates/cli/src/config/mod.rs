@@ -17,7 +17,7 @@ use serde::Deserialize;
 
 pub use checks::{
     CheckLevel, ClocConfig, DocsConfig, EscapeAction, EscapePattern, EscapesConfig, LineMetric,
-    LinksConfig, TocConfig,
+    LinksConfig, SpecsConfig, SpecsSectionsConfig, TocConfig,
 };
 pub use go::{GoConfig, GoPolicyConfig, GoSuppressConfig};
 pub use javascript::{JavaScriptConfig, JavaScriptPolicyConfig};
@@ -26,7 +26,10 @@ pub use suppress::{SuppressConfig, SuppressLevel, SuppressScopeConfig};
 
 use crate::error::{Error, Result};
 
-pub use crate::checks::agents::config::{AgentsConfig, AgentsScopeConfig};
+pub use crate::checks::agents::config::{
+    AgentsConfig, AgentsScopeConfig, ContentRule, RequiredSection, SectionsConfig,
+    deserialize_optional_usize,
+};
 
 /// Minimum config structure for version checking.
 #[derive(Deserialize)]

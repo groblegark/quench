@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use super::{links, toc};
+use super::{content, links, toc};
 use crate::check::{CheckContext, Violation};
 
 /// Index file detection candidates in priority order.
@@ -372,6 +372,46 @@ pub fn validate_specs(ctx: &CheckContext, violations: &mut Vec<Violation>) {
         }
         _ => {
             // Unknown mode - treat as exists (no additional validation)
+        }
+    }
+
+    // Content validation for all spec files
+    let all_specs = collect_spec_files(ctx.root, specs_path, &config.extension);
+    if !all_specs.is_empty() {
+        validate_specs_content(ctx, &all_specs, violations);
+    }
+}
+
+/// Validate content of all spec files.
+fn validate_specs_content(
+    ctx: &CheckContext,
+    specs: &HashSet<PathBuf>,
+    violations: &mut Vec<Violation>,
+) {
+    let config = &ctx.config.check.docs.specs;
+    let canonical_root = match ctx.root.canonicalize() {
+        Ok(r) => r,
+        Err(_) => return,
+    };
+
+    for spec_path in specs {
+        if ctx.limit.is_some_and(|l| violations.len() >= l) {
+            break;
+        }
+
+        let file_content = match fs::read_to_string(spec_path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+
+        let rel_path = spec_path.strip_prefix(&canonical_root).unwrap_or(spec_path);
+        let file_violations = content::validate_spec_content(rel_path, &file_content, config);
+
+        for v in file_violations {
+            if ctx.limit.is_some_and(|l| violations.len() >= l) {
+                break;
+            }
+            violations.push(v);
         }
     }
 }

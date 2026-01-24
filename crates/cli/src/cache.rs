@@ -23,7 +23,8 @@ use crate::check::Violation;
 /// v8: Fixed cfg(test) detection false positives on comments.
 /// v11: TOC validator skips box diagrams (blocks with top corner characters).
 /// v12: StripParentDirName resolves relative to parent dir, not root.
-pub const CACHE_VERSION: u32 = 12;
+/// v13: Added content validation for spec files (sections, tables, size limits).
+pub const CACHE_VERSION: u32 = 13;
 
 /// Cache file name within .quench directory.
 pub const CACHE_FILE_NAME: &str = "cache.bin";

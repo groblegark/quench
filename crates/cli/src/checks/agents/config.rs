@@ -9,7 +9,7 @@ use serde::de::{self, Deserializer};
 use crate::config::CheckLevel;
 
 /// Custom deserializer for optional usize that accepts false to mean None.
-fn deserialize_optional_usize<'de, D>(deserializer: D) -> Result<Option<usize>, D::Error>
+pub fn deserialize_optional_usize<'de, D>(deserializer: D) -> Result<Option<usize>, D::Error>
 where
     D: Deserializer<'de>,
 {

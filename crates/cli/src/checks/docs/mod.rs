@@ -8,6 +8,7 @@
 //! - Markdown links point to existing files
 //! - (Future) Specs have required sections
 
+mod content;
 mod links;
 mod specs;
 mod toc;
