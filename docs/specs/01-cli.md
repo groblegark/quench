@@ -182,26 +182,30 @@ Use `--profile` to initialize with opinionated defaults for specific languages a
 
 ```bash
 quench init --profile rust              # Rust project defaults
+quench init --profile golang            # Go project defaults
 quench init --profile shell             # Shell project defaults
 quench init --profile rust,shell        # Multi-language project
+quench init --profile golang,rust       # Multi-language project
 quench init --profile claude            # Claude Code agent defaults
 quench init --profile cursor            # Cursor IDE agent defaults
-quench init --profile rust,claude       # Combined language + agent
+quench init --profile golang,claude     # Combined language + agent
 ```
 
 | Profile | Description |
 |---------|-------------|
 | `rust` | Cargo workspace, clippy escapes, unsafe/unwrap detection |
 | `shell` | Shellcheck integration, set +e/eval escapes |
+| `golang` | Go modules, nolint escapes, unsafe.Pointer detection |
 | `claude` | CLAUDE.md with required sections, sync setup |
 | `cursor` | .cursorrules with required sections, sync setup |
 
 **Auto-detection**: When no `--profile` is specified, quench detects:
-- Languages from project root (Cargo.toml → rust, *.sh → shell)
+- Languages from project root (Cargo.toml → rust, go.mod → golang, *.sh → shell)
 - Agent files from existing files (CLAUDE.md, .cursorrules)
 
 See language-specific defaults:
 - [Rust defaults](langs/rust.md#profile-defaults)
+- [Go defaults](langs/golang.md#profile-defaults)
 - [Shell defaults](langs/shell.md#profile-defaults)
 - [Agent file defaults](checks/agents.md#profile-defaults)
 
