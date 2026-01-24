@@ -33,6 +33,12 @@ pattern = "as unknown"
 action = "comment"
 comment = "// CAST:"
 advice = "Add a // CAST: comment explaining why the type assertion is necessary."
+
+[[check.escapes.patterns]]
+pattern = "@ts-ignore"
+action = "forbid"
+in_tests = "allow"
+advice = "Use @ts-expect-error instead, which fails if the error is resolved."
 ```
 
 **Landing the Plane items** (added to agent files when combined with `claude` or `cursor` profile):
@@ -83,7 +89,7 @@ test('adds two numbers', () => {
 
 ### Escapes in Test Code
 
-Escape patterns (`as unknown`, etc.) are allowed in test code:
+Escape patterns (`as unknown`, `@ts-ignore`) are allowed in test code:
 
 - **Test files**: Any file matching test patterns
 
@@ -92,12 +98,12 @@ Escape patterns (`as unknown`, etc.) are allowed in test code:
 | Pattern | Action | Comment Required |
 |---------|--------|------------------|
 | `as unknown` | comment | `// CAST:` |
+| `@ts-ignore` | forbid | - |
 
-Quench does not forbid usage directly, and assumes you are already running ESLint/Biome and TypeScript.
-TypeScript directives like `@ts-ignore` and `@ts-expect-error` are left to your linter configuration
-(e.g., `@typescript-eslint/ban-ts-comment` or Biome's equivalent).
+Quench assumes you are already running ESLint/Biome and TypeScript for general linting.
 
 - **`as unknown`**: Type escape that bypasses the type checker; document why casting is safe
+- **`@ts-ignore`**: Silences errors without validation; use `@ts-expect-error` instead (which is self-documenting)
 
 ## Suppress
 

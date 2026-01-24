@@ -77,7 +77,7 @@ See [langs/javascript.md](langs/javascript.md) for full JavaScript/TypeScript co
 ### Summary
 
 - **Test detection**: `*.test.ts`, `*.spec.ts`, `__tests__/` directories
-- **Escape patterns**: `as unknown`
+- **Escape patterns**: `as unknown`, `@ts-ignore` (forbid)
 - **Lint suppression**: `eslint-disable`, `biome-ignore`
 - **Build metrics**: Bundle size, build time
 
