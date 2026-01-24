@@ -1,6 +1,6 @@
 # Phase 470: Go Adapter - Policy
 
-**Root Feature:** Go language adapter policy enforcement
+**Root Feature:** `quench-70fe`
 
 ## Overview
 
