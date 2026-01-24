@@ -16,6 +16,7 @@ pub mod output;
 pub mod pattern;
 pub mod ratchet;
 pub mod runner;
+pub mod tolerance;
 pub mod walker;
 
 pub use baseline::{Baseline, BaselineError, BaselineMetrics};
