@@ -694,8 +694,10 @@ fn validate_file_toc(
             let strategies_note = format!("Tried: {}", strategies_tried.join(", "));
 
             let advice = format!(
-                "File does not exist. Update the tree to match actual files, or add a \
-                 language tag like ```text to skip validation. {}",
+                "File does not exist.\n\
+                 Update the table of contents to match actual files.\n\
+                 If this is not a TOC, add a language tag like ```text.\n\n\
+                 {}",
                 strategies_note
             );
 

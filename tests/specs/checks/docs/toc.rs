@@ -22,7 +22,7 @@ fn toc_tree_entries_validated_against_filesystem() {
 
 /// Spec: docs/specs/checks/docs.md#output
 ///
-/// > CLAUDE.md:72: toc path not found: checks/coverage.md
+/// > broken_toc: File does not exist.
 #[test]
 #[ignore = "TODO: Phase 602 - Docs Check Implementation"]
 fn broken_toc_path_generates_violation() {
@@ -30,7 +30,37 @@ fn broken_toc_path_generates_violation() {
         .on("docs/toc-broken")
         .fails()
         .stdout_has("docs: FAIL")
-        .stdout_has("toc path not found");
+        .stdout_has("broken_toc");
+}
+
+/// Spec: docs/specs/checks/docs.md#output
+///
+/// > Advice message is multiline for readability.
+#[test]
+fn broken_toc_advice_is_multiline() {
+    let temp = default_project();
+    temp.file(
+        "CLAUDE.md",
+        r#"# Project
+
+```
+src/
+├── missing.rs
+```
+"#,
+    );
+    check("docs").pwd(temp.path()).fails().stdout_eq(
+        "docs: FAIL
+  CLAUDE.md:5: broken_toc: src/missing.rs
+    File does not exist.
+    Update the table of contents to match actual files.
+    If this is not a TOC, add a language tag like ```text.
+
+    Tried: relative to markdown file, relative to project root, stripping parent directory prefix
+
+FAIL: docs
+",
+    );
 }
 
 /// Spec: docs/specs/checks/docs.md#what-gets-validated
