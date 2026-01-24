@@ -109,7 +109,7 @@ fn validate_file_toc_cached(
                     "File does not exist ({valid} of {total} paths valid, {failed} failed).\n\
                      This check ensures directory trees in documentation stay up-to-date.\n\
                      Update the table of contents or directory tree to match actual files.\n\
-                     If this is illustrative, add a ```no-toc language tag.\n\nTried: {}",
+                     If this is illustrative, use a language tag like ```{{lang}}, ```diagram, ```example, or ```ignore.\n\nTried: {}",
                     tried.join(", ")
                 ),
             )
@@ -138,7 +138,7 @@ fn validate_file_toc_cached(
                     "File does not exist ({valid} of {total} paths valid, {failed_count} failed).\n\
                      This check ensures directory trees in documentation stay up-to-date.\n\
                      TOC entries should use a consistent path style (resolving {}).\n\
-                     If this is illustrative, add a ```no-toc language tag.",
+                     If this is illustrative, use a language tag like ```{{lang}}, ```diagram, ```example, or ```ignore.",
                     strategy.description()
                 ),
             )

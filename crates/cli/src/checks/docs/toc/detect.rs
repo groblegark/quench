@@ -14,7 +14,7 @@ pub(crate) const TOC_LANGUAGE: &str = "toc";
 #[rustfmt::skip]
 const NON_TREE_LANGUAGES: &[&str] = &[
     // Explicit skip annotations
-    "no-toc", "ignore",
+    "ignore", "diagram", "example",
     // Code languages
     "rust", "rs", "go", "python", "py", "javascript", "js", "typescript", "ts",
     "java", "c", "cpp", "csharp", "cs", "ruby", "rb", "php", "swift", "kotlin",

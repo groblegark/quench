@@ -5,11 +5,21 @@ use super::*;
 // === Explicit skip annotations ===
 
 #[test]
-fn no_toc_block_skipped() {
+fn diagram_block_skipped() {
     let block = FencedBlock {
         start_line: 1,
         lines: vec!["src/".to_string(), "├── lib.rs".to_string()],
-        language: Some("no-toc".to_string()),
+        language: Some("diagram".to_string()),
+    };
+    assert!(!looks_like_tree(&block));
+}
+
+#[test]
+fn example_block_skipped() {
+    let block = FencedBlock {
+        start_line: 1,
+        lines: vec!["src/".to_string(), "├── lib.rs".to_string()],
+        language: Some("example".to_string()),
     };
     assert!(!looks_like_tree(&block));
 }
@@ -679,7 +689,7 @@ fn directory_tree_without_top_corner_still_detected() {
     assert!(looks_like_tree(&block));
 }
 
-// === Integration tests for toc/no-toc annotations ===
+// === Integration tests for toc/skip annotations ===
 
 #[test]
 fn toc_annotation_validates_when_explicit() {
@@ -731,16 +741,16 @@ src/
 }
 
 #[test]
-fn no_toc_annotation_skips_validation() {
+fn diagram_annotation_skips_validation() {
     use tempfile::TempDir;
 
     let temp = TempDir::new().unwrap();
     let root = temp.path();
 
-    // Create markdown with no-toc block (file doesn't need to exist)
+    // Create markdown with diagram block (file doesn't need to exist)
     let content = r#"# Test
 
-```no-toc
+```diagram
 nonexistent/
 ├── fake.rs
 ```
@@ -750,9 +760,9 @@ nonexistent/
     // Extract and check blocks
     let blocks = extract_fenced_blocks(content);
     assert_eq!(blocks.len(), 1);
-    assert_eq!(blocks[0].language, Some("no-toc".to_string()));
+    assert_eq!(blocks[0].language, Some("diagram".to_string()));
 
-    // Block should NOT be detected as tree due to no-toc tag
+    // Block should NOT be detected as tree due to diagram tag
     assert!(!looks_like_tree(&blocks[0]));
 }
 

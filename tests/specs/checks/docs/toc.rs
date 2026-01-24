@@ -53,7 +53,7 @@ src/
     File does not exist (0 of 1 paths valid, 1 failed).
     This check ensures directory trees in documentation stay up-to-date.
     Update the table of contents or directory tree to match actual files.
-    If this is illustrative, add a ```no-toc language tag.
+    If this is illustrative, use a language tag like ```{lang}, ```diagram, ```example, or ```ignore.
 
     Tried: relative to markdown file, relative to project root, stripping parent directory prefix
 
@@ -477,28 +477,28 @@ Just some random text here
 
 /// Spec: docs/specs/checks/docs.md#explicit-toc-syntax
 ///
-/// > Code blocks tagged `no-toc` are never validated.
+/// > Code blocks tagged `diagram` are never validated.
 #[test]
-fn no_toc_tag_skips_validation() {
+fn diagram_tag_skips_validation() {
     let temp = default_project();
     temp.file(
         "CLAUDE.md",
         r#"# Project
 
-```no-toc
+```diagram
 src/
 ├── definitely-missing.rs
 └── also-missing.rs
 ```
 "#,
     );
-    // Should pass because no-toc blocks are skipped
+    // Should pass because diagram blocks are skipped
     check("docs").pwd(temp.path()).passes();
 }
 
 /// Spec: docs/specs/checks/docs.md#explicit-toc-syntax
 ///
-/// > Code blocks tagged `ignore` are never validated (alias for no-toc).
+/// > Code blocks tagged `ignore` are never validated.
 #[test]
 fn ignore_tag_skips_validation() {
     let temp = default_project();
