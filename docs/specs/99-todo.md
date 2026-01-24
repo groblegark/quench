@@ -325,6 +325,192 @@ Would verify:
 
 Could be a new check (`docs` or `specs`) or integrated into existing tooling.
 
+## Import Dependency Rules
+
+Enforce layered architecture by validating import/dependency relationships between modules.
+
+### Motivation
+
+Layered architectures prevent spaghetti dependencies, but violations are easy to introduce and hard to detect in review. Quench can enforce these rules statically by parsing imports.
+
+### Architecture Example
+
+```
+                    ┌─────────────────────┐
+                    │        cli          │  Layer 4: Entry points
+                    └──────────┬──────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │       engine        │  Layer 3: Orchestration
+                    └──────────┬──────────┘
+                               │
+          ┌────────────────────┼────────────────────┐
+          │                    │                    │
+┌─────────▼─────────┐ ┌────────▼────────┐ ┌─────────▼───────┐
+│     adapters      │ │     storage     │ │     runbook     │  Layer 2
+└───────────────────┘ └─────────────────┘ └─────────────────┘
+          │                    │                    │
+          └────────────────────┼────────────────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │        core         │  Layer 1: Pure logic
+                    └─────────────────────┘
+```
+
+Rules: Higher layers may import from lower layers. Same-layer imports allowed within a module but not across modules. Lower layers may never import from higher layers.
+
+### Configuration
+
+```toml
+[check.imports]
+check = "error"                          # error | warn | off
+
+[[check.imports.layer]]
+name = "core"
+modules = ["crate::core", "src/core/**"]
+self = true                              # submodules can import siblings (default)
+layers = false                           # no other layers allowed
+builtin = true                           # std/builtins allowed
+external = ["serde", "thiserror"]        # only listed externals
+
+[[check.imports.layer]]
+name = "adapters"
+modules = ["crate::adapters", "src/adapters/**"]
+self = false                             # submodules can't import siblings
+layers = ["core"]                        # only core
+builtin = true
+external = true                          # all externals allowed
+
+[[check.imports.layer]]
+name = "storage"
+modules = ["crate::storage", "src/storage/**"]
+layers = ["core"]
+external = ["sled", "serde"]
+
+[[check.imports.layer]]
+name = "engine"
+modules = ["crate::engine", "src/engine/**"]
+layers = ["core", "adapters", "storage"]
+external = true
+
+[[check.imports.layer]]
+name = "cli"
+modules = ["crate::cli", "src/cli/**", "src/main.rs"]
+layers = "*"                             # any layer (equivalent to true)
+builtin = "*"
+external = "*"
+```
+
+**Field values:**
+| Value | Meaning |
+|-------|---------|
+| `false` | none allowed |
+| `true` or `"*"` | all allowed |
+| `[...]` | only listed items allowed |
+
+### Language Support
+
+| Language | Import Detection |
+|----------|------------------|
+| `rust` | `use crate::`, `mod`, `extern crate` |
+| `golang` | `import "..."`, `import (...)` |
+| `typescript` | `import ... from`, `require()` |
+| `python` | `import`, `from ... import` |
+
+### Detection
+
+For each source file:
+1. Determine which layer the file belongs to (by path matching)
+2. Parse imports/use statements
+3. Resolve import targets to layers
+4. Flag violations: importing from higher or same-level cross-module
+
+### Output
+
+```
+imports: FAIL
+  src/core/parser.rs:5: layer violation (core -> engine)
+    use crate::engine::Config;
+    Core layer cannot import from engine layer. Move shared types to core or pass via parameter.
+
+  src/adapters/rust.rs:12: cross-module import (adapters -> storage)
+    use crate::storage::Cache;
+    Same-level modules should not depend on each other. Extract shared interface to core.
+```
+
+### JSON Output
+
+```json
+{
+  "file": "src/core/parser.rs",
+  "line": 5,
+  "type": "layer_violation",
+  "layer": "core",
+  "import": "crate::engine::Config",
+  "target": "engine",
+  "allowed": [],
+  "advice": "Core layer cannot import from engine."
+}
+```
+
+```json
+{
+  "file": "src/core/utils.rs",
+  "line": 12,
+  "type": "external_violation",
+  "layer": "core",
+  "import": "reqwest",
+  "allowed": ["serde", "thiserror"],
+  "advice": "External crate 'reqwest' not allowed in core layer."
+}
+```
+
+### Rust-Specific: Workspace Crates
+
+For Rust workspaces, layers can be defined at crate granularity:
+
+```toml
+[[check.imports.layer]]
+name = "core"
+modules = ["quench_core"]               # Crate name from Cargo.toml
+layers = false
+external = ["serde"]
+
+[[check.imports.layer]]
+name = "cli"
+modules = ["quench_cli"]
+layers = "*"
+external = "*"
+```
+
+Violations detected via `Cargo.toml` dependencies and `use` statements.
+
+### Go-Specific: Package Paths
+
+```toml
+[[check.imports.layer]]
+name = "core"
+modules = ["github.com/org/project/internal/core"]
+layers = false
+
+[[check.imports.layer]]
+name = "cmd"
+modules = ["github.com/org/project/cmd/**"]
+layers = "*"
+```
+
+### TypeScript-Specific: Path Aliases
+
+Respects `tsconfig.json` path aliases:
+
+```toml
+[[check.imports.layer]]
+name = "core"
+modules = ["@/core/**", "src/core/**"]
+layers = false
+external = ["zod", "date-fns"]
+```
+
 ## Notes from Interview
 
 - Primary users are AI agents ("landing the plane")
