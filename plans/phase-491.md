@@ -1,6 +1,7 @@
 # Phase 491: JavaScript Adapter - Specs
 
 **Plan:** `phase-491`
+**Root Feature:** `quench-35f2`
 **Blocked By:** Phase 201 (Generic Language Adapter)
 
 ## Overview
