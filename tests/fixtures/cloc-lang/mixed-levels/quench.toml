@@ -1,0 +1,12 @@
+version = 1
+[check.cloc]
+max_lines = 5
+
+[rust.cloc]
+check = "error"
+
+[golang.cloc]
+check = "warn"
+
+[javascript.cloc]
+check = "off"
