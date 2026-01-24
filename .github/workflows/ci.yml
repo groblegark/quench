@@ -51,6 +51,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --all
+      - name: Self Check
+        run: ./target/debug/quench check
 
   audit:
     name: Security Audit
