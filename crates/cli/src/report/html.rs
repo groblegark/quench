@@ -352,3 +352,7 @@ impl ReportFormatter for HtmlFormatter {
             .to_string()
     }
 }
+
+#[cfg(test)]
+#[path = "html_tests.rs"]
+mod tests;
