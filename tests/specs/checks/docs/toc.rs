@@ -144,6 +144,116 @@ fn toc_dot_prefix_resolves_relative_to_markdown_file() {
     check("docs").pwd(temp.path()).passes();
 }
 
+/// Spec: docs/specs/checks/docs.md#what-gets-validated
+///
+/// > Ellipsis entries (`.`, `..`, `...`) are ignored as placeholders.
+#[test]
+fn toc_ellipsis_entries_ignored() {
+    let temp = default_project();
+    temp.file("src/lib.rs", "// lib\n");
+    temp.file("src/main.rs", "// main\n");
+    temp.file(
+        "CLAUDE.md",
+        r#"# Project
+
+```
+src/
+├── lib.rs
+├── main.rs
+└── ...
+```
+"#,
+    );
+    // The `...` should be ignored, not treated as a file to validate
+    check("docs").pwd(temp.path()).passes();
+}
+
+/// Spec: docs/specs/checks/docs.md#what-gets-validated
+///
+/// > Dot entries (`.` and `..`) are ignored as directory references.
+#[test]
+fn toc_dot_entries_ignored() {
+    let temp = default_project();
+    temp.file("src/lib.rs", "// lib\n");
+    temp.file(
+        "CLAUDE.md",
+        r#"# Project
+
+```
+.
+├── src/
+│   └── lib.rs
+```
+"#,
+    );
+    check("docs").pwd(temp.path()).passes();
+}
+
+/// Spec: docs/specs/checks/docs.md#what-gets-validated
+///
+/// > Glob patterns (containing `*`) match any file.
+#[test]
+fn toc_glob_pattern_matches_files() {
+    let temp = default_project();
+    temp.file("src/lib.rs", "// lib\n");
+    temp.file("src/main.rs", "// main\n");
+    temp.file("src/utils.rs", "// utils\n");
+    temp.file(
+        "CLAUDE.md",
+        r#"# Project
+
+```
+src/
+├── *.rs
+```
+"#,
+    );
+    // The `*.rs` glob should match the existing .rs files
+    check("docs").pwd(temp.path()).passes();
+}
+
+/// Spec: docs/specs/checks/docs.md#what-gets-validated
+///
+/// > Recursive glob patterns (`**/*.ext`) match nested files.
+#[test]
+fn toc_recursive_glob_pattern_matches_nested() {
+    let temp = default_project();
+    temp.file("src/lib.rs", "// lib\n");
+    temp.file("src/utils/helpers.rs", "// helpers\n");
+    temp.file(
+        "CLAUDE.md",
+        r#"# Project
+
+```
+src/
+├── **/*.rs
+```
+"#,
+    );
+    check("docs").pwd(temp.path()).passes();
+}
+
+/// Spec: docs/specs/checks/docs.md#what-gets-validated
+///
+/// > Glob patterns fail if no files match.
+#[test]
+fn toc_glob_pattern_fails_when_no_match() {
+    let temp = default_project();
+    temp.file("src/lib.rs", "// lib\n");
+    temp.file(
+        "CLAUDE.md",
+        r#"# Project
+
+```
+src/
+├── *.ts
+```
+"#,
+    );
+    // No .ts files exist, so glob should fail
+    check("docs").pwd(temp.path()).fails().stdout_has("*.ts");
+}
+
 /// Spec: docs/specs/checks/docs.md#resolution
 ///
 /// > Strip markdown file's parent directory name prefix

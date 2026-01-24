@@ -112,6 +112,13 @@ fn parse_tree_line(
         return None;
     }
 
+    // Ignore ellipsis and directory reference entries
+    // These are placeholders, not actual files to validate
+    let name_without_slash = name.trim_end_matches('/');
+    if matches!(name_without_slash, "." | ".." | "...") {
+        return None;
+    }
+
     let is_dir = name.ends_with('/');
     let name = name.trim_end_matches('/');
 
@@ -274,6 +281,36 @@ fn normalize_dot_prefix(path: &str) -> &str {
     path
 }
 
+/// Check if a path contains glob wildcards.
+fn is_glob_pattern(path: &str) -> bool {
+    path.contains('*')
+}
+
+/// Try to resolve a glob pattern by finding any matching file.
+/// Uses the `ignore` crate for fast parallel directory walking.
+fn try_resolve_glob(base: &Path, pattern: &str) -> bool {
+    let Ok(glob) = Glob::new(pattern) else {
+        return false;
+    };
+    let matcher = glob.compile_matcher();
+
+    // Use ignore crate's WalkBuilder for fast traversal
+    let walker = ignore::WalkBuilder::new(base)
+        .max_depth(Some(10))
+        .build();
+
+    for entry in walker.flatten() {
+        let path = entry.path();
+        // Get path relative to base for matching
+        if let Ok(relative) = path.strip_prefix(base) {
+            if matcher.is_match(relative) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// Try to resolve a path using a specific strategy.
 fn try_resolve(
     root: &Path,
@@ -283,6 +320,31 @@ fn try_resolve(
 ) -> bool {
     // Normalize `.`/`./` prefix for all strategies
     let normalized = normalize_dot_prefix(entry_path);
+
+    // Handle glob patterns
+    if is_glob_pattern(normalized) {
+        return match strategy {
+            ResolutionStrategy::RelativeToFile => {
+                if let Some(parent) = md_file.parent() {
+                    try_resolve_glob(parent, normalized)
+                } else {
+                    false
+                }
+            }
+            ResolutionStrategy::RelativeToRoot => try_resolve_glob(root, normalized),
+            ResolutionStrategy::StripParentDirName => {
+                if let Some(parent) = md_file.parent()
+                    && let Some(parent_name) = parent.file_name().and_then(|n| n.to_str())
+                {
+                    let prefix = format!("{}/", parent_name);
+                    if let Some(stripped) = normalized.strip_prefix(&prefix) {
+                        return try_resolve_glob(root, stripped);
+                    }
+                }
+                false
+            }
+        };
+    }
 
     match strategy {
         ResolutionStrategy::RelativeToFile => {
@@ -436,6 +498,14 @@ fn looks_like_tree(block: &FencedBlock) -> bool {
 
     // Must have at least one line
     if block.lines.is_empty() {
+        return false;
+    }
+
+    // Box diagram detection: if any line contains a top corner, it's a box diagram, not a tree
+    // Top corners: ┌ (U+250C), ╔ (U+2554), ╭ (U+256D)
+    if block.lines.iter().any(|line| {
+        line.contains('┌') || line.contains('╔') || line.contains('╭')
+    }) {
         return false;
     }
 
@@ -688,18 +758,11 @@ fn validate_file_toc(
                 tried_strategies.iter().map(|s| s.description()).collect();
             let strategies_note = format!("Tried: {}", strategies_tried.join(", "));
 
-            let advice = if failed_entries.len() > 2 {
-                format!(
-                    "File does not exist. If this is example output (not a directory tree), \
-                     add a language tag like ```text or ```bash to skip TOC validation. {}",
-                    strategies_note
-                )
-            } else {
-                format!(
-                    "File does not exist. Update the tree or create the file. {}",
-                    strategies_note
-                )
-            };
+            let advice = format!(
+                "File does not exist. Update the tree to match actual files, or add a \
+                 language tag like ```text to skip validation. {}",
+                strategies_note
+            );
 
             for entry in failed_entries {
                 let line = block.start_line + entry.line_offset;

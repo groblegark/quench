@@ -21,7 +21,8 @@ use crate::check::Violation;
 /// Incremented when check logic changes (e.g., counting nonblank vs all lines).
 /// v7: Migrated from bincode to postcard serialization.
 /// v8: Fixed cfg(test) detection false positives on comments.
-pub const CACHE_VERSION: u32 = 10;
+/// v11: TOC validator skips box diagrams (blocks with top corner characters).
+pub const CACHE_VERSION: u32 = 11;
 
 /// Cache file name within .quench directory.
 pub const CACHE_FILE_NAME: &str = "cache.bin";

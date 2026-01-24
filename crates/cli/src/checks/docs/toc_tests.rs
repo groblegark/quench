@@ -306,3 +306,143 @@ fn deeply_nested_tree() {
             .any(|e| e.path == "crates/cli/src/checks/docs/toc.rs")
     );
 }
+
+// === Ellipsis and dot entries ignored ===
+
+#[test]
+fn ellipsis_entry_ignored() {
+    let block = FencedBlock {
+        start_line: 1,
+        lines: vec![
+            "src/".to_string(),
+            "├── lib.rs".to_string(),
+            "└── ...".to_string(),
+        ],
+        language: None,
+    };
+    let entries = parse_tree_block(&block);
+    // Should have src/ and lib.rs, but NOT ...
+    assert_eq!(entries.len(), 2);
+    assert!(!entries.iter().any(|e| e.path.contains("...")));
+}
+
+#[test]
+fn dot_entry_ignored() {
+    let block = FencedBlock {
+        start_line: 1,
+        lines: vec![
+            ".".to_string(),
+            "├── src/".to_string(),
+            "│   └── lib.rs".to_string(),
+        ],
+        language: None,
+    };
+    let entries = parse_tree_block(&block);
+    // Should have src/ and lib.rs, but NOT .
+    assert!(entries.iter().any(|e| e.path == "src"));
+    assert!(entries.iter().any(|e| e.path == "src/lib.rs"));
+    assert!(!entries.iter().any(|e| e.path == "."));
+}
+
+#[test]
+fn double_dot_entry_ignored() {
+    let block = FencedBlock {
+        start_line: 1,
+        lines: vec![
+            "..".to_string(),
+            "├── parent/".to_string(),
+        ],
+        language: None,
+    };
+    let entries = parse_tree_block(&block);
+    assert!(!entries.iter().any(|e| e.path == ".."));
+}
+
+#[test]
+fn four_dots_not_ignored() {
+    let block = FencedBlock {
+        start_line: 1,
+        lines: vec![
+            "src/".to_string(),
+            "├── lib.rs".to_string(),
+            "└── ....".to_string(),
+        ],
+        language: None,
+    };
+    let entries = parse_tree_block(&block);
+    // Four dots should NOT be ignored - only . .. ... are special
+    assert!(entries.iter().any(|e| e.path == "src/...."));
+}
+
+// === Glob pattern detection ===
+
+#[test]
+fn glob_pattern_detected() {
+    assert!(is_glob_pattern("*.rs"));
+    assert!(is_glob_pattern("**/*.ts"));
+    assert!(is_glob_pattern("src/*.js"));
+    assert!(!is_glob_pattern("src/lib.rs"));
+    assert!(!is_glob_pattern("README.md"));
+}
+
+// === Box diagram detection ===
+
+#[test]
+fn box_diagram_with_top_corner_not_tree() {
+    let block = FencedBlock {
+        start_line: 1,
+        lines: vec![
+            "┌─────────────────────────────────────────────────┐".to_string(),
+            "│              Worker Lifecycle                    │".to_string(),
+            "├─────────────────────────────────────────────────┤".to_string(),
+            "│ 1. Load state from state.json                   │".to_string(),
+            "└─────────────────────────────────────────────────┘".to_string(),
+        ],
+        language: None,
+    };
+    assert!(!looks_like_tree(&block));
+}
+
+#[test]
+fn box_diagram_double_line_corner_not_tree() {
+    let block = FencedBlock {
+        start_line: 1,
+        lines: vec![
+            "╔═══════════════════╗".to_string(),
+            "║   Title           ║".to_string(),
+            "╚═══════════════════╝".to_string(),
+        ],
+        language: None,
+    };
+    assert!(!looks_like_tree(&block));
+}
+
+#[test]
+fn box_diagram_rounded_corner_not_tree() {
+    let block = FencedBlock {
+        start_line: 1,
+        lines: vec![
+            "╭───────────────────╮".to_string(),
+            "│   Content         │".to_string(),
+            "╰───────────────────╯".to_string(),
+        ],
+        language: None,
+    };
+    assert!(!looks_like_tree(&block));
+}
+
+#[test]
+fn directory_tree_without_top_corner_still_detected() {
+    // Directory trees use ├, └, │ but NOT top corners like ┌
+    let block = FencedBlock {
+        start_line: 1,
+        lines: vec![
+            "src/".to_string(),
+            "├── lib.rs".to_string(),
+            "│   └── nested.rs".to_string(),
+            "└── main.rs".to_string(),
+        ],
+        language: None,
+    };
+    assert!(looks_like_tree(&block));
+}

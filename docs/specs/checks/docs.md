@@ -40,6 +40,19 @@ src/
 
 Each file in the tree is checked for existence.
 
+**Glob patterns** (`*`, `**`) match any file:
+~~~markdown
+```
+src/
+├── *.rs          # Matches if any .rs file exists
+├── **/*.test.ts  # Matches nested test files
+```
+~~~
+
+**Placeholders** are ignored (not validated):
+- `.`, `..`, `...` - directory references and ellipsis
+- Box diagrams (blocks containing `┌`, `╔`, `╭`) - not directory trees
+
 ### Resolution
 
 Resolution applies to the entire tree block. All entries must resolve with the same strategy, or fall back to the next:
