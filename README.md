@@ -38,8 +38,8 @@ advice_test = "Use table-driven tests with t.Run()."  # customize advice for pro
 [check.agents]
 required = ["CLAUDE.md"]  # default: ["*"] any agent file
 tables = "forbid"         # default: "allow"
-# mermaid = "forbid"
-# box_diagrams = "forbid"
+# mermaid = "allow/forbid"
+# box_diagrams = "allow/forbid"
 
 # Per-scope config:
 #   .root (project, monorepo or workspace)
