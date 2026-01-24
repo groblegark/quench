@@ -8,7 +8,6 @@
 mod checks;
 mod go;
 mod parse;
-mod parse_checks;
 mod shell;
 mod suggest;
 mod suppress;
@@ -28,10 +27,10 @@ pub use suppress::{SuppressConfig, SuppressLevel, SuppressScopeConfig};
 
 use crate::error::{Error, Result};
 use parse::{
-    parse_cloc_config, parse_escapes_config, parse_go_config, parse_rust_config,
-    parse_shell_config, warn_unknown_key,
+    parse_agents_config, parse_cloc_config, parse_docs_config, parse_escapes_config,
+    parse_go_config, parse_rust_config, parse_shell_config, parse_string_array_or_else,
+    parse_string_array_or_empty, warn_unknown_key,
 };
-use parse_checks::{parse_agents_config, parse_docs_config};
 use suggest::warn_unknown_check;
 
 pub use crate::checks::agents::config::{AgentsConfig, AgentsScopeConfig};
@@ -404,39 +403,16 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
                 .map(|s| s.to_string());
 
             // Parse source patterns
-            let source = t
-                .get("source")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str().map(String::from))
-                        .collect()
-                })
-                .unwrap_or_default();
+            let source = parse_string_array_or_empty(t.get("source"));
 
             // Parse test patterns
-            let tests = t
-                .get("tests")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str().map(String::from))
-                        .collect()
-                })
-                .unwrap_or_else(ProjectConfig::default_test_patterns);
+            let tests =
+                parse_string_array_or_else(t.get("tests"), ProjectConfig::default_test_patterns);
 
             // Parse ignore patterns
             let ignore = match t.get("ignore") {
                 Some(toml::Value::Table(ignore_table)) => {
-                    let patterns = ignore_table
-                        .get("patterns")
-                        .and_then(|v| v.as_array())
-                        .map(|arr| {
-                            arr.iter()
-                                .filter_map(|v| v.as_str().map(String::from))
-                                .collect()
-                        })
-                        .unwrap_or_default();
+                    let patterns = parse_string_array_or_empty(ignore_table.get("patterns"));
 
                     // Warn about unknown ignore fields
                     for key in ignore_table.keys() {
@@ -470,15 +446,7 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
     // Parse workspace config
     let workspace = match flexible.workspace {
         Some(toml::Value::Table(t)) => {
-            let packages = t
-                .get("packages")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str().map(String::from))
-                        .collect()
-                })
-                .unwrap_or_default();
+            let packages = parse_string_array_or_empty(t.get("packages"));
 
             WorkspaceConfig {
                 packages,

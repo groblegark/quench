@@ -6,19 +6,94 @@
 use std::path::Path;
 
 use super::{
-    CfgTestSplitMode, CheckLevel, ClocConfig, EscapeAction, EscapePattern, EscapesConfig, GoConfig,
-    GoPolicyConfig, GoSuppressConfig, LineMetric, LintChangesPolicy, RustConfig, RustPolicyConfig,
-    ShellConfig, ShellPolicyConfig, ShellSuppressConfig, SuppressConfig, SuppressLevel,
-    SuppressScopeConfig,
+    AgentsConfig, AgentsScopeConfig, CfgTestSplitMode, CheckLevel, ClocConfig, DocsConfig,
+    EscapeAction, EscapePattern, EscapesConfig, GoConfig, GoPolicyConfig, GoSuppressConfig,
+    LineMetric, LintChangesPolicy, RustConfig, RustPolicyConfig, ShellConfig, ShellPolicyConfig,
+    ShellSuppressConfig, SuppressConfig, SuppressLevel, SuppressScopeConfig, TocConfig,
 };
+use crate::checks::agents::config::{ContentRule, RequiredSection, SectionsConfig};
 
 /// Parse a TOML array of strings into a Vec<String>.
-fn parse_string_array(value: Option<&toml::Value>) -> Option<Vec<String>> {
+pub(super) fn parse_string_array(value: Option<&toml::Value>) -> Option<Vec<String>> {
     value?.as_array().map(|arr| {
         arr.iter()
             .filter_map(|v| v.as_str().map(String::from))
             .collect()
     })
+}
+
+/// Parse a TOML array of strings with a default function.
+pub(super) fn parse_string_array_or_else<F>(value: Option<&toml::Value>, default: F) -> Vec<String>
+where
+    F: FnOnce() -> Vec<String>,
+{
+    parse_string_array(value).unwrap_or_else(default)
+}
+
+/// Parse a TOML array of strings, returning empty vec if not found.
+pub(super) fn parse_string_array_or_empty(value: Option<&toml::Value>) -> Vec<String> {
+    parse_string_array(value).unwrap_or_default()
+}
+
+/// Parse a TOML string value with a default function.
+fn parse_string_or_else<F>(value: Option<&toml::Value>, default: F) -> String
+where
+    F: FnOnce() -> String,
+{
+    value
+        .and_then(|v| v.as_str())
+        .map(String::from)
+        .unwrap_or_else(default)
+}
+
+/// Parse a TOML string value as Option<String>.
+pub(super) fn parse_string_option(value: Option<&toml::Value>) -> Option<String> {
+    value.and_then(|v| v.as_str()).map(String::from)
+}
+
+/// Parse a TOML integer value as usize with a default function.
+fn parse_usize_or_else<F>(value: Option<&toml::Value>, default: F) -> usize
+where
+    F: FnOnce() -> usize,
+{
+    value
+        .and_then(|v| v.as_integer())
+        .map(|v| v as usize)
+        .unwrap_or_else(default)
+}
+
+/// Parse a TOML integer value as Option<usize>.
+pub(super) fn parse_usize_option(value: Option<&toml::Value>) -> Option<usize> {
+    value.and_then(|v| v.as_integer()).map(|v| v as usize)
+}
+
+/// Parse check level from TOML value.
+fn parse_check_level(value: Option<&toml::Value>) -> CheckLevel {
+    match value.and_then(|v| v.as_str()) {
+        Some("error") => CheckLevel::Error,
+        Some("warn") => CheckLevel::Warn,
+        Some("off") => CheckLevel::Off,
+        _ => CheckLevel::default(),
+    }
+}
+
+/// Parse suppress level from TOML value with a default.
+fn parse_suppress_level(value: Option<&toml::Value>, default: SuppressLevel) -> SuppressLevel {
+    match value.and_then(|v| v.as_str()) {
+        Some("forbid") => SuppressLevel::Forbid,
+        Some("comment") => SuppressLevel::Comment,
+        Some("allow") => SuppressLevel::Allow,
+        _ => default,
+    }
+}
+
+/// Parse lint changes policy from TOML value.
+fn parse_lint_changes_policy(value: Option<&toml::Value>) -> LintChangesPolicy {
+    match value.and_then(|v| v.as_str()) {
+        Some("standalone") => LintChangesPolicy::Standalone,
+        Some("none") | None => LintChangesPolicy::None,
+        _ => LintChangesPolicy::None,
+    }
 }
 
 /// Parse cfg_test_split from TOML value.
@@ -46,20 +121,11 @@ pub(super) fn parse_rust_config(value: Option<&toml::Value>) -> RustConfig {
         return RustConfig::default();
     };
 
-    let cfg_test_split = parse_cfg_test_split(t.get("cfg_test_split"));
-
-    let suppress = parse_suppress_config(t.get("suppress"));
-    let policy = parse_policy_config(t.get("policy"));
-    let cloc_advice = t
-        .get("cloc_advice")
-        .and_then(|v| v.as_str())
-        .map(String::from);
-
     RustConfig {
-        cfg_test_split,
-        suppress,
-        policy,
-        cloc_advice,
+        cfg_test_split: parse_cfg_test_split(t.get("cfg_test_split")),
+        suppress: parse_suppress_config(t.get("suppress")),
+        policy: parse_policy_config(t.get("policy")),
+        cloc_advice: parse_string_option(t.get("cloc_advice")),
     }
 }
 
@@ -69,26 +135,12 @@ pub(super) fn parse_shell_config(value: Option<&toml::Value>) -> ShellConfig {
         return ShellConfig::default();
     };
 
-    let source = parse_string_array(t.get("source")).unwrap_or_else(ShellConfig::default_source);
-    let tests = parse_string_array(t.get("tests")).unwrap_or_else(ShellConfig::default_tests);
-
-    // Parse suppress config
-    let suppress = parse_shell_suppress_config(t.get("suppress"));
-
-    // Parse policy config
-    let policy = parse_shell_policy_config(t.get("policy"));
-
-    let cloc_advice = t
-        .get("cloc_advice")
-        .and_then(|v| v.as_str())
-        .map(String::from);
-
     ShellConfig {
-        source,
-        tests,
-        suppress,
-        policy,
-        cloc_advice,
+        source: parse_string_array_or_else(t.get("source"), ShellConfig::default_source),
+        tests: parse_string_array_or_else(t.get("tests"), ShellConfig::default_tests),
+        suppress: parse_shell_suppress_config(t.get("suppress")),
+        policy: parse_shell_policy_config(t.get("policy")),
+        cloc_advice: parse_string_option(t.get("cloc_advice")),
     }
 }
 
@@ -98,32 +150,20 @@ fn parse_shell_suppress_config(value: Option<&toml::Value>) -> ShellSuppressConf
         return ShellSuppressConfig::default();
     };
 
-    let check = match t.get("check").and_then(|v| v.as_str()) {
-        Some("forbid") => SuppressLevel::Forbid,
-        Some("comment") => SuppressLevel::Comment,
-        Some("allow") => SuppressLevel::Allow,
-        _ => ShellSuppressConfig::default_check(),
-    };
-
-    let comment = t.get("comment").and_then(|v| v.as_str()).map(String::from);
-
-    // Shell uses empty defaults (forbid level doesn't need patterns)
-    let source = parse_suppress_scope_config_with_defaults(
-        t.get("source"),
-        ShellSuppressConfig::default_source(),
-    );
-    let test = t
-        .get("test")
-        .map(|v| {
-            parse_suppress_scope_config_with_defaults(Some(v), ShellSuppressConfig::default_test())
-        })
-        .unwrap_or_else(ShellSuppressConfig::default_test);
-
     ShellSuppressConfig {
-        check,
-        comment,
-        source,
-        test,
+        check: parse_suppress_level(t.get("check"), ShellSuppressConfig::default_check()),
+        comment: parse_string_option(t.get("comment")),
+        // Shell uses empty defaults (forbid level doesn't need patterns)
+        source: parse_suppress_scope_with_defaults(
+            t.get("source"),
+            ShellSuppressConfig::default_source(),
+        ),
+        test: t
+            .get("test")
+            .map(|v| {
+                parse_suppress_scope_with_defaults(Some(v), ShellSuppressConfig::default_test())
+            })
+            .unwrap_or_else(ShellSuppressConfig::default_test),
     }
 }
 
@@ -133,17 +173,12 @@ fn parse_shell_policy_config(value: Option<&toml::Value>) -> ShellPolicyConfig {
         return ShellPolicyConfig::default();
     };
 
-    let lint_changes = match t.get("lint_changes").and_then(|v| v.as_str()) {
-        Some("standalone") => LintChangesPolicy::Standalone,
-        Some("none") | None => LintChangesPolicy::None,
-        _ => LintChangesPolicy::None,
-    };
-
-    let lint_config = parse_string_array(t.get("lint_config"))
-        .unwrap_or_else(ShellPolicyConfig::default_lint_config);
     ShellPolicyConfig {
-        lint_changes,
-        lint_config,
+        lint_changes: parse_lint_changes_policy(t.get("lint_changes")),
+        lint_config: parse_string_array_or_else(
+            t.get("lint_config"),
+            ShellPolicyConfig::default_lint_config,
+        ),
     }
 }
 
@@ -152,26 +187,13 @@ pub(super) fn parse_go_config(value: Option<&toml::Value>) -> GoConfig {
     let Some(toml::Value::Table(t)) = value else {
         return GoConfig::default();
     };
-    let source = parse_string_array(t.get("source")).unwrap_or_else(GoConfig::default_source);
-    let tests = parse_string_array(t.get("tests")).unwrap_or_else(GoConfig::default_tests);
-
-    // Parse suppress config
-    let suppress = parse_go_suppress_config(t.get("suppress"));
-
-    // Parse policy config
-    let policy = parse_go_policy_config(t.get("policy"));
-
-    let cloc_advice = t
-        .get("cloc_advice")
-        .and_then(|v| v.as_str())
-        .map(String::from);
 
     GoConfig {
-        source,
-        tests,
-        suppress,
-        policy,
-        cloc_advice,
+        source: parse_string_array_or_else(t.get("source"), GoConfig::default_source),
+        tests: parse_string_array_or_else(t.get("tests"), GoConfig::default_tests),
+        suppress: parse_go_suppress_config(t.get("suppress")),
+        policy: parse_go_policy_config(t.get("policy")),
+        cloc_advice: parse_string_option(t.get("cloc_advice")),
     }
 }
 
@@ -181,32 +203,18 @@ fn parse_go_suppress_config(value: Option<&toml::Value>) -> GoSuppressConfig {
         return GoSuppressConfig::default();
     };
 
-    let check = match t.get("check").and_then(|v| v.as_str()) {
-        Some("forbid") => SuppressLevel::Forbid,
-        Some("comment") => SuppressLevel::Comment,
-        Some("allow") => SuppressLevel::Allow,
-        _ => GoSuppressConfig::default_check(),
-    };
-
-    let comment = t.get("comment").and_then(|v| v.as_str()).map(String::from);
-
-    // Go uses empty defaults (no per-lint patterns yet)
-    let source = parse_suppress_scope_config_with_defaults(
-        t.get("source"),
-        GoSuppressConfig::default_source(),
-    );
-    let test = t
-        .get("test")
-        .map(|v| {
-            parse_suppress_scope_config_with_defaults(Some(v), GoSuppressConfig::default_test())
-        })
-        .unwrap_or_else(GoSuppressConfig::default_test);
-
     GoSuppressConfig {
-        check,
-        comment,
-        source,
-        test,
+        check: parse_suppress_level(t.get("check"), GoSuppressConfig::default_check()),
+        comment: parse_string_option(t.get("comment")),
+        // Go uses empty defaults (no per-lint patterns yet)
+        source: parse_suppress_scope_with_defaults(
+            t.get("source"),
+            GoSuppressConfig::default_source(),
+        ),
+        test: t
+            .get("test")
+            .map(|v| parse_suppress_scope_with_defaults(Some(v), GoSuppressConfig::default_test()))
+            .unwrap_or_else(GoSuppressConfig::default_test),
     }
 }
 
@@ -216,25 +224,12 @@ fn parse_go_policy_config(value: Option<&toml::Value>) -> GoPolicyConfig {
         return GoPolicyConfig::default();
     };
 
-    let lint_changes = match t.get("lint_changes").and_then(|v| v.as_str()) {
-        Some("standalone") => LintChangesPolicy::Standalone,
-        Some("none") | None => LintChangesPolicy::None,
-        _ => LintChangesPolicy::None,
-    };
-
-    let lint_config = t
-        .get("lint_config")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_else(GoPolicyConfig::default_lint_config);
-
     GoPolicyConfig {
-        lint_changes,
-        lint_config,
+        lint_changes: parse_lint_changes_policy(t.get("lint_changes")),
+        lint_config: parse_string_array_or_else(
+            t.get("lint_config"),
+            GoPolicyConfig::default_lint_config,
+        ),
     }
 }
 
@@ -244,25 +239,12 @@ fn parse_policy_config(value: Option<&toml::Value>) -> RustPolicyConfig {
         return RustPolicyConfig::default();
     };
 
-    let lint_changes = match t.get("lint_changes").and_then(|v| v.as_str()) {
-        Some("standalone") => LintChangesPolicy::Standalone,
-        Some("none") | None => LintChangesPolicy::None,
-        _ => LintChangesPolicy::None,
-    };
-
-    let lint_config = t
-        .get("lint_config")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_else(RustPolicyConfig::default_lint_config);
-
     RustPolicyConfig {
-        lint_changes,
-        lint_config,
+        lint_changes: parse_lint_changes_policy(t.get("lint_changes")),
+        lint_config: parse_string_array_or_else(
+            t.get("lint_config"),
+            RustPolicyConfig::default_lint_config,
+        ),
     }
 }
 
@@ -272,38 +254,26 @@ fn parse_suppress_config(value: Option<&toml::Value>) -> SuppressConfig {
         return SuppressConfig::default();
     };
 
-    let check = match t.get("check").and_then(|v| v.as_str()) {
-        Some("forbid") => SuppressLevel::Forbid,
-        Some("comment") => SuppressLevel::Comment,
-        Some("allow") => SuppressLevel::Allow,
-        _ => SuppressConfig::default_check(),
-    };
-
-    let comment = t.get("comment").and_then(|v| v.as_str()).map(String::from);
-
-    let source = parse_suppress_scope_config(t.get("source"), false);
-    let test = parse_suppress_scope_config(t.get("test"), true);
-
     SuppressConfig {
-        check,
-        comment,
-        source,
-        test,
+        check: parse_suppress_level(t.get("check"), SuppressConfig::default_check()),
+        comment: parse_string_option(t.get("comment")),
+        source: parse_suppress_scope(t.get("source"), false),
+        test: parse_suppress_scope(t.get("test"), true),
     }
 }
 
 /// Parse scope-specific suppress configuration with language-specific defaults.
-fn parse_suppress_scope_config(value: Option<&toml::Value>, is_test: bool) -> SuppressScopeConfig {
+fn parse_suppress_scope(value: Option<&toml::Value>, is_test: bool) -> SuppressScopeConfig {
     let defaults = if is_test {
         SuppressScopeConfig::default_for_test()
     } else {
         SuppressScopeConfig::default_for_source()
     };
-    parse_suppress_scope_config_with_defaults(value, defaults)
+    parse_suppress_scope_with_defaults(value, defaults)
 }
 
 /// Parse scope-specific suppress configuration with explicit defaults.
-fn parse_suppress_scope_config_with_defaults(
+fn parse_suppress_scope_with_defaults(
     value: Option<&toml::Value>,
     defaults: SuppressScopeConfig,
 ) -> SuppressScopeConfig {
@@ -321,25 +291,8 @@ fn parse_suppress_scope_config_with_defaults(
         _ => None,
     };
 
-    let allow = t
-        .get("allow")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default();
-
-    let forbid = t
-        .get("forbid")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default();
+    let allow = parse_string_array_or_empty(t.get("allow"));
+    let forbid = parse_string_array_or_empty(t.get("forbid"));
 
     // Parse per-lint-code comment patterns.
     // Supports both:
@@ -399,83 +352,34 @@ pub(super) fn parse_cloc_config(value: Option<&toml::Value>) -> ClocConfig {
         return ClocConfig::default();
     };
 
-    let max_lines = t
-        .get("max_lines")
-        .and_then(|v| v.as_integer())
-        .map(|v| v as usize)
-        .unwrap_or_else(ClocConfig::default_max_lines);
-
-    let max_lines_test = t
-        .get("max_lines_test")
-        .and_then(|v| v.as_integer())
-        .map(|v| v as usize)
-        .unwrap_or_else(ClocConfig::default_max_lines_test);
-
-    let check = match t.get("check").and_then(|v| v.as_str()) {
-        Some("error") => CheckLevel::Error,
-        Some("warn") => CheckLevel::Warn,
-        Some("off") => CheckLevel::Off,
-        _ => CheckLevel::default(),
-    };
-
-    let test_patterns = t
-        .get("test_patterns")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_else(ClocConfig::default_test_patterns);
-
-    let exclude = t
-        .get("exclude")
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|v| v.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default();
-
-    let max_tokens = t
-        .get("max_tokens")
-        .map(|v| {
-            if v.as_bool() == Some(false) {
-                None // max_tokens = false disables the check
-            } else {
-                v.as_integer().map(|n| n as usize)
-            }
-        })
-        .unwrap_or_else(ClocConfig::default_max_tokens);
-
-    let advice = t
-        .get("advice")
-        .and_then(|v| v.as_str())
-        .map(String::from)
-        .unwrap_or_else(ClocConfig::default_advice);
-
-    let advice_test = t
-        .get("advice_test")
-        .and_then(|v| v.as_str())
-        .map(String::from)
-        .unwrap_or_else(ClocConfig::default_advice_test);
-
-    let metric = match t.get("metric").and_then(|v| v.as_str()) {
-        Some("nonblank") => LineMetric::Nonblank,
-        _ => LineMetric::Lines,
-    };
-
     ClocConfig {
-        max_lines,
-        max_lines_test,
-        metric,
-        check,
-        test_patterns,
-        exclude,
-        max_tokens,
-        advice,
-        advice_test,
+        max_lines: parse_usize_or_else(t.get("max_lines"), ClocConfig::default_max_lines),
+        max_lines_test: parse_usize_or_else(
+            t.get("max_lines_test"),
+            ClocConfig::default_max_lines_test,
+        ),
+        metric: match t.get("metric").and_then(|v| v.as_str()) {
+            Some("nonblank") => LineMetric::Nonblank,
+            _ => LineMetric::Lines,
+        },
+        check: parse_check_level(t.get("check")),
+        test_patterns: parse_string_array_or_else(
+            t.get("test_patterns"),
+            ClocConfig::default_test_patterns,
+        ),
+        exclude: parse_string_array_or_empty(t.get("exclude")),
+        max_tokens: t
+            .get("max_tokens")
+            .map(|v| {
+                if v.as_bool() == Some(false) {
+                    None // max_tokens = false disables the check
+                } else {
+                    v.as_integer().map(|n| n as usize)
+                }
+            })
+            .unwrap_or_else(ClocConfig::default_max_tokens),
+        advice: parse_string_or_else(t.get("advice"), ClocConfig::default_advice),
+        advice_test: parse_string_or_else(t.get("advice_test"), ClocConfig::default_advice_test),
     }
 }
 
@@ -485,20 +389,14 @@ pub(super) fn parse_escapes_config(value: Option<&toml::Value>) -> EscapesConfig
         return EscapesConfig::default();
     };
 
-    let check = match t.get("check").and_then(|v| v.as_str()) {
-        Some("error") => CheckLevel::Error,
-        Some("warn") => CheckLevel::Warn,
-        Some("off") => CheckLevel::Off,
-        _ => CheckLevel::default(),
-    };
-
-    let patterns = t
-        .get("patterns")
-        .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(parse_escape_pattern).collect())
-        .unwrap_or_default();
-
-    EscapesConfig { check, patterns }
+    EscapesConfig {
+        check: parse_check_level(t.get("check")),
+        patterns: t
+            .get("patterns")
+            .and_then(|v| v.as_array())
+            .map(|arr| arr.iter().filter_map(parse_escape_pattern).collect())
+            .unwrap_or_default(),
+    }
 }
 
 /// Parse a single escape pattern from TOML value.
@@ -515,7 +413,7 @@ fn parse_escape_pattern(value: &toml::Value) -> Option<EscapePattern> {
         _ => EscapeAction::default(),
     };
 
-    let comment = t.get("comment").and_then(|v| v.as_str()).map(String::from);
+    let comment = parse_string_option(t.get("comment"));
 
     let threshold = t
         .get("threshold")
@@ -523,7 +421,7 @@ fn parse_escape_pattern(value: &toml::Value) -> Option<EscapePattern> {
         .map(|v| v as usize)
         .unwrap_or(0);
 
-    let advice = t.get("advice").and_then(|v| v.as_str()).map(String::from);
+    let advice = parse_string_option(t.get("advice"));
 
     Some(EscapePattern {
         name,
@@ -542,4 +440,114 @@ pub(super) fn warn_unknown_key(path: &Path, key: &str) {
         path.display(),
         key
     );
+}
+
+/// Parse agents configuration from TOML value.
+pub(super) fn parse_agents_config(value: Option<&toml::Value>) -> AgentsConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return AgentsConfig::default();
+    };
+
+    AgentsConfig {
+        check: parse_check_level(t.get("check")),
+        files: parse_string_array_or_else(t.get("files"), AgentsConfig::default_files),
+        required: parse_string_array_or_empty(t.get("required")),
+        optional: parse_string_array_or_empty(t.get("optional")),
+        forbid: parse_string_array_or_empty(t.get("forbid")),
+        sync: t.get("sync").and_then(|v| v.as_bool()).unwrap_or(false),
+        sync_source: parse_string_option(t.get("sync_source")),
+        sections: parse_sections_config(t.get("sections")),
+        tables: parse_content_rule(t.get("tables")).unwrap_or_default(),
+        box_diagrams: parse_content_rule(t.get("box_diagrams")).unwrap_or_else(ContentRule::allow),
+        mermaid: parse_content_rule(t.get("mermaid")).unwrap_or_else(ContentRule::allow),
+        max_lines: parse_usize_option(t.get("max_lines")),
+        max_tokens: parse_usize_option(t.get("max_tokens")),
+        root: t.get("root").map(parse_agents_scope_config),
+        package: t.get("package").map(parse_agents_scope_config),
+        module: t.get("module").map(parse_agents_scope_config),
+    }
+}
+
+/// Parse a content rule from TOML value.
+fn parse_content_rule(value: Option<&toml::Value>) -> Option<ContentRule> {
+    let s = value?.as_str()?;
+    match s {
+        "allow" => Some(ContentRule::Allow),
+        "forbid" => Some(ContentRule::Forbid),
+        _ => None,
+    }
+}
+
+/// Parse a scope-specific agents configuration.
+fn parse_agents_scope_config(value: &toml::Value) -> AgentsScopeConfig {
+    let Some(t) = value.as_table() else {
+        return AgentsScopeConfig::default();
+    };
+
+    AgentsScopeConfig {
+        required: parse_string_array_or_empty(t.get("required")),
+        optional: parse_string_array_or_empty(t.get("optional")),
+        forbid: parse_string_array_or_empty(t.get("forbid")),
+        max_lines: parse_usize_option(t.get("max_lines")),
+        max_tokens: parse_usize_option(t.get("max_tokens")),
+    }
+}
+
+/// Parse sections configuration from TOML value.
+fn parse_sections_config(value: Option<&toml::Value>) -> SectionsConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return SectionsConfig::default();
+    };
+
+    SectionsConfig {
+        required: t
+            .get("required")
+            .and_then(|v| v.as_array())
+            .map(|arr| arr.iter().filter_map(parse_required_section).collect())
+            .unwrap_or_default(),
+        forbid: parse_string_array_or_empty(t.get("forbid")),
+    }
+}
+
+/// Parse a single required section from TOML value.
+fn parse_required_section(value: &toml::Value) -> Option<RequiredSection> {
+    match value {
+        // Simple form: just a string name
+        toml::Value::String(name) => Some(RequiredSection {
+            name: name.clone(),
+            advice: None,
+        }),
+        // Extended form: table with name and advice
+        toml::Value::Table(t) => {
+            let name = t.get("name")?.as_str()?.to_string();
+            let advice = parse_string_option(t.get("advice"));
+            Some(RequiredSection { name, advice })
+        }
+        _ => None,
+    }
+}
+
+/// Parse docs configuration from TOML value.
+pub(super) fn parse_docs_config(value: Option<&toml::Value>) -> DocsConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return DocsConfig::default();
+    };
+
+    DocsConfig {
+        check: parse_string_option(t.get("check")),
+        toc: parse_toc_config(t.get("toc")),
+    }
+}
+
+/// Parse TOC configuration from TOML value.
+fn parse_toc_config(value: Option<&toml::Value>) -> TocConfig {
+    let Some(toml::Value::Table(t)) = value else {
+        return TocConfig::default();
+    };
+
+    TocConfig {
+        check: parse_string_option(t.get("check")),
+        include: parse_string_array_or_else(t.get("include"), TocConfig::default_include),
+        exclude: parse_string_array_or_else(t.get("exclude"), TocConfig::default_exclude),
+    }
 }
