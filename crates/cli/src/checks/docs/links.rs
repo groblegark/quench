@@ -5,7 +5,6 @@
 
 use std::path::Path;
 
-use globset::{Glob, GlobSet, GlobSetBuilder};
 use regex::Regex;
 
 use crate::check::{CheckContext, Violation};
@@ -110,59 +109,25 @@ pub(super) fn resolve_link(md_file: &Path, target: &str) -> std::path::PathBuf {
     }
 }
 
-/// Build a GlobSet from patterns.
-fn build_glob_set(patterns: &[String]) -> GlobSet {
-    let mut builder = GlobSetBuilder::new();
-    for pattern in patterns {
-        if let Ok(glob) = Glob::new(pattern) {
-            builder.add(glob);
-        }
-    }
-    builder.build().unwrap_or_else(|_| GlobSet::empty())
-}
-
 /// Validate markdown links in all markdown files.
 pub fn validate_links(ctx: &CheckContext, violations: &mut Vec<Violation>) {
     let config = &ctx.config.check.docs.links;
 
     // Check if link validation is disabled
-    let check_level = config
-        .check
-        .as_deref()
-        .or(ctx.config.check.docs.check.as_deref())
-        .unwrap_or("error");
-    if check_level == "off" {
+    if !super::is_check_enabled(
+        config.check.as_deref(),
+        ctx.config.check.docs.check.as_deref(),
+    ) {
         return;
     }
 
-    // Build include/exclude matchers
-    let include_set = build_glob_set(&config.include);
-    let exclude_set = build_glob_set(&config.exclude);
-
-    // Process each markdown file
-    for walked in ctx.files {
-        let relative_path = walked.path.strip_prefix(ctx.root).unwrap_or(&walked.path);
-        let path_str = relative_path.to_string_lossy();
-
-        // Check include patterns
-        if !include_set.is_match(&*path_str) {
-            continue;
-        }
-
-        // Check exclude patterns
-        if exclude_set.is_match(&*path_str) {
-            continue;
-        }
-
-        // Read file content
-        let content = match std::fs::read_to_string(&walked.path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
-
-        // Extract and validate links
-        validate_file_links(ctx, relative_path, &content, violations);
-    }
+    super::process_markdown_files(
+        ctx,
+        &config.include,
+        &config.exclude,
+        violations,
+        validate_file_links,
+    );
 }
 
 /// Validate links within a single file.

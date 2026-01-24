@@ -61,8 +61,6 @@ fn matches_extension(path: &Path, extension: &str) -> bool {
 }
 
 /// Count spec files in the directory.
-// KEEP UNTIL: Phase 616+ uses for metrics reporting
-#[allow(dead_code)]
 fn count_spec_files(root: &Path, specs_path: &str, extension: &str) -> usize {
     collect_spec_files(root, specs_path, extension).len()
 }
@@ -288,12 +286,10 @@ pub fn validate_specs(ctx: &CheckContext, violations: &mut Vec<Violation>) {
     let config = &ctx.config.check.docs.specs;
 
     // Check if specs validation is disabled
-    let check_level = config
-        .check
-        .as_deref()
-        .or(ctx.config.check.docs.check.as_deref())
-        .unwrap_or("error");
-    if check_level == "off" {
+    if !super::is_check_enabled(
+        config.check.as_deref(),
+        ctx.config.check.docs.check.as_deref(),
+    ) {
         return;
     }
 

@@ -15,7 +15,55 @@ mod links;
 mod specs;
 mod toc;
 
-use crate::check::{Check, CheckContext, CheckResult};
+use std::path::Path;
+
+use crate::adapter::build_glob_set;
+use crate::check::{Check, CheckContext, CheckResult, Violation};
+
+/// Check if a docs subcheck is enabled.
+///
+/// Returns `true` if the check should run, `false` if disabled.
+/// Checks subcheck config first, then falls back to parent config.
+pub(super) fn is_check_enabled(subcheck: Option<&str>, parent: Option<&str>) -> bool {
+    matches!(subcheck.or(parent).unwrap_or("error"), "error" | "warn")
+}
+
+/// Process markdown files matching include/exclude patterns.
+///
+/// Calls the validator closure for each matching file with:
+/// - relative_path: Path relative to ctx.root
+/// - content: File contents
+pub(super) fn process_markdown_files<F>(
+    ctx: &CheckContext,
+    include: &[String],
+    exclude: &[String],
+    violations: &mut Vec<Violation>,
+    mut validator: F,
+) where
+    F: FnMut(&CheckContext, &Path, &str, &mut Vec<Violation>),
+{
+    let include_set = build_glob_set(include);
+    let exclude_set = build_glob_set(exclude);
+
+    for walked in ctx.files {
+        let relative_path = walked.path.strip_prefix(ctx.root).unwrap_or(&walked.path);
+        let path_str = relative_path.to_string_lossy();
+
+        if !include_set.is_match(&*path_str) {
+            continue;
+        }
+        if exclude_set.is_match(&*path_str) {
+            continue;
+        }
+
+        let content = match std::fs::read_to_string(&walked.path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+
+        validator(ctx, relative_path, &content, violations);
+    }
+}
 
 pub struct DocsCheck;
 
@@ -32,8 +80,7 @@ impl Check for DocsCheck {
         let mut violations = Vec::new();
 
         // Check if docs check is disabled
-        let check_level = ctx.config.check.docs.check.as_deref().unwrap_or("error");
-        if check_level == "off" {
+        if !is_check_enabled(None, ctx.config.check.docs.check.as_deref()) {
             return CheckResult::passed("docs");
         }
 
