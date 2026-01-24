@@ -1,7 +1,7 @@
 # Checkpoint 15E: Performance - Ratcheting
 
 **Plan:** `checkpoint-15e-perf`
-**Root Feature:** `quench-ratchet-perf`
+**Root Feature:** `quench-1322`
 **Depends On:** checkpoint-15d-benchmark (escapes ratcheting complete)
 
 ## Overview
