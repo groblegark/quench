@@ -1,5 +1,7 @@
 # Phase 610: Docs Check - Link Validation
 
+**Root Feature:** `quench-6204`
+
 ## Overview
 
 Add markdown link validation to the existing docs check. This validates that local file links in markdown documents (`[text](path)`) point to existing files, reporting broken links as violations. External URLs (http/https) are skipped.
