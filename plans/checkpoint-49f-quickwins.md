@@ -1,5 +1,7 @@
 # Checkpoint 49f: JavaScript Adapter Quick Wins
 
+**Root Feature:** `quench-f592`
+
 ## Overview
 
 Clean up the JavaScript adapter code to improve consistency, remove dead code, and consolidate duplicate patterns with other language adapters. The JavaScript adapter has accumulated several inconsistencies that create maintenance burden and potential bugs.
