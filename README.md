@@ -50,7 +50,7 @@ tables = "forbid"         # No markdown tables in agent files
 | Check | What it does |
 |-------|--------------|
 | `cloc` | Enforces file size limits (lines, tokens) |
-| `escapes` | Flags unsafe patterns (`.unwrap()`, `unsafe`, `todo!()`) |
+| `escapes` | Flags escape hatches (`.unwrap()`, `unsafe`, `set +e`) |
 | `suppress` | Requires justification for lint suppressions (`#[allow]`, `//nolint`) |
 | `agents` | Validates AI context files (CLAUDE.md, .cursorrules) |
 
