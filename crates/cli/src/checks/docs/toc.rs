@@ -16,6 +16,9 @@ struct FencedBlock {
     start_line: u32,
     /// Content lines within the block.
     lines: Vec<String>,
+    /// Language tag from the opening fence (e.g., "rust", "bash", "text").
+    /// None if no tag was specified.
+    language: Option<String>,
 }
 
 /// A parsed entry from a directory tree.
@@ -35,6 +38,7 @@ fn extract_fenced_blocks(content: &str) -> Vec<FencedBlock> {
     let mut in_block = false;
     let mut current_lines = Vec::new();
     let mut start_line = 0u32;
+    let mut current_language: Option<String> = None;
 
     for (idx, line) in content.lines().enumerate() {
         let line_num = idx as u32 + 1;
@@ -45,12 +49,29 @@ fn extract_fenced_blocks(content: &str) -> Vec<FencedBlock> {
             in_block = true;
             start_line = line_num + 1; // Content starts on next line
             current_lines.clear();
+
+            // Extract language tag after ```
+            let after_fence = trimmed.strip_prefix("```").unwrap_or("").trim();
+            current_language = if after_fence.is_empty() {
+                None
+            } else {
+                // Take first word as language (handles ```rust,linenos)
+                Some(
+                    after_fence
+                        .split(|c: char| !c.is_alphanumeric() && c != '-' && c != '_')
+                        .next()
+                        .unwrap_or("")
+                        .to_lowercase(),
+                )
+                .filter(|s| !s.is_empty())
+            };
         } else if in_block && trimmed == "```" {
             // End of fenced block
             in_block = false;
             blocks.push(FencedBlock {
                 start_line,
                 lines: std::mem::take(&mut current_lines),
+                language: current_language.take(),
             });
         } else if in_block {
             current_lines.push(line.to_string());
@@ -259,19 +280,193 @@ fn build_glob_set(patterns: &[String]) -> GlobSet {
     builder.build().unwrap_or_else(|_| GlobSet::empty())
 }
 
+/// Language tags that indicate the block is NOT a directory tree.
+const NON_TREE_LANGUAGES: &[&str] = &[
+    // Code languages
+    "rust",
+    "rs",
+    "go",
+    "python",
+    "py",
+    "javascript",
+    "js",
+    "typescript",
+    "ts",
+    "java",
+    "c",
+    "cpp",
+    "csharp",
+    "cs",
+    "ruby",
+    "rb",
+    "php",
+    "swift",
+    "kotlin",
+    "scala",
+    "perl",
+    "lua",
+    "r",
+    "julia",
+    "haskell",
+    "hs",
+    "ocaml",
+    "ml",
+    "elixir",
+    "ex",
+    "erlang",
+    "clojure",
+    "clj",
+    "lisp",
+    "scheme",
+    "racket",
+    "zig",
+    "nim",
+    "d",
+    "v",
+    "odin",
+    "jai",
+    "carbon",
+    // Shell and scripting
+    "bash",
+    "sh",
+    "zsh",
+    "fish",
+    "powershell",
+    "pwsh",
+    "bat",
+    "cmd",
+    // Config and data (could be tree-like but explicit tag means user knows)
+    "toml",
+    "yaml",
+    "yml",
+    "json",
+    "xml",
+    "ini",
+    "cfg",
+    // Output and plain text
+    "text",
+    "txt",
+    "output",
+    "console",
+    "terminal",
+    "log",
+    // Markup
+    "html",
+    "css",
+    "scss",
+    "sass",
+    "less",
+    // Other
+    "sql",
+    "graphql",
+    "gql",
+    "dockerfile",
+    "makefile",
+    "cmake",
+];
+
 /// Check if a fenced block looks like a directory tree.
 fn looks_like_tree(block: &FencedBlock) -> bool {
+    // Blocks with known non-tree language tags are skipped
+    if let Some(ref lang) = block.language
+        && NON_TREE_LANGUAGES.contains(&lang.as_str())
+    {
+        return false;
+    }
+
     // Must have at least one line
     if block.lines.is_empty() {
         return false;
     }
 
-    // Count lines that look like tree entries
-    let tree_line_count = block.lines.iter().filter(|line| is_tree_line(line)).count();
+    // Count different types of tree signals
+    let box_drawing_lines = block
+        .lines
+        .iter()
+        .filter(|line| {
+            let t = line.trim();
+            t.contains('├') || t.contains('└') || t.contains('│')
+        })
+        .count();
 
-    // Require at least 2 tree-like lines to be considered a tree
-    // This avoids false positives from single-line file references
-    tree_line_count >= 2
+    let directory_lines = block
+        .lines
+        .iter()
+        .filter(|line| {
+            let t = line.trim();
+            t.ends_with('/') && !t.contains(' ') && !t.contains('=')
+        })
+        .count();
+
+    let file_like_lines = block.lines.iter().filter(|line| is_tree_line(line)).count();
+
+    // Strong signal: any box-drawing characters
+    if box_drawing_lines >= 1 {
+        return true;
+    }
+
+    // Strong signal: directory lines (ending with /)
+    if directory_lines >= 1 && file_like_lines >= 2 {
+        return true;
+    }
+
+    // Weak signal: multiple file-like lines
+    // Require MORE evidence (3+ lines instead of 2)
+    // AND no indication this is error output
+    if file_like_lines >= 3 {
+        // Check that NO lines look like error output
+        let has_error_output = block
+            .lines
+            .iter()
+            .any(|line| looks_like_error_output(line.trim()));
+        if !has_error_output {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// Check if a line looks like compiler/linter error output.
+///
+/// Matches patterns like:
+/// - `file.ext:123:` (file:line:)
+/// - `file.ext:123:45:` (file:line:col:)
+/// - `file.ext:123: message` (file:line: message)
+fn looks_like_error_output(line: &str) -> bool {
+    // Look for pattern: something.ext:digits:
+    // Must have: extension with dot, colon, digits, colon
+    let Some(colon_pos) = line.find(':') else {
+        return false;
+    };
+
+    let before_colon = &line[..colon_pos];
+
+    // Must look like a file path (contains dot for extension)
+    if !before_colon.contains('.') {
+        return false;
+    }
+
+    // Check if what follows the colon starts with digits
+    let after_colon = &line[colon_pos + 1..];
+    let first_after = after_colon.chars().next();
+
+    match first_after {
+        Some(c) if c.is_ascii_digit() => {
+            // Looks like file.ext:123...
+            // Check if followed by another colon (file:line: or file:line:col:)
+            if let Some(next_colon) = after_colon.find(':') {
+                let between = &after_colon[..next_colon];
+                // All digits between first and second colon
+                if between.chars().all(|c| c.is_ascii_digit()) {
+                    return true;
+                }
+            }
+        }
+        _ => {}
+    }
+
+    false
 }
 
 /// Check if a line looks like a directory tree entry.
@@ -299,6 +494,13 @@ fn is_tree_line(line: &str) -> bool {
     }
     // TOML table arrays [[...]]
     if trimmed.starts_with("[[") {
+        return false;
+    }
+
+    // Reject error output patterns
+    // Pattern: file.ext:line: or file.ext:line:col:
+    // Examples: "foo.rs:23:", "src/main.go:45:12:", "script.sh:10: error"
+    if looks_like_error_output(trimmed) {
         return false;
     }
 
@@ -396,6 +598,7 @@ fn validate_file_toc(
 
         let entries = parse_tree_block(&block);
         let abs_file = ctx.root.join(relative_path);
+        let mut block_violations = Vec::new();
 
         for entry in entries {
             // Skip directories (only validate files)
@@ -406,14 +609,22 @@ fn validate_file_toc(
             // Try to resolve the path
             if !resolve_path(ctx.root, &abs_file, &entry.path) {
                 let line = block.start_line + entry.line_offset;
+                block_violations.push((line, entry.path.clone()));
+            }
+        }
+
+        // If most entries in the block fail, suggest marking as non-tree
+        if !block_violations.is_empty() {
+            let advice = if block_violations.len() > 2 {
+                "File does not exist. If this is example output (not a directory tree), \
+                 add a language tag like ```text or ```bash to skip TOC validation."
+            } else {
+                "File does not exist. Update the tree or create the file."
+            };
+
+            for (line, path) in block_violations {
                 violations.push(
-                    Violation::file(
-                        relative_path,
-                        line,
-                        "broken_toc",
-                        "File does not exist. Update the tree or create the file.",
-                    )
-                    .with_pattern(entry.path.clone()),
+                    Violation::file(relative_path, line, "broken_toc", advice).with_pattern(path),
                 );
             }
         }
