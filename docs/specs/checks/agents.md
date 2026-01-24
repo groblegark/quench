@@ -18,7 +18,7 @@ With no configuration, the agents check applies these defaults:
 | `files` | CLAUDE.md, AGENTS.md, .cursorrules, .cursorignore, .cursor/rules/*.md[c] | All recognized agent files |
 | `required` | `["*"]` | At least one agent file must exist |
 | `sync` | `true` | Keep multiple agent files consistent |
-| `tables` | `forbid` | Tables waste tokens |
+| `tables` | `allow` | Tables can be useful for structured data |
 | `box_diagrams` | `allow` | ASCII diagrams are often useful |
 | `mermaid` | `allow` | Mermaid blocks are often useful |
 | `max_lines` | `500` | Encourage concise context |
@@ -290,10 +290,10 @@ sections.forbid = [
 
 ### Markdown Tables
 
-Tables are verbose and not token-efficient. Default: forbid.
+Tables can be useful for structured data. Default: allow.
 
 ```toml
-tables = "forbid"           # allow | forbid (default: forbid)
+tables = "allow"            # allow | forbid (default: allow)
 ```
 
 Advice: Use lists or prose instead.
@@ -439,7 +439,7 @@ sections.forbid = ["Secrets", "API Keys"]
 # advice = "Checklist for AI agents before finishing work"
 
 # Content rules
-tables = "forbid"
+tables = "allow"
 box_diagrams = "allow"
 mermaid = "allow"
 

@@ -37,9 +37,9 @@ fn default_sync_is_enabled() {
 }
 
 #[test]
-fn default_tables_is_forbid() {
+fn default_tables_is_allow() {
     let config = AgentsConfig::default();
-    assert_eq!(config.tables, ContentRule::Forbid);
+    assert_eq!(config.tables, ContentRule::Allow);
 }
 
 #[test]

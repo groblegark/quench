@@ -47,9 +47,9 @@ fn default_sync_enabled_detects_out_of_sync_files() {
 
 /// Spec: docs/specs/checks/agents.md#zero-config-defaults
 ///
-/// > tables = "forbid" - Markdown tables generate violations
+/// > tables = "allow" - Markdown tables allowed by default
 #[test]
-fn default_forbids_markdown_tables() {
+fn default_allows_markdown_tables() {
     let temp = Project::empty();
     temp.config("");
     temp.file(
@@ -57,11 +57,8 @@ fn default_forbids_markdown_tables() {
         "# Project\n\n## Directory Structure\n\nLayout\n\n## Commands\n\n| Cmd | Desc |\n|-----|------|\n| a | b |\n\n## Landing the Plane\n\n- Done\n",
     );
 
-    let result = check("agents").pwd(temp.path()).json().fails();
-    assert!(
-        result.has_violation("forbidden_table"),
-        "should fail with forbidden_table (tables forbidden by default)"
-    );
+    // Should pass - tables allowed by default
+    check("agents").pwd(temp.path()).passes();
 }
 
 /// Spec: docs/specs/checks/agents.md#zero-config-defaults

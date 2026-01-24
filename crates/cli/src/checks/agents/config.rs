@@ -30,9 +30,9 @@ where
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum ContentRule {
     /// Allow this content type.
+    #[default]
     Allow,
     /// Forbid this content type (generate violation).
-    #[default]
     Forbid,
 }
 
@@ -96,7 +96,7 @@ pub struct AgentsConfig {
     #[serde(default)]
     pub sections: SectionsConfig,
 
-    /// Markdown table enforcement (default: forbid).
+    /// Markdown table enforcement (default: allow).
     #[serde(default)]
     pub tables: ContentRule,
 
