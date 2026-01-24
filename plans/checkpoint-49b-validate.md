@@ -1,6 +1,6 @@
 # Checkpoint 49B: JavaScript Adapter Complete - Validation
 
-**Root Feature:** JavaScript language adapter validation
+**Root Feature:** `quench-b6a8` - JavaScript language adapter validation
 
 ## Overview
 
