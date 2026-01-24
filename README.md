@@ -35,8 +35,8 @@ version = 1
 max_lines = 750       # Source file limit (default: 750)
 max_lines_test = 1100 # Test file limit (default: 1100)
 exclude = ["generated/**", "vendor/**"]
-advice = "Split large files into smaller modules."
-advice_test = "Consider parameterized tests."
+advice = "Split large files into sibling modules or submodules."
+advice_test = "Use table-driven tests with t.Run()."  # Go-specific
 
 [check.escapes]
 # Detects escape hatches like .unwrap(), unsafe, set +e
