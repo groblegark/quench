@@ -38,7 +38,12 @@ advice_test = "Use table-driven tests with t.Run()."  # customize advice for pro
 [check.agents]
 required = ["CLAUDE.md"]  # default: ["*"] any agent file
 tables = "forbid"         # default: "allow"
-# Scopes: [check.agents.root], .package, .module
+# mermaid = "forbid"
+# box_diagrams = "forbid"
+
+# Per-scope config: .root (project), .package (crates/), .module (subdirs)
+[check.agents.package]
+required = []             # no agent file required in packages
 ```
 
 ## Checks

@@ -43,7 +43,7 @@ pub enum FileKind {
 /// Adapters are responsible for:
 /// - Classifying files as source, test, or other
 /// - Providing default escape patterns
-/// - (Future) Inline test detection, lint suppression patterns
+/// - TODO(Future): Inline test detection, lint suppression patterns
 pub trait Adapter: Send + Sync {
     /// Adapter identifier (e.g., "rust", "shell", "generic").
     fn name(&self) -> &'static str;
