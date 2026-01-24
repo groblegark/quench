@@ -4,44 +4,51 @@ A fast linting tool for AI agents that measures quality signals.
 
 ## Installation
 
-### Homebrew (macOS)
-
 ```bash
+# macOS
 brew install alfredjeanlab/tap/quench
-```
 
-### Linux / Manual
-
-```bash
+# Linux / macOS (manual)
 curl -fsSL https://github.com/alfredjeanlab/quench/releases/latest/download/install.sh | bash
 ```
 
+## Supported Languages
+
+Rust, Go, Shell
+
 ## Quick Start
 
-Initialize configuration in your project:
-
 ```bash
-quench init
-```
-
-Run quality checks:
-
-```bash
-quench check
+quench init    # Create quench.toml
+quench check   # Run quality checks
 ```
 
 ## Configuration
-
-Quench is configured via `quench.toml`. Example with cloc limits:
 
 ```toml
 version = 1
 
 [check.cloc]
-exclude = ["tests/fixtures/**", "vendor/**"]
-advice = "Split large files into smaller modules."
-advice_test = "Consider parameterized tests with yare."
+max_lines = 750       # Source file limit (default: 750)
+max_lines_test = 1100 # Test file limit (default: 1100)
+exclude = ["generated/**", "vendor/**"]
+
+[check.escapes]
+# Detects escape hatches like .unwrap(), unsafe, todo!()
+# Language-specific defaults apply automatically
+
+[check.agents]
+required = ["CLAUDE.md"]  # Require agent context files
+tables = "forbid"         # No markdown tables in agent files
 ```
+
+## Checks
+
+| Check | What it does |
+|-------|--------------|
+| `cloc` | Enforces file size limits (lines, tokens) |
+| `escapes` | Flags unsafe patterns (`.unwrap()`, `unsafe`, `//nolint`) |
+| `agents` | Validates AI context files (CLAUDE.md, .cursorrules) |
 
 ## License
 
