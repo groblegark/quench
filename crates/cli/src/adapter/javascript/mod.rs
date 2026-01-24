@@ -29,6 +29,10 @@ use crate::config::JavaScriptPolicyConfig;
 use super::glob::build_glob_set;
 use super::{Adapter, EscapeAction, EscapePattern, FileKind};
 
+/// Common ignore directory prefixes to check before GlobSet.
+/// Order: most common first for early exit.
+const IGNORE_PREFIXES: &[&str] = &["node_modules", "dist", "build", ".next", "coverage"];
+
 /// Default escape patterns for JavaScript/TypeScript.
 ///
 /// These patterns detect common type safety escapes that require justification.
@@ -51,23 +55,23 @@ const JS_ESCAPE_PATTERNS: &[EscapePattern] = &[
 
 /// JavaScript/TypeScript language adapter.
 pub struct JavaScriptAdapter {
-    source_patterns: GlobSet,
     test_patterns: GlobSet,
     ignore_patterns: GlobSet,
 }
 
 impl JavaScriptAdapter {
+    /// Fast extension check for source files.
+    /// Returns Some(true) for JS/TS extensions, None if GlobSet needed.
+    #[inline]
+    fn is_js_extension(path: &Path) -> Option<bool> {
+        path.extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| matches!(ext, "js" | "jsx" | "ts" | "tsx" | "mjs" | "mts"))
+    }
+
     /// Create a new JavaScript adapter with default patterns.
     pub fn new() -> Self {
         Self {
-            source_patterns: build_glob_set(&[
-                "**/*.js".to_string(),
-                "**/*.jsx".to_string(),
-                "**/*.ts".to_string(),
-                "**/*.tsx".to_string(),
-                "**/*.mjs".to_string(),
-                "**/*.mts".to_string(),
-            ]),
             test_patterns: build_glob_set(&[
                 "**/*.test.js".to_string(),
                 "**/*.test.ts".to_string(),
@@ -92,7 +96,22 @@ impl JavaScriptAdapter {
     }
 
     /// Check if a path should be ignored (e.g., node_modules/).
+    ///
+    /// Uses fast prefix check for common directories before falling back to GlobSet.
     pub fn should_ignore(&self, path: &Path) -> bool {
+        // Fast path: check common prefixes in first path component
+        if let Some(first_component) = path.components().next()
+            && let std::path::Component::Normal(name) = first_component
+            && let Some(name_str) = name.to_str()
+        {
+            for prefix in IGNORE_PREFIXES {
+                if name_str == *prefix {
+                    return true;
+                }
+            }
+        }
+
+        // Fallback: GlobSet for edge cases (patterns in subdirectories)
         self.ignore_patterns.is_match(path)
     }
 
@@ -137,13 +156,13 @@ impl Adapter for JavaScriptAdapter {
             return FileKind::Other;
         }
 
-        // Test patterns take precedence
+        // Test patterns take precedence (must check before source)
         if self.test_patterns.is_match(path) {
             return FileKind::Test;
         }
 
-        // Source patterns
-        if self.source_patterns.is_match(path) {
+        // Fast path: extension check instead of GlobSet for source files
+        if Self::is_js_extension(path).unwrap_or(false) {
             return FileKind::Source;
         }
 

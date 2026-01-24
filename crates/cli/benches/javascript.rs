@@ -82,6 +82,73 @@ fn bench_js_classify(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark fast-path extension checking for source files.
+fn bench_js_fast_path(c: &mut Criterion) {
+    let js_adapter = JavaScriptAdapter::new();
+
+    // Mixed extensions: some JS/TS (fast path hit), some other (fast path miss)
+    let mixed_paths: Vec<PathBuf> = ["tsx", "ts", "js", "jsx", "mjs", "mts", "css", "json", "md"]
+        .iter()
+        .cycle()
+        .take(1000)
+        .enumerate()
+        .map(|(i, ext)| PathBuf::from(format!("src/file_{}.{}", i, ext)))
+        .collect();
+
+    // All JS/TS extensions (100% fast path hit)
+    let js_only_paths: Vec<PathBuf> = ["tsx", "ts", "js", "jsx", "mjs", "mts"]
+        .iter()
+        .cycle()
+        .take(1000)
+        .enumerate()
+        .map(|(i, ext)| PathBuf::from(format!("src/file_{}.{}", i, ext)))
+        .collect();
+
+    // Mixed ignore prefix paths
+    let ignore_paths: Vec<PathBuf> = [
+        "node_modules/pkg/index.js",
+        "dist/bundle.js",
+        "src/app.ts",
+        "build/output.js",
+        ".next/cache/data.json",
+        "coverage/lcov.info",
+        "lib/utils.ts",
+    ]
+    .iter()
+    .cycle()
+    .take(1000)
+    .map(|s| PathBuf::from(*s))
+    .collect();
+
+    let mut group = c.benchmark_group("js_fast_path");
+
+    group.bench_function("extension_check_1k_mixed", |b| {
+        b.iter(|| {
+            for path in &mixed_paths {
+                black_box(js_adapter.classify(path));
+            }
+        })
+    });
+
+    group.bench_function("extension_check_1k_js_only", |b| {
+        b.iter(|| {
+            for path in &js_only_paths {
+                black_box(js_adapter.classify(path));
+            }
+        })
+    });
+
+    group.bench_function("ignore_prefix_1k_mixed", |b| {
+        b.iter(|| {
+            for path in &ignore_paths {
+                black_box(js_adapter.classify(path));
+            }
+        })
+    });
+
+    group.finish();
+}
+
 /// Benchmark JavaScript workspace detection.
 fn bench_js_workspace_detection(c: &mut Criterion) {
     let mut group = c.benchmark_group("js_workspace_detection");
@@ -168,6 +235,7 @@ criterion_group!(
     benches,
     bench_js_adapter_creation,
     bench_js_classify,
+    bench_js_fast_path,
     bench_js_workspace_detection,
     bench_js_suppress_parse,
 );

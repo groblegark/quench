@@ -31,6 +31,11 @@ fn is_loop_error(err: &ignore::Error) -> bool {
 /// Default maximum directory depth.
 pub const DEFAULT_MAX_DEPTH: usize = 100;
 
+/// Directories to skip entirely during walking.
+/// These are filtered during traversal, not after discovery.
+/// Skipping at the walker level prevents any I/O on these subtrees.
+pub const SKIP_DIRECTORIES: &[&str] = &["node_modules", ".git"];
+
 /// Walker configuration.
 #[derive(Debug, Clone)]
 pub struct WalkerConfig {
@@ -123,6 +128,21 @@ pub struct FileWalker {
 }
 
 impl FileWalker {
+    /// Check if a directory entry should be skipped entirely.
+    /// Skipping prevents traversal of the entire subtree.
+    #[inline]
+    fn should_skip_dir(entry: &ignore::DirEntry) -> bool {
+        if !entry.file_type().map(|t| t.is_dir()).unwrap_or(false) {
+            return false;
+        }
+
+        entry
+            .file_name()
+            .to_str()
+            .map(|name| SKIP_DIRECTORIES.contains(&name))
+            .unwrap_or(false)
+    }
+
     /// Create a new walker with the given configuration.
     pub fn new(config: WalkerConfig) -> Self {
         Self { config }
@@ -202,6 +222,17 @@ impl FileWalker {
             }
         }
 
+        // Filter out common skip directories at the walker level.
+        // This prevents any I/O on these subtrees for both parallel and sequential modes.
+        builder.filter_entry(|entry| {
+            !entry.file_type().map(|t| t.is_dir()).unwrap_or(false)
+                || !entry
+                    .file_name()
+                    .to_str()
+                    .map(|name| SKIP_DIRECTORIES.contains(&name))
+                    .unwrap_or(false)
+        });
+
         let use_parallel = self.should_use_parallel(root);
 
         let handle = if use_parallel {
@@ -238,6 +269,11 @@ impl FileWalker {
 
                 Box::new(move |entry| match entry {
                     Ok(entry) => {
+                        // Skip configured directories entirely (e.g., node_modules, .git)
+                        if Self::should_skip_dir(&entry) {
+                            return WalkState::Skip;
+                        }
+
                         let is_file = entry.file_type().map(|t| t.is_file()).unwrap_or(false);
 
                         if !is_file {
