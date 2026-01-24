@@ -106,24 +106,18 @@ When a shellcheck suppression is missing a required comment (when `check = "comm
 2. Lint-specific guidance tailored to common ShellCheck codes
 3. The list of acceptable comment patterns (when configured)
 
-**Example outputs:**
+**Example (no specific pattern):**
 
 ```
 scripts/deploy.sh:23: shellcheck_missing_comment: # shellcheck disable=SC2086
   Lint suppression requires justification.
   Is unquoted expansion intentional here?
   Add a comment above the directive.
-
-scripts/build.sh:45: shellcheck_missing_comment: # shellcheck disable=SC2154
-  Lint suppression requires justification.
-  Is this variable defined externally?
-  If so, add one of:
-    # OK: ...
-    # INTENTIONAL: ...
 ```
 
-The first example shows the default behavior (no specific pattern required).
-The second example shows when multiple patterns are configured for a lint code.
+**Example (with configured patterns):**
+
+See the configuration example above showing `[shell.suppress.source.SC2086]` with `comment = "# INTENTIONAL:"`. When patterns are configured, the violation message will list them.
 
 **Default per-lint guidance** (for common ShellCheck codes):
 

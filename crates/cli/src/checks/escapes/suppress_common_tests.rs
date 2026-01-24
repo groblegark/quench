@@ -119,7 +119,8 @@ fn comment_level_requires_comment() {
     assert_eq!(
         result,
         Some(SuppressViolationKind::MissingComment {
-            required_pattern: None
+            lint_code: Some("dead_code".to_string()),
+            required_patterns: vec![]
         })
     );
 }
@@ -159,7 +160,8 @@ fn global_pattern_enforced() {
     assert_eq!(
         result,
         Some(SuppressViolationKind::MissingComment {
-            required_pattern: Some("// REASON:".to_string())
+            lint_code: Some("dead_code".to_string()),
+            required_patterns: vec!["// REASON:".to_string()]
         })
     );
 }
@@ -202,7 +204,8 @@ fn per_lint_pattern_takes_precedence() {
     assert_eq!(
         result,
         Some(SuppressViolationKind::MissingComment {
-            required_pattern: Some("// NOTE(compat):".to_string())
+            lint_code: Some("dead_code".to_string()),
+            required_patterns: vec!["// NOTE(compat):".to_string()]
         })
     );
 
@@ -244,7 +247,8 @@ fn per_lint_pattern_fallback_to_global() {
     assert_eq!(
         result,
         Some(SuppressViolationKind::MissingComment {
-            required_pattern: Some("// REASON:".to_string())
+            lint_code: Some("unused_variables".to_string()),
+            required_patterns: vec!["// REASON:".to_string()]
         })
     );
 }
@@ -286,7 +290,8 @@ fn multiple_patterns_any_match_passes() {
     assert_eq!(
         result,
         Some(SuppressViolationKind::MissingComment {
-            required_pattern: Some("// KEEP UNTIL:".to_string())
+            lint_code: Some("dead_code".to_string()),
+            required_patterns: vec!["// KEEP UNTIL:".to_string(), "// NOTE(compat):".to_string()]
         })
     );
 }
