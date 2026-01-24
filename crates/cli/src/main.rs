@@ -3,6 +3,8 @@
 
 //! Quench CLI entry point.
 
+mod git;
+
 use std::sync::Arc;
 
 use clap::{CommandFactory, Parser};
@@ -24,6 +26,8 @@ use quench::output::text::TextFormatter;
 use quench::ratchet::{self, CurrentMetrics};
 use quench::runner::{CheckRunner, RunnerConfig};
 use quench::walker::{FileWalker, WalkerConfig};
+
+use git::{detect_base_branch, get_changed_files, get_staged_files};
 
 fn init_logging() {
     let filter = EnvFilter::try_from_env("QUENCH_LOG").unwrap_or_else(|_| EnvFilter::new("off"));
@@ -524,105 +528,6 @@ fn run_check(cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
     };
 
     Ok(exit_code)
-}
-
-/// Get list of changed files compared to a git base ref.
-fn get_changed_files(
-    root: &std::path::Path,
-    base: &str,
-) -> anyhow::Result<Vec<std::path::PathBuf>> {
-    use std::process::Command;
-
-    // Get staged/unstaged changes (diffstat against base)
-    let output = Command::new("git")
-        .args(["diff", "--name-only", base])
-        .current_dir(root)
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("git diff failed: {}", stderr.trim());
-    }
-
-    // Also get staged changes
-    let staged_output = Command::new("git")
-        .args(["diff", "--name-only", "--cached", base])
-        .current_dir(root)
-        .output()?;
-
-    let mut files: std::collections::HashSet<std::path::PathBuf> = std::collections::HashSet::new();
-
-    for line in String::from_utf8_lossy(&output.stdout).lines() {
-        if !line.is_empty() {
-            files.insert(root.join(line));
-        }
-    }
-
-    if staged_output.status.success() {
-        for line in String::from_utf8_lossy(&staged_output.stdout).lines() {
-            if !line.is_empty() {
-                files.insert(root.join(line));
-            }
-        }
-    }
-
-    Ok(files.into_iter().collect())
-}
-
-/// Get list of staged files (for --staged flag).
-fn get_staged_files(root: &std::path::Path) -> anyhow::Result<Vec<std::path::PathBuf>> {
-    use std::process::Command;
-
-    // Get staged changes
-    let output = Command::new("git")
-        .args(["diff", "--name-only", "--cached"])
-        .current_dir(root)
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("git diff --cached failed: {}", stderr.trim());
-    }
-
-    let mut files: Vec<std::path::PathBuf> = Vec::new();
-    for line in String::from_utf8_lossy(&output.stdout).lines() {
-        if !line.is_empty() {
-            files.push(root.join(line));
-        }
-    }
-
-    Ok(files)
-}
-
-/// Detect base branch for CI mode (main or master).
-fn detect_base_branch(root: &std::path::Path) -> Option<String> {
-    use std::process::Command;
-
-    // Check if main branch exists
-    let main_check = Command::new("git")
-        .args(["rev-parse", "--verify", "main"])
-        .current_dir(root)
-        .output();
-
-    if let Ok(output) = main_check
-        && output.status.success()
-    {
-        return Some("main".to_string());
-    }
-
-    // Fall back to master
-    let master_check = Command::new("git")
-        .args(["rev-parse", "--verify", "master"])
-        .current_dir(root)
-        .output();
-
-    if let Ok(output) = master_check
-        && output.status.success()
-    {
-        return Some("master".to_string());
-    }
-
-    None
 }
 
 fn run_report(_cli: &Cli, args: &ReportArgs) -> anyhow::Result<()> {
