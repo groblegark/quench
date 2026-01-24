@@ -173,7 +173,9 @@ fn bench_stress_e2e(c: &mut Criterion) {
     for (fixture, description) in fixtures {
         let path = e2e_fixture_path(fixture);
         if !path.exists() {
-            eprintln!("Skipping {fixture} ({description}): run ./scripts/fixtures/generate-stress-fixtures");
+            eprintln!(
+                "Skipping {fixture} ({description}): run ./scripts/fixtures/generate-stress-fixtures"
+            );
             continue;
         }
 
