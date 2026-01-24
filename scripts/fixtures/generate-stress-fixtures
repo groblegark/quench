@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 Alfred Jean LLC
-# scripts/generate-stress-fixtures - Generate large-scale stress test fixtures
+# scripts/fixtures/generate-stress-fixtures - Generate large-scale stress test fixtures
 #
 # Creates fixtures for end-to-end stress testing:
 # - stress-huge-files: 50K tiny files (file traversal stress)
@@ -9,13 +9,13 @@
 # - stress-large-file: 5 files of 1-5MB each (large file handling)
 #
 # Usage:
-#   ./scripts/generate-stress-fixtures              # Generate all fixtures
-#   ./scripts/generate-stress-fixtures --clean      # Remove existing fixtures first
+#   ./scripts/fixtures/generate-stress-fixtures              # Generate all fixtures
+#   ./scripts/fixtures/generate-stress-fixtures --clean      # Remove existing fixtures first
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 FIXTURE_DIR="$REPO_ROOT/tests/fixtures"
 
 # Colors

@@ -70,6 +70,29 @@ check = "comment"                # forbid | comment | allow
 lint_changes = "standalone"
 ```
 
+## JavaScript / TypeScript Adapter
+
+See [langs/javascript.md](langs/javascript.md) for full JavaScript/TypeScript configuration.
+
+### Summary
+
+- **Test detection**: `*.test.ts`, `*.spec.ts`, `__tests__/` directories
+- **Escape patterns**: `as unknown`
+- **Lint suppression**: `eslint-disable`, `biome-ignore`
+- **Build metrics**: Bundle size, build time
+
+```toml
+[javascript]
+bundle_size = true
+build_time = true
+
+[javascript.suppress]
+check = "comment"              # forbid | comment | allow
+
+[javascript.policy]
+lint_changes = "standalone"
+```
+
 ## Shell Adapter
 
 See [langs/shell.md](langs/shell.md) for full Shell configuration.
@@ -117,7 +140,6 @@ tests = ["test/**/*", "tests/**/*", "**/*_test.*", "**/*.spec.*"]
 
 | Adapter | Detection | Test Patterns | Key Escapes |
 |---------|-----------|---------------|-------------|
-| `typescript` | `tsconfig.json` | `*.test.ts`, `*.spec.ts` | `as unknown`, `@ts-ignore`, `any` |
 | `python` | `pyproject.toml` | `test_*.py`, `*_test.py` | `# type: ignore`, `# noqa` |
 
 Future adapters will also provide build metrics. See [checks/build.md](checks/build.md) for how adapters integrate with the build check (bundle size, build time, etc.).

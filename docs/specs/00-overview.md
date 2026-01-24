@@ -62,6 +62,8 @@ When configuration is needed, it's hierarchical (monorepo-friendly) and minimal.
 | Adapter | Capabilities |
 |---------|--------------|
 | `rust` | `#[cfg(test)]` parsing, cargo integration, llvm-cov coverage |
+| `golang` | `*_test.go` detection, go test integration, built-in coverage |
+| `javascript` | `*.test.ts` / `*.spec.ts` detection, bundler integration, vitest/jest coverage |
 | `shell` | Shellcheck integration, bats test runner |
 | `generic` | Glob-based source/test detection, pattern matching |
 
