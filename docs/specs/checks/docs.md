@@ -67,10 +67,10 @@ docs/specs/
 ```
 ~~~
 
-Use `no-toc` or `ignore` to explicitly skip validation:
+Use `ignore`, `diagram`, `example`, or a specific language tag to explicitly skip validation:
 
 ~~~markdown
-```no-toc
+```diagram
 hypothetical/
 ├── future-feature.rs
 └── not-yet-implemented.rs
@@ -80,8 +80,10 @@ hypothetical/
 | Tag | Behavior |
 |-----|----------|
 | `toc` | Always validate as directory tree |
-| `no-toc` | Never validate (explicit skip) |
-| `ignore` | Never validate (alias for `no-toc`) |
+| `ignore` | Never validate (explicit skip) |
+| `diagram` | Never validate (illustrative diagram) |
+| `example` | Never validate (example output) |
+| `{lang}` | Never validate (language-specific code) |
 
 **Invalid Format Error:**
 
