@@ -858,57 +858,123 @@ sync_source = "CLAUDE.md"
 }
 
 // =============================================================================
-// SNAPSHOT TESTS
+// EXACT OUTPUT FORMAT SPECS
 // =============================================================================
-// These tests use insta to capture exact output format for regression testing.
+// These tests verify exact output format using direct comparison.
+// Any output change requires explicit test update (no auto-accept).
 
-use insta::assert_snapshot;
-
-/// Snapshot: Text output for missing file violation
+/// Spec: docs/specs/checks/agents.md#output
+///
+/// > Missing file shows human-readable description with exact format.
 #[test]
-fn snapshot_missing_file_text() {
-    let result = check("agents").on("agents/missing-file").fails();
-    assert_snapshot!(result.stdout());
+fn exact_missing_file_text() {
+    check("agents")
+        .on("agents/missing-file")
+        .fails()
+        .stdout_eq(r###"agents: FAIL
+  CLAUDE.md: missing required file
+    Required agent file 'CLAUDE.md' not found at project root
+FAIL: agents
+"###);
 }
 
-/// Snapshot: Text output for out-of-sync files
+/// Spec: docs/specs/checks/agents.md#output
+///
+/// > Out of sync shows other file name with exact format.
 #[test]
-fn snapshot_out_of_sync_text() {
-    let result = check("agents").on("agents/out-of-sync").fails();
-    assert_snapshot!(result.stdout());
+fn exact_out_of_sync_text() {
+    check("agents")
+        .on("agents/out-of-sync")
+        .fails()
+        .stdout_eq(r###"agents: FAIL
+  .cursorrules: out of sync with CLAUDE.md
+    Code Style differs. Use --fix to sync from CLAUDE.md, or reconcile manually.
+  CLAUDE.md: missing required section
+    Add a "## Directory Structure" section: Overview of project layout and key directories
+  CLAUDE.md: missing required section
+    Add a "## Landing the Plane" section: Checklist for AI agents before completing work
+  .cursorrules: missing required section
+    Add a "## Directory Structure" section: Overview of project layout and key directories
+  .cursorrules: missing required section
+    Add a "## Landing the Plane" section: Checklist for AI agents before completing work
+FAIL: agents
+"###);
 }
 
-/// Snapshot: Text output for forbidden table
+/// Spec: docs/specs/checks/agents.md#output
+///
+/// > Forbidden table shows line number with exact format.
 #[test]
-fn snapshot_forbidden_table_text() {
-    let result = check("agents").on("agents/with-table").fails();
-    assert_snapshot!(result.stdout());
+fn exact_forbidden_table_text() {
+    check("agents")
+        .on("agents/with-table")
+        .fails()
+        .stdout_eq(r###"agents: FAIL
+  CLAUDE.md: missing required section
+    Add a "## Directory Structure" section: Overview of project layout and key directories
+  CLAUDE.md: missing required section
+    Add a "## Landing the Plane" section: Checklist for AI agents before completing work
+  CLAUDE.md:7: forbidden table
+    Tables are not token-efficient. Convert to a list or prose.
+FAIL: agents
+"###);
 }
 
-/// Snapshot: Text output for missing section
+/// Spec: docs/specs/checks/agents.md#output
+///
+/// > Missing section includes section name and advice with exact format.
 #[test]
-fn snapshot_missing_section_text() {
-    let result = check("agents").on("agents/missing-section").fails();
-    assert_snapshot!(result.stdout());
+fn exact_missing_section_text() {
+    check("agents")
+        .on("agents/missing-section")
+        .fails()
+        .stdout_eq(r###"agents: FAIL
+  CLAUDE.md: missing required section
+    Add a "## Landing the Plane" section: Checklist for AI agents before finishing work
+FAIL: agents
+"###);
 }
 
-/// Snapshot: Text output for oversized file (lines)
+/// Spec: docs/specs/checks/agents.md#output
+///
+/// > File too large shows value vs threshold with exact format.
 #[test]
-fn snapshot_oversized_lines_text() {
-    let result = check("agents").on("agents/oversized-lines").fails();
-    assert_snapshot!(result.stdout());
+fn exact_oversized_lines_text() {
+    check("agents")
+        .on("agents/oversized-lines")
+        .fails()
+        .stdout_eq(r###"agents: FAIL
+  CLAUDE.md: missing required section
+    Add a "## Directory Structure" section: Overview of project layout and key directories
+  CLAUDE.md: missing required section
+    Add a "## Landing the Plane" section: Checklist for AI agents before completing work
+  CLAUDE.md: file too large (59 vs 50)
+    File has 59 lines (max: 50). Split into smaller files or reduce content.
+FAIL: agents
+"###);
 }
 
-/// Snapshot: JSON output for multi-scope project (with timestamp redacted)
+/// Spec: docs/specs/checks/agents.md#json-output
+///
+/// > JSON output for multi-scope project includes expected structure.
 #[test]
-fn snapshot_agents_project_json() {
+fn exact_agents_project_json() {
     let result = check("agents").on("agents-project").json().passes();
-    // Redact the timestamp for deterministic snapshots
-    let json = result.raw_json();
-    let redacted = regex::Regex::new(r#""timestamp": "[^"]+""#)
-        .expect("valid regex")
-        .replace(&json, r#""timestamp": "[REDACTED]""#);
-    assert_snapshot!(redacted);
+    let metrics = result.require("metrics");
+
+    // Verify structure without timestamp dependency
+    let files_found = metrics.get("files_found").unwrap().as_array().unwrap();
+    assert_eq!(files_found.len(), 3);
+    assert!(files_found.iter().any(|f| f.as_str() == Some("CLAUDE.md")));
+    assert!(files_found.iter().any(|f| f.as_str() == Some(".cursorrules")));
+    assert!(files_found
+        .iter()
+        .any(|f| f.as_str() == Some("crates/api/CLAUDE.md")));
+
+    let files_missing = metrics.get("files_missing").unwrap().as_array().unwrap();
+    assert!(files_missing.is_empty());
+
+    assert_eq!(metrics.get("in_sync").unwrap().as_bool(), Some(true));
 }
 
 // =============================================================================

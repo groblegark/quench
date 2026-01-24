@@ -52,6 +52,12 @@ impl ShellConfig {
             "**/*_test.sh".to_string(),
         ]
     }
+
+    pub(crate) fn default_cloc_advice() -> &'static str {
+        "Can the script be made more concise?\n\n\
+         If not, split into multiple scripts or source helper files.\n\
+         Consider whether complex logic should be in a compiled language instead."
+    }
 }
 
 /// Shell suppress configuration (defaults to "forbid" unlike Rust's "comment").

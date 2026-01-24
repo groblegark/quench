@@ -570,24 +570,25 @@ fn default_cloc_advice_includes_avoid_picking() {
 }
 
 #[test]
-fn cloc_advice_for_language_uses_generic_by_default() {
+fn cloc_advice_for_language_uses_language_defaults() {
     let path = PathBuf::from("quench.toml");
     let content = "version = 1\n";
     let config = parse_with_warnings(content, &path).unwrap();
 
-    // All languages should use generic advice by default
+    // Known languages should use their language-specific defaults
     assert_eq!(
         config.cloc_advice_for_language("rust"),
-        &config.check.cloc.advice
+        RustConfig::default_cloc_advice()
     );
     assert_eq!(
         config.cloc_advice_for_language("go"),
-        &config.check.cloc.advice
+        GoConfig::default_cloc_advice()
     );
     assert_eq!(
         config.cloc_advice_for_language("shell"),
-        &config.check.cloc.advice
+        ShellConfig::default_cloc_advice()
     );
+    // Unknown languages fall back to generic advice
     assert_eq!(
         config.cloc_advice_for_language("unknown"),
         &config.check.cloc.advice
@@ -595,7 +596,7 @@ fn cloc_advice_for_language_uses_generic_by_default() {
 }
 
 #[test]
-fn rust_cloc_advice_overrides_generic() {
+fn rust_cloc_advice_overrides_default() {
     let path = PathBuf::from("quench.toml");
     let content = r#"
 version = 1
@@ -609,15 +610,15 @@ cloc_advice = "Custom Rust advice here"
         config.cloc_advice_for_language("rust"),
         "Custom Rust advice here"
     );
-    // Other languages still use generic
+    // Other languages still use their defaults
     assert_eq!(
         config.cloc_advice_for_language("go"),
-        &config.check.cloc.advice
+        GoConfig::default_cloc_advice()
     );
 }
 
 #[test]
-fn go_cloc_advice_overrides_generic() {
+fn go_cloc_advice_overrides_default() {
     let path = PathBuf::from("quench.toml");
     let content = r#"
 version = 1
@@ -631,15 +632,15 @@ cloc_advice = "Custom Go advice here"
         config.cloc_advice_for_language("go"),
         "Custom Go advice here"
     );
-    // Other languages still use generic
+    // Other languages still use their defaults
     assert_eq!(
         config.cloc_advice_for_language("rust"),
-        &config.check.cloc.advice
+        RustConfig::default_cloc_advice()
     );
 }
 
 #[test]
-fn shell_cloc_advice_overrides_generic() {
+fn shell_cloc_advice_overrides_default() {
     let path = PathBuf::from("quench.toml");
     let content = r#"
 version = 1
@@ -653,9 +654,9 @@ cloc_advice = "Custom Shell advice here"
         config.cloc_advice_for_language("shell"),
         "Custom Shell advice here"
     );
-    // Other languages still use generic
+    // Other languages still use their defaults
     assert_eq!(
         config.cloc_advice_for_language("rust"),
-        &config.check.cloc.advice
+        RustConfig::default_cloc_advice()
     );
 }

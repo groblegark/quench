@@ -95,15 +95,26 @@ pub struct Config {
 }
 
 impl Config {
-    /// Get cloc advice for source files, checking language-specific first.
+    /// Get cloc advice for source files, checking user override then language default.
     pub fn cloc_advice_for_language(&self, language: &str) -> &str {
         match language {
-            "rust" => self.rust.cloc_advice.as_deref(),
-            "go" => self.go.cloc_advice.as_deref(),
-            "shell" => self.shell.cloc_advice.as_deref(),
-            _ => None,
+            "rust" => self
+                .rust
+                .cloc_advice
+                .as_deref()
+                .unwrap_or(RustConfig::default_cloc_advice()),
+            "go" => self
+                .go
+                .cloc_advice
+                .as_deref()
+                .unwrap_or(GoConfig::default_cloc_advice()),
+            "shell" => self
+                .shell
+                .cloc_advice
+                .as_deref()
+                .unwrap_or(ShellConfig::default_cloc_advice()),
+            _ => &self.check.cloc.advice,
         }
-        .unwrap_or(&self.check.cloc.advice)
     }
 }
 
@@ -141,6 +152,14 @@ impl Default for RustConfig {
 impl RustConfig {
     pub(crate) fn default_cfg_test_split() -> bool {
         true
+    }
+
+    pub(crate) fn default_cloc_advice() -> &'static str {
+        "Can the code be made more concise?\n\n\
+         If not, split large source files into sibling modules or submodules in a folder;\n\
+         consider refactoring to be more unit testable.\n\n\
+         Avoid picking and removing individual lines to satisfy the linter,\n\
+         prefer properly refactoring out testable code blocks."
     }
 }
 

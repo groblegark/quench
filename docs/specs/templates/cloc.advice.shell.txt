@@ -1,0 +1,4 @@
+Can the script be made more concise?
+
+If not, split into multiple scripts or source helper files.
+Consider whether complex logic should be in a compiled language instead.

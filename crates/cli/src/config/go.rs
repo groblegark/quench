@@ -48,6 +48,14 @@ impl GoConfig {
     pub(crate) fn default_tests() -> Vec<String> {
         vec!["**/*_test.go".to_string()]
     }
+
+    pub(crate) fn default_cloc_advice() -> &'static str {
+        "Can the code be made more concise?\n\n\
+         If not, split large files into multiple files in the same package,\n\
+         or extract reusable logic into internal packages.\n\n\
+         Avoid picking and removing individual lines to satisfy the linter,\n\
+         prefer properly refactoring out testable code blocks."
+    }
 }
 
 /// Go suppress configuration (defaults to "comment" like Rust).

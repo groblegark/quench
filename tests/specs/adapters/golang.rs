@@ -459,27 +459,36 @@ lint_config = [".golangci.yml"]
 }
 
 // =============================================================================
-// SNAPSHOT TESTS
+// EXACT OUTPUT FORMAT SPECS
 // =============================================================================
-// These tests use insta to capture exact output format for regression testing.
+// These tests verify exact output format using direct comparison.
+// Any output change requires explicit test update (no auto-accept).
 
-use insta::assert_snapshot;
-
-/// Snapshot: Go adapter cloc output on simple project
+/// Spec: Go adapter cloc metrics structure
 #[test]
-fn snapshot_go_simple_cloc_json() {
+fn exact_go_simple_cloc_json() {
     let result = check("cloc").on("go-simple").json().passes();
-    // Redact the timestamp for deterministic snapshots
-    let json = result.raw_json();
-    let redacted = regex::Regex::new(r#""timestamp": "[^"]+""#)
-        .expect("valid regex")
-        .replace(&json, r#""timestamp": "[REDACTED]""#);
-    assert_snapshot!(redacted);
+    let metrics = result.require("metrics");
+
+    // Verify structure without timestamp dependency
+    assert_eq!(metrics.get("ratio").unwrap().as_f64(), Some(0.32));
+    assert_eq!(metrics.get("source_files").unwrap().as_i64(), Some(3));
+    assert_eq!(metrics.get("source_lines").unwrap().as_i64(), Some(22));
+    assert_eq!(metrics.get("source_tokens").unwrap().as_i64(), Some(100));
+    assert_eq!(metrics.get("test_files").unwrap().as_i64(), Some(1));
+    assert_eq!(metrics.get("test_lines").unwrap().as_i64(), Some(7));
+    assert_eq!(metrics.get("test_tokens").unwrap().as_i64(), Some(27));
 }
 
-/// Snapshot: Go escape violation text output
+/// Spec: Go escape violation text output format
 #[test]
-fn snapshot_unsafe_pointer_fail_text() {
-    let result = check("escapes").on("golang/unsafe-pointer-fail").fails();
-    assert_snapshot!(result.stdout());
+fn exact_unsafe_pointer_fail_text() {
+    check("escapes")
+        .on("golang/unsafe-pointer-fail")
+        .fails()
+        .stdout_eq(r###"escapes: FAIL
+  main.go:7: missing_comment: unsafe_pointer
+    Add a // SAFETY: comment explaining pointer validity.
+FAIL: escapes
+"###);
 }

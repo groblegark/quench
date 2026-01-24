@@ -1,0 +1,7 @@
+Can the code be made more concise?
+
+If not, split large files into multiple files in the same package,
+or extract reusable logic into internal packages.
+
+Avoid picking and removing individual lines to satisfy the linter,
+prefer properly refactoring out testable code blocks.

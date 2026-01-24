@@ -244,9 +244,10 @@ fn cloc_source_violation_has_default_advice() {
         .get("advice")
         .and_then(|a| a.as_str())
         .unwrap();
+    // Rust files use Rust-specific advice
     assert_eq!(
         advice,
-        include_str!("../../../docs/specs/templates/cloc.advice.txt").trim()
+        include_str!("../../../docs/specs/templates/cloc.advice.rust.txt").trim()
     );
 }
 
@@ -275,7 +276,7 @@ fn cloc_test_violation_has_default_advice() {
         .unwrap();
     assert_eq!(
         advice,
-        include_str!("../../../docs/specs/templates/cloc.advice_test.txt").trim()
+        include_str!("../../../docs/specs/templates/cloc.advice-test.txt").trim()
     );
 }
 
