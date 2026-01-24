@@ -12,6 +12,7 @@ use globset::{Glob, GlobSet, GlobSetBuilder};
 use rayon::prelude::*;
 
 use super::diff::{ChangeType, CommitChanges, FileChange};
+use super::patterns;
 
 /// Configuration for correlation detection.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -131,10 +132,27 @@ impl TestIndex {
             return true;
         }
 
-        // Check with common suffixes/prefixes
-        self.base_names.contains(&format!("{}_test", base_name))
-            || self.base_names.contains(&format!("{}_tests", base_name))
-            || self.base_names.contains(&format!("test_{}", base_name))
+        // Check with common suffixes
+        for suffix in patterns::TEST_SUFFIXES {
+            if self
+                .base_names
+                .contains(&format!("{}{}", base_name, suffix))
+            {
+                return true;
+            }
+        }
+
+        // Check with common prefixes
+        for prefix in patterns::TEST_PREFIXES {
+            if self
+                .base_names
+                .contains(&format!("{}{}", prefix, base_name))
+            {
+                return true;
+            }
+        }
+
+        false
     }
 
     /// Check if a test file exists at any of the expected locations for a source file.
@@ -454,70 +472,29 @@ fn correlation_base_name(path: &Path) -> Option<&str> {
 /// A test is test-only if its base name doesn't match any source file's base name,
 /// even when accounting for common test suffixes/prefixes.
 fn is_test_only(test_base: &str, source_base_names: &HashSet<String>) -> bool {
-    // Direct match: test "parser" matches source "parser"
-    if source_base_names.contains(test_base) {
-        return false;
-    }
-
-    // Test has suffix that matches source
-    // e.g., "parser_test" matches source "parser"
-    for suffix in ["_test", "_tests"] {
-        if let Some(stripped) = test_base.strip_suffix(suffix)
-            && source_base_names.contains(stripped)
-        {
-            return false;
-        }
-    }
-
-    // Test has prefix that matches source
-    // e.g., "test_parser" matches source "parser"
-    if let Some(stripped) = test_base.strip_prefix("test_")
-        && source_base_names.contains(stripped)
-    {
-        return false;
-    }
-
-    // Source has suffix/prefix that matches test
-    // e.g., source "parser" matches test "parser" (via _test, _tests, test_ variations)
-    for source in source_base_names {
-        if test_base == format!("{}_test", source)
-            || test_base == format!("{}_tests", source)
-            || test_base == format!("test_{}", source)
-        {
-            return false;
-        }
-    }
-
-    true
+    !source_base_names
+        .iter()
+        .any(|source_base| patterns::matches_base_name(test_base, source_base))
 }
 
 /// Get candidate test file paths for a base name (Rust).
 ///
 /// Returns patterns like: tests/{base}_tests.rs, tests/{base}_test.rs, etc.
-/// Used for placeholder test checking.
+///
+/// Prefer using `patterns::candidate_test_paths_for()` for language-aware path generation.
 pub fn candidate_test_paths(base_name: &str) -> Vec<String> {
-    vec![
-        format!("tests/{}_tests.rs", base_name),
-        format!("tests/{}_test.rs", base_name),
-        format!("tests/{}.rs", base_name),
-        format!("test/{}_tests.rs", base_name),
-        format!("test/{}_test.rs", base_name),
-        format!("test/{}.rs", base_name),
-    ]
+    // Delegate to patterns module's internal Rust path generator
+    // by creating a fake Rust path
+    patterns::candidate_test_paths_for(Path::new(&format!("{}.rs", base_name)))
 }
 
 /// Get candidate test file paths for a base name (JavaScript/TypeScript).
+///
+/// Prefer using `patterns::candidate_test_paths_for()` for language-aware path generation.
 pub fn candidate_js_test_paths(base_name: &str) -> Vec<String> {
-    let b = base_name;
-    let exts = ["ts", "js"];
-    let mut paths = Vec::with_capacity(16);
-    for ext in &exts {
-        paths.push(format!("{b}.test.{ext}"));
-        paths.push(format!("{b}.spec.{ext}"));
-        paths.push(format!("__tests__/{b}.test.{ext}"));
-        paths.push(format!("tests/{b}.test.{ext}"));
-    }
-    paths
+    // Delegate to patterns module's internal JS path generator
+    // by creating a fake JS path
+    patterns::candidate_test_paths_for(Path::new(&format!("{}.ts", base_name)))
 }
 
 /// Get candidate test file locations for a source file.
@@ -566,32 +543,52 @@ pub fn has_correlated_test(
         }
     }
 
-    // Strategy 2: Base name matching (existing logic)
-    test_base_names.iter().any(|test_name| {
-        test_name == base_name
-            || *test_name == format!("{}_test", base_name)
-            || *test_name == format!("{}_tests", base_name)
-            || *test_name == format!("test_{}", base_name)
-    })
+    // Strategy 2: Base name matching
+    test_base_names
+        .iter()
+        .any(|test_name| patterns::matches_base_name(test_name, base_name))
+}
+
+/// Extract the normalized base name from a file path.
+///
+/// Returns the file stem with test affixes stripped.
+/// This is the canonical function for extracting base names from test file paths.
+///
+/// Examples:
+/// - "tests/parser_tests.rs" -> "parser"
+/// - "test_utils.rs" -> "utils"
+/// - "src/parser.rs" -> "parser"
+fn file_base_name(path: &Path) -> Option<&str> {
+    let stem = path.file_stem()?.to_str()?;
+    Some(strip_test_affixes(stem))
 }
 
 /// Extract base name from a test file, stripping test suffixes.
+///
+/// This is a convenience wrapper that returns an owned String.
 fn extract_base_name(path: &Path) -> Option<String> {
-    let stem = path.file_stem()?.to_str()?;
+    file_base_name(path).map(|s| s.to_string())
+}
 
-    // Strip common test suffixes/prefixes
-    // Rust/Go style: _test, _tests, test_
-    // JS/TS style: .test, .spec (part of stem for files like parser.test.ts)
-    let base = stem
-        .strip_suffix("_tests")
-        .or_else(|| stem.strip_suffix("_test"))
-        .or_else(|| stem.strip_suffix(".test"))
-        .or_else(|| stem.strip_suffix(".spec"))
-        .or_else(|| stem.strip_suffix("_spec"))
-        .or_else(|| stem.strip_prefix("test_"))
-        .unwrap_or(stem);
-
-    Some(base.to_string())
+/// Strip test-related suffixes and prefixes from a file stem.
+///
+/// Examples:
+/// - "parser_tests" -> "parser"
+/// - "test_parser" -> "parser"
+/// - "parser.test" -> "parser"
+/// - "parser" -> "parser" (unchanged)
+fn strip_test_affixes(stem: &str) -> &str {
+    for suffix in patterns::ALL_TEST_SUFFIXES {
+        if let Some(stripped) = stem.strip_suffix(suffix) {
+            return stripped;
+        }
+    }
+    for prefix in patterns::TEST_PREFIXES {
+        if let Some(stripped) = stem.strip_prefix(prefix) {
+            return stripped;
+        }
+    }
+    stem
 }
 
 /// Build a GlobSet from pattern strings.

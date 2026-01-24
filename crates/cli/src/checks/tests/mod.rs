@@ -7,6 +7,7 @@
 
 pub mod correlation;
 pub mod diff;
+pub mod patterns;
 pub mod placeholder;
 
 #[cfg(test)]
@@ -21,10 +22,10 @@ use crate::check::{Check, CheckContext, CheckResult, Violation};
 use crate::config::TestsCommitConfig;
 
 use self::correlation::{
-    CorrelationConfig, DiffRange, analyze_commit, analyze_correlation, candidate_js_test_paths,
-    candidate_test_paths, has_inline_test_changes,
+    CorrelationConfig, DiffRange, analyze_commit, analyze_correlation, has_inline_test_changes,
 };
 use self::diff::{ChangeType, get_base_changes, get_commits_since, get_staged_changes};
+use self::patterns::{Language, candidate_test_paths_for, detect_language};
 use self::placeholder::{has_js_placeholder_test, has_placeholder_test};
 use std::path::Path;
 
@@ -33,27 +34,6 @@ const RUST_EXT: &str = "rs";
 
 /// Length for truncating git hashes in display.
 const SHORT_HASH_LEN: usize = 7;
-
-/// Detected language of a source file.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Language {
-    Rust,
-    Go,
-    JavaScript,
-    Python,
-    Unknown,
-}
-
-/// Detect the language of a source file from its extension.
-fn detect_language(path: &Path) -> Language {
-    match path.extension().and_then(|e| e.to_str()) {
-        Some("rs") => Language::Rust,
-        Some("go") => Language::Go,
-        Some("ts" | "tsx" | "js" | "jsx" | "mjs" | "mts") => Language::JavaScript,
-        Some("py") => Language::Python,
-        _ => Language::Unknown,
-    }
-}
 
 /// Generate language-specific advice for missing tests.
 fn missing_tests_advice(file_stem: &str, lang: Language) -> String {
@@ -356,25 +336,24 @@ fn has_placeholder_for_source(source_path: &Path, root: &Path) -> bool {
         None => return false,
     };
 
-    // Determine if this is a JS/TS file
-    let is_js = source_path
-        .extension()
-        .and_then(|e| e.to_str())
-        .is_some_and(|ext| matches!(ext, "ts" | "tsx" | "js" | "jsx" | "mjs" | "mts"));
+    let lang = detect_language(source_path);
+    let candidate_paths = candidate_test_paths_for(source_path);
 
-    if is_js {
-        // Check JS/TS placeholder tests
-        candidate_js_test_paths(base_name).iter().any(|test_path| {
-            let test_file = Path::new(test_path);
-            root.join(test_file).exists()
-                && has_js_placeholder_test(test_file, base_name, root).unwrap_or(false)
-        })
-    } else {
-        // Check Rust placeholder tests
-        candidate_test_paths(base_name).iter().any(|test_path| {
-            let test_file = Path::new(test_path);
-            root.join(test_file).exists()
-                && has_placeholder_test(test_file, base_name, root).unwrap_or(false)
-        })
-    }
+    // Check each candidate path for placeholder tests
+    candidate_paths.iter().any(|test_path| {
+        let test_file = Path::new(test_path);
+        if !root.join(test_file).exists() {
+            return false;
+        }
+
+        // Use language-specific placeholder detection
+        match lang {
+            Language::JavaScript => {
+                has_js_placeholder_test(test_file, base_name, root).unwrap_or(false)
+            }
+            Language::Rust => has_placeholder_test(test_file, base_name, root).unwrap_or(false),
+            // Other languages don't have placeholder test support yet
+            _ => false,
+        }
+    })
 }
