@@ -3,8 +3,6 @@
 
 //! Markdown format report output.
 
-use std::fmt::Write;
-
 use crate::baseline::Baseline;
 use crate::cli::CheckFilter;
 
@@ -13,39 +11,38 @@ use super::{FilteredMetrics, ReportFormatter, human_bytes};
 /// Markdown format report formatter.
 pub struct MarkdownFormatter;
 
-impl ReportFormatter for MarkdownFormatter {
-    fn format(&self, baseline: &Baseline, filter: &dyn CheckFilter) -> anyhow::Result<String> {
-        let filtered = FilteredMetrics::new(baseline, filter);
-        let mut output = String::with_capacity(512);
-
+/// Write markdown report content. This macro handles the common formatting logic
+/// for both fmt::Write (String) and io::Write (stdout, files).
+macro_rules! write_markdown_report {
+    ($writer:expr, $baseline:expr, $filtered:expr) => {
         // Header
-        writeln!(output, "# Quench Report\n")?;
-        if let Some(ref commit) = baseline.commit {
-            let date = baseline.updated.format("%Y-%m-%d");
-            writeln!(output, "**Baseline:** {} ({})\n", commit, date)?;
+        writeln!($writer, "# Quench Report\n")?;
+        if let Some(ref commit) = $baseline.commit {
+            let date = $baseline.updated.format("%Y-%m-%d");
+            writeln!($writer, "**Baseline:** {} ({})\n", commit, date)?;
         }
 
         // Summary table
-        writeln!(output, "| Metric | Value |")?;
-        writeln!(output, "|--------|------:|")?;
+        writeln!($writer, "| Metric | Value |")?;
+        writeln!($writer, "|--------|------:|")?;
 
-        if let Some(coverage) = filtered.coverage() {
-            writeln!(output, "| Coverage | {:.1}% |", coverage.total)?;
+        if let Some(coverage) = $filtered.coverage() {
+            writeln!($writer, "| Coverage | {:.1}% |", coverage.total)?;
 
             if let Some(ref packages) = coverage.by_package {
                 let mut keys: Vec<_> = packages.keys().collect();
                 keys.sort();
                 for name in keys {
-                    writeln!(output, "| Coverage ({}) | {:.1}% |", name, packages[name])?;
+                    writeln!($writer, "| Coverage ({}) | {:.1}% |", name, packages[name])?;
                 }
             }
         }
 
-        if let Some(escapes) = filtered.escapes() {
+        if let Some(escapes) = $filtered.escapes() {
             let mut keys: Vec<_> = escapes.source.keys().collect();
             keys.sort();
             for name in keys {
-                writeln!(output, "| Escapes ({}) | {} |", name, escapes.source[name])?;
+                writeln!($writer, "| Escapes ({}) | {} |", name, escapes.source[name])?;
             }
 
             // Test escapes (if present)
@@ -53,33 +50,42 @@ impl ReportFormatter for MarkdownFormatter {
                 let mut keys: Vec<_> = test.keys().collect();
                 keys.sort();
                 for name in keys {
-                    writeln!(output, "| Escapes test ({}) | {} |", name, test[name])?;
+                    writeln!($writer, "| Escapes test ({}) | {} |", name, test[name])?;
                 }
             }
         }
 
-        if let Some(build) = filtered.build_time() {
-            writeln!(output, "| Build (cold) | {:.1}s |", build.cold)?;
-            writeln!(output, "| Build (hot) | {:.1}s |", build.hot)?;
+        if let Some(build) = $filtered.build_time() {
+            writeln!($writer, "| Build (cold) | {:.1}s |", build.cold)?;
+            writeln!($writer, "| Build (hot) | {:.1}s |", build.hot)?;
         }
 
-        if let Some(tests) = filtered.test_time() {
-            writeln!(output, "| Test time | {:.1}s |", tests.total)?;
+        if let Some(tests) = $filtered.test_time() {
+            writeln!($writer, "| Test time | {:.1}s |", tests.total)?;
         }
 
-        if let Some(sizes) = filtered.binary_size() {
+        if let Some(sizes) = $filtered.binary_size() {
             let mut keys: Vec<_> = sizes.keys().collect();
             keys.sort();
             for name in keys {
                 writeln!(
-                    output,
+                    $writer,
                     "| Binary ({}) | {} |",
                     name,
                     human_bytes(sizes[name])
                 )?;
             }
         }
+    };
+}
 
+impl ReportFormatter for MarkdownFormatter {
+    fn format(&self, baseline: &Baseline, filter: &dyn CheckFilter) -> anyhow::Result<String> {
+        use std::fmt::Write;
+
+        let filtered = FilteredMetrics::new(baseline, filter);
+        let mut output = String::with_capacity(512);
+        write_markdown_report!(&mut output, baseline, &filtered);
         Ok(output)
     }
 
@@ -89,8 +95,8 @@ impl ReportFormatter for MarkdownFormatter {
         baseline: &Baseline,
         filter: &dyn CheckFilter,
     ) -> anyhow::Result<()> {
-        let output = self.format(baseline, filter)?;
-        write!(writer, "{}", output)?;
+        let filtered = FilteredMetrics::new(baseline, filter);
+        write_markdown_report!(writer, baseline, &filtered);
         Ok(())
     }
 
@@ -98,3 +104,7 @@ impl ReportFormatter for MarkdownFormatter {
         "# Quench Report\n\n*No baseline found.*\n".to_string()
     }
 }
+
+#[cfg(test)]
+#[path = "markdown_tests.rs"]
+mod tests;

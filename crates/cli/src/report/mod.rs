@@ -196,3 +196,7 @@ pub fn human_bytes(bytes: u64) -> String {
         format!("{} B", bytes)
     }
 }
+
+#[cfg(test)]
+#[path = "mod_tests.rs"]
+mod tests;

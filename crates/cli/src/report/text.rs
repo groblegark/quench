@@ -3,8 +3,6 @@
 
 //! Text format report output.
 
-use std::fmt::Write;
-
 use crate::baseline::Baseline;
 use crate::cli::CheckFilter;
 
@@ -17,13 +15,89 @@ pub struct TextFormatter;
 const TEXT_HEADER_SIZE: usize = 100;
 const TEXT_METRIC_SIZE: usize = 50;
 
+/// Write text report content. This macro handles the common formatting logic
+/// for both fmt::Write (String) and io::Write (stdout, files).
+macro_rules! write_text_report {
+    ($writer:expr, $baseline:expr, $filtered:expr) => {
+        // Header with baseline info
+        writeln!($writer, "Quench Report")?;
+        writeln!($writer, "=============")?;
+        if let Some(ref commit) = $baseline.commit {
+            let date = $baseline.updated.format("%Y-%m-%d");
+            writeln!($writer, "Baseline: {} ({})", commit, date)?;
+        } else {
+            let date = $baseline.updated.format("%Y-%m-%d");
+            writeln!($writer, "Baseline: {}", date)?;
+        }
+        writeln!($writer)?;
+
+        // Coverage (mapped to "tests" check)
+        if let Some(coverage) = $filtered.coverage() {
+            writeln!($writer, "coverage: {:.1}%", coverage.total)?;
+
+            if let Some(ref packages) = coverage.by_package {
+                let mut keys: Vec<_> = packages.keys().collect();
+                keys.sort();
+                for name in keys {
+                    writeln!($writer, "  {}: {:.1}%", name, packages[name])?;
+                }
+            }
+        }
+
+        // Escapes
+        if let Some(escapes) = $filtered.escapes() {
+            let mut keys: Vec<_> = escapes.source.keys().collect();
+            keys.sort();
+            for name in keys {
+                writeln!($writer, "escapes.{}: {}", name, escapes.source[name])?;
+            }
+
+            // Test escapes (if present)
+            if let Some(ref test) = escapes.test {
+                let mut keys: Vec<_> = test.keys().collect();
+                keys.sort();
+                for name in keys {
+                    writeln!($writer, "escapes.test.{}: {}", name, test[name])?;
+                }
+            }
+        }
+
+        // Build time
+        if let Some(build) = $filtered.build_time() {
+            writeln!($writer, "build_time.cold: {:.1}s", build.cold)?;
+            writeln!($writer, "build_time.hot: {:.1}s", build.hot)?;
+        }
+
+        // Test time
+        if let Some(tests) = $filtered.test_time() {
+            writeln!($writer, "test_time.total: {:.1}s", tests.total)?;
+        }
+
+        // Binary size
+        if let Some(sizes) = $filtered.binary_size() {
+            let mut keys: Vec<_> = sizes.keys().collect();
+            keys.sort();
+            for name in keys {
+                writeln!(
+                    $writer,
+                    "binary_size.{}: {}",
+                    name,
+                    human_bytes(sizes[name])
+                )?;
+            }
+        }
+    };
+}
+
 impl ReportFormatter for TextFormatter {
     fn format(&self, baseline: &Baseline, filter: &dyn CheckFilter) -> anyhow::Result<String> {
+        use std::fmt::Write;
+
         let filtered = FilteredMetrics::new(baseline, filter);
         // Pre-allocate buffer based on estimated size
         let capacity = TEXT_HEADER_SIZE + filtered.count() * TEXT_METRIC_SIZE;
         let mut output = String::with_capacity(capacity);
-        self.write_to_fmt(&mut output, baseline, &filtered)?;
+        write_text_report!(&mut output, baseline, &filtered);
         Ok(output)
     }
 
@@ -34,7 +108,8 @@ impl ReportFormatter for TextFormatter {
         filter: &dyn CheckFilter,
     ) -> anyhow::Result<()> {
         let filtered = FilteredMetrics::new(baseline, filter);
-        self.write_to_io(writer, baseline, &filtered)
+        write_text_report!(writer, baseline, &filtered);
+        Ok(())
     }
 
     fn format_empty(&self) -> String {
@@ -42,150 +117,6 @@ impl ReportFormatter for TextFormatter {
     }
 }
 
-impl TextFormatter {
-    /// Write formatted output to a fmt::Write (String, etc.).
-    fn write_to_fmt(
-        &self,
-        output: &mut String,
-        baseline: &Baseline,
-        filtered: &FilteredMetrics<'_>,
-    ) -> anyhow::Result<()> {
-        // Header with baseline info
-        writeln!(output, "Quench Report")?;
-        writeln!(output, "=============")?;
-        if let Some(ref commit) = baseline.commit {
-            let date = baseline.updated.format("%Y-%m-%d");
-            writeln!(output, "Baseline: {} ({})", commit, date)?;
-        } else {
-            let date = baseline.updated.format("%Y-%m-%d");
-            writeln!(output, "Baseline: {}", date)?;
-        }
-        writeln!(output)?;
-
-        // Coverage (mapped to "tests" check)
-        if let Some(coverage) = filtered.coverage() {
-            writeln!(output, "coverage: {:.1}%", coverage.total)?;
-
-            if let Some(ref packages) = coverage.by_package {
-                let mut keys: Vec<_> = packages.keys().collect();
-                keys.sort();
-                for name in keys {
-                    writeln!(output, "  {}: {:.1}%", name, packages[name])?;
-                }
-            }
-        }
-
-        // Escapes
-        if let Some(escapes) = filtered.escapes() {
-            let mut keys: Vec<_> = escapes.source.keys().collect();
-            keys.sort();
-            for name in keys {
-                writeln!(output, "escapes.{}: {}", name, escapes.source[name])?;
-            }
-
-            // Test escapes (if present)
-            if let Some(ref test) = escapes.test {
-                let mut keys: Vec<_> = test.keys().collect();
-                keys.sort();
-                for name in keys {
-                    writeln!(output, "escapes.test.{}: {}", name, test[name])?;
-                }
-            }
-        }
-
-        // Build time
-        if let Some(build) = filtered.build_time() {
-            writeln!(output, "build_time.cold: {:.1}s", build.cold)?;
-            writeln!(output, "build_time.hot: {:.1}s", build.hot)?;
-        }
-
-        // Test time
-        if let Some(tests) = filtered.test_time() {
-            writeln!(output, "test_time.total: {:.1}s", tests.total)?;
-        }
-
-        // Binary size
-        if let Some(sizes) = filtered.binary_size() {
-            let mut keys: Vec<_> = sizes.keys().collect();
-            keys.sort();
-            for name in keys {
-                writeln!(output, "binary_size.{}: {}", name, human_bytes(sizes[name]))?;
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Write formatted output to an io::Write (stdout, files, etc.).
-    fn write_to_io(
-        &self,
-        writer: &mut dyn std::io::Write,
-        baseline: &Baseline,
-        filtered: &FilteredMetrics<'_>,
-    ) -> anyhow::Result<()> {
-        // Header with baseline info
-        writeln!(writer, "Quench Report")?;
-        writeln!(writer, "=============")?;
-        if let Some(ref commit) = baseline.commit {
-            let date = baseline.updated.format("%Y-%m-%d");
-            writeln!(writer, "Baseline: {} ({})", commit, date)?;
-        } else {
-            let date = baseline.updated.format("%Y-%m-%d");
-            writeln!(writer, "Baseline: {}", date)?;
-        }
-        writeln!(writer)?;
-
-        // Coverage (mapped to "tests" check)
-        if let Some(coverage) = filtered.coverage() {
-            writeln!(writer, "coverage: {:.1}%", coverage.total)?;
-
-            if let Some(ref packages) = coverage.by_package {
-                let mut keys: Vec<_> = packages.keys().collect();
-                keys.sort();
-                for name in keys {
-                    writeln!(writer, "  {}: {:.1}%", name, packages[name])?;
-                }
-            }
-        }
-
-        // Escapes
-        if let Some(escapes) = filtered.escapes() {
-            let mut keys: Vec<_> = escapes.source.keys().collect();
-            keys.sort();
-            for name in keys {
-                writeln!(writer, "escapes.{}: {}", name, escapes.source[name])?;
-            }
-
-            // Test escapes (if present)
-            if let Some(ref test) = escapes.test {
-                let mut keys: Vec<_> = test.keys().collect();
-                keys.sort();
-                for name in keys {
-                    writeln!(writer, "escapes.test.{}: {}", name, test[name])?;
-                }
-            }
-        }
-
-        // Build time
-        if let Some(build) = filtered.build_time() {
-            writeln!(writer, "build_time.cold: {:.1}s", build.cold)?;
-            writeln!(writer, "build_time.hot: {:.1}s", build.hot)?;
-        }
-
-        // Test time
-        if let Some(tests) = filtered.test_time() {
-            writeln!(writer, "test_time.total: {:.1}s", tests.total)?;
-        }
-
-        // Binary size
-        if let Some(sizes) = filtered.binary_size() {
-            let mut keys: Vec<_> = sizes.keys().collect();
-            keys.sort();
-            for name in keys {
-                writeln!(writer, "binary_size.{}: {}", name, human_bytes(sizes[name]))?;
-            }
-        }
-
-        Ok(())
-    }
-}
+#[cfg(test)]
+#[path = "text_tests.rs"]
+mod tests;

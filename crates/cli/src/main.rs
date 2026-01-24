@@ -5,6 +5,7 @@
 
 use std::sync::Arc;
 
+use anyhow::Context;
 use clap::{CommandFactory, Parser};
 use tracing_subscriber::{EnvFilter, fmt};
 
@@ -561,7 +562,8 @@ fn run_report(cli: &Cli, args: &ReportArgs) -> anyhow::Result<()> {
     }
 
     // Load baseline
-    let baseline = Baseline::load(&baseline_path)?;
+    let baseline = Baseline::load(&baseline_path)
+        .with_context(|| format!("failed to load baseline from {}", baseline_path.display()))?;
 
     // Write output using streaming when possible
     match file_path {
