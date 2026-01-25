@@ -1,6 +1,6 @@
 # Phase 901: CI Mode - Specs
 
-**Root Feature:** `ci-mode`
+**Root Feature:** `quench-5ed5`
 **Follows:** checkpoint-10h-techdebt (Tech Debt cleanup)
 
 ## Overview
