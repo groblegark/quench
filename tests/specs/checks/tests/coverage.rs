@@ -77,7 +77,7 @@ fn test_covered() { assert_eq!(test_project::covered(), 42); }
 ///
 /// > Shell scripts via kcov: targets = ["scripts/*.sh"]
 #[test]
-#[ignore = "TODO: Phase 9XX - Test runners implementation"]
+#[ignore = "TODO: Phase 940 - Requires runner integration"]
 fn bats_runner_collects_shell_coverage_via_kcov() {
     let temp = Project::empty();
     temp.config(
@@ -126,7 +126,7 @@ setup() { source scripts/helper.sh; }
 ///
 /// > targets = ["myapp"] - Instrument Rust binary for coverage
 #[test]
-#[ignore = "TODO: Phase 9XX - Test runners implementation"]
+#[ignore = "TODO: Phase 940 - Requires runner integration"]
 fn bats_runner_collects_rust_binary_coverage() {
     let temp = Project::empty();
     temp.config(
@@ -193,7 +193,7 @@ fn main() {
 ///
 /// > Coverage: Merged across suites covering the same language
 #[test]
-#[ignore = "TODO: Phase 9XX - Test runners implementation"]
+#[ignore = "TODO: Phase 940 - Requires runner integration"]
 fn multiple_suite_coverages_merged() {
     let temp = Project::empty();
     temp.config(
@@ -277,7 +277,7 @@ fn test_other() { assert_eq!(myapp::other(), 0); }
 ///
 /// > For suites that only contribute timing: targets = []
 #[test]
-#[ignore = "TODO: Phase 9XX - Test runners implementation"]
+#[ignore = "TODO: Phase 940 - Requires runner integration"]
 fn suite_with_empty_targets_skips_coverage() {
     let temp = Project::empty();
     temp.config(
