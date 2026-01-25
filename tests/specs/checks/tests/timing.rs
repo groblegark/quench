@@ -16,22 +16,7 @@ use crate::prelude::*;
 #[test]
 #[ignore = "TODO: Phase 9XX - Test runners implementation"]
 fn cargo_runner_extracts_average_timing() {
-    let temp = Project::empty();
-    temp.config(
-        r#"
-[[check.tests.suite]]
-runner = "cargo"
-"#,
-    );
-    temp.file(
-        "Cargo.toml",
-        r#"
-[package]
-name = "test_project"
-version = "0.1.0"
-edition = "2021"
-"#,
-    );
+    let temp = Project::cargo("test_project");
     temp.file("src/lib.rs", "");
     temp.file(
         "tests/timing.rs",
@@ -57,22 +42,7 @@ use std::time::Duration;
 #[test]
 #[ignore = "TODO: Phase 9XX - Test runners implementation"]
 fn cargo_runner_extracts_max_timing_with_name() {
-    let temp = Project::empty();
-    temp.config(
-        r#"
-[[check.tests.suite]]
-runner = "cargo"
-"#,
-    );
-    temp.file(
-        "Cargo.toml",
-        r#"
-[package]
-name = "test_project"
-version = "0.1.0"
-edition = "2021"
-"#,
-    );
+    let temp = Project::cargo("test_project");
     temp.file("src/lib.rs", "");
     temp.file(
         "tests/timing.rs",
@@ -100,22 +70,7 @@ use std::time::Duration;
 #[test]
 #[ignore = "TODO: Phase 9XX - Test runners implementation"]
 fn runner_reports_total_time() {
-    let temp = Project::empty();
-    temp.config(
-        r#"
-[[check.tests.suite]]
-runner = "cargo"
-"#,
-    );
-    temp.file(
-        "Cargo.toml",
-        r#"
-[package]
-name = "test_project"
-version = "0.1.0"
-edition = "2021"
-"#,
-    );
+    let temp = Project::cargo("test_project");
     temp.file("src/lib.rs", "");
     temp.file("tests/basic.rs", "#[test] fn t() {}");
 
@@ -171,21 +126,12 @@ path = "tests/"
 #[test]
 #[ignore = "TODO: Phase 9XX - Test runners implementation"]
 fn runner_fails_when_test_exceeds_max_time() {
-    let temp = Project::empty();
+    let temp = Project::cargo("test_project");
     temp.config(
         r#"
 [[check.tests.suite]]
 runner = "cargo"
 max_test = "50ms"
-"#,
-    );
-    temp.file(
-        "Cargo.toml",
-        r#"
-[package]
-name = "test_project"
-version = "0.1.0"
-edition = "2021"
 "#,
     );
     temp.file("src/lib.rs", "");

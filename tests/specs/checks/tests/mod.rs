@@ -4,7 +4,6 @@
 //! Reference: docs/specs/11-test-runners.md
 
 mod ci_metrics;
-mod ci_output;
 mod correlation;
 mod coverage;
 mod output;
