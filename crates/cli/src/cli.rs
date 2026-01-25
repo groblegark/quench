@@ -134,10 +134,6 @@ pub struct CheckArgs {
     #[arg(long)]
     pub license: bool,
 
-    /// Run only the placeholders check
-    #[arg(long)]
-    pub placeholders: bool,
-
     // Check disable flags (skip these checks)
     /// Skip the cloc check
     #[arg(long)]
@@ -170,10 +166,6 @@ pub struct CheckArgs {
     /// Skip the license check
     #[arg(long)]
     pub no_license: bool,
-
-    /// Skip the placeholders check
-    #[arg(long)]
-    pub no_placeholders: bool,
 }
 
 /// Trait for filtering checks/metrics by name.
@@ -229,7 +221,6 @@ impl CheckFilter for CheckArgs {
             git => "git",
             build => "build",
             license => "license",
-            placeholders => "placeholders",
         )
     }
 
@@ -243,7 +234,6 @@ impl CheckFilter for CheckArgs {
             no_git => "git",
             no_build => "build",
             no_license => "license",
-            no_placeholders => "placeholders",
         )
     }
 }
@@ -295,10 +285,6 @@ pub struct ReportArgs {
     #[arg(long)]
     pub license: bool,
 
-    /// Show only placeholders metrics
-    #[arg(long)]
-    pub placeholders: bool,
-
     // Check disable flags (skip these metrics)
     /// Skip cloc metrics
     #[arg(long)]
@@ -331,10 +317,6 @@ pub struct ReportArgs {
     /// Skip license metrics
     #[arg(long)]
     pub no_license: bool,
-
-    /// Skip placeholders metrics
-    #[arg(long)]
-    pub no_placeholders: bool,
 }
 
 impl ReportArgs {
@@ -375,7 +357,6 @@ impl CheckFilter for ReportArgs {
             git => "git",
             build => "build",
             license => "license",
-            placeholders => "placeholders",
         )
     }
 
@@ -389,7 +370,6 @@ impl CheckFilter for ReportArgs {
             no_git => "git",
             no_build => "build",
             no_license => "license",
-            no_placeholders => "placeholders",
         )
     }
 }
