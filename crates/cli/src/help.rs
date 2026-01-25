@@ -4,13 +4,14 @@
 //! Custom help formatting with consolidated --[no-] flags and colorization.
 //!
 //! Clap displays negatable flags as separate lines:
-//!   --color      Force color output
-//!   --no-color   Disable color output
+//!   --limit      Set limit
+//!   --no-limit   Disable limit
 //!
 //! This module consolidates them into a single line:
-//!   --[no-]color   Enable/disable color output
+//!   --[no-]limit   Enable/disable limit
 //!
-//! It also provides colorized help output using ANSI 256-color codes.
+//! Since we capture help to a string for consolidation (regex parsing),
+//! we apply colors ourselves rather than using clap's built-in colorization.
 
 use crate::color;
 use clap::Command;
@@ -19,26 +20,14 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-/// Generate clap Styles for help output with consistent color conventions.
+/// Generate clap Styles for help output.
+///
+/// Returns plain styles since we apply colors ourselves after flag
+/// consolidation. Clap's auto-colorization doesn't work when capturing
+/// help to a string (for regex-based consolidation).
 pub fn styles() -> Styles {
-    if !color::should_colorize() {
-        return Styles::plain();
-    }
-
-    use anstyle::{Ansi256Color, Color, Style};
-
-    let header = Style::new().fg_color(Some(Color::Ansi256(Ansi256Color(color::codes::HEADER))));
-    let literal = Style::new().fg_color(Some(Color::Ansi256(Ansi256Color(color::codes::LITERAL))));
-    let placeholder =
-        Style::new().fg_color(Some(Color::Ansi256(Ansi256Color(color::codes::CONTEXT))));
-    let context = Style::new().fg_color(Some(Color::Ansi256(Ansi256Color(color::codes::CONTEXT))));
-
-    Styles::styled()
-        .header(header)
-        .usage(header)
-        .literal(literal)
-        .placeholder(placeholder)
-        .valid(context)
+    // We apply colors ourselves in format_help() after consolidation
+    Styles::plain()
 }
 
 /// Regex to match option lines in help output.
@@ -54,14 +43,146 @@ static OPTION_LINE_RE: LazyLock<Regex> = LazyLock::new(|| {
 static NO_FLAG_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^--no-(.+)$").expect("valid regex"));
 
-/// Formats help text with consolidated --[no-] flags.
+/// Formats help text with consolidated --[no-] flags and colorization.
 pub fn format_help(cmd: &mut Command) -> String {
     let mut help = Vec::new();
     // write_help only fails on IO errors, which can't happen with Vec<u8>
     let _ = cmd.write_help(&mut help);
     // Help output from clap is always valid UTF-8
     let raw_help = String::from_utf8_lossy(&help);
-    consolidate_negatable_flags(&raw_help)
+    let consolidated = consolidate_negatable_flags(&raw_help);
+    colorize_help(&consolidated)
+}
+
+/// Apply colors to help text.
+///
+/// Colorizes:
+/// - Section headers (Usage:, Commands:, Options:, Arguments:)
+/// - Command/option names (literals)
+/// - Placeholders like <PATH>
+fn colorize_help(help: &str) -> String {
+    if !color::should_colorize() {
+        return help.to_string();
+    }
+
+    let mut result = String::with_capacity(help.len() + 512);
+
+    for line in help.lines() {
+        if !result.is_empty() {
+            result.push('\n');
+        }
+
+        // Section headers: "Usage:", "Commands:", "Options:", "Arguments:"
+        if is_section_header(line) {
+            result.push_str(&color::header(line));
+            continue;
+        }
+
+        // Command/subcommand lines: "  check   Run quality checks"
+        if let Some(colored) = colorize_command_line(line) {
+            result.push_str(&colored);
+            continue;
+        }
+
+        // Option lines: "  -o, --output <FORMAT>  Description"
+        if let Some(colored) = colorize_option_line(line) {
+            result.push_str(&colored);
+            continue;
+        }
+
+        // Default: pass through unchanged
+        result.push_str(line);
+    }
+
+    result
+}
+
+/// Check if a line is a section header.
+fn is_section_header(line: &str) -> bool {
+    let trimmed = line.trim();
+    matches!(trimmed, "Usage:" | "Commands:" | "Options:" | "Arguments:")
+}
+
+/// Colorize a command/subcommand line like "  check   Run quality checks".
+fn colorize_command_line(line: &str) -> Option<String> {
+    // Must start with exactly 2 spaces, then a word, then 2+ spaces, then description
+    if !line.starts_with("  ") || line.starts_with("   ") {
+        return None;
+    }
+
+    let content = &line[2..];
+    // Skip if it looks like an option (starts with -)
+    if content.starts_with('-') {
+        return None;
+    }
+
+    // Find the command name (first word) and description separator (2+ spaces)
+    let mut parts = content.splitn(2, "  ");
+    let cmd_name = parts.next()?;
+
+    // Command name should be a simple word (no spaces, no special chars except -)
+    if cmd_name.is_empty() || cmd_name.contains(' ') {
+        return None;
+    }
+
+    // Get everything after the command name (preserves spacing)
+    let rest = &content[cmd_name.len()..];
+
+    Some(format!("  {}{}", color::literal(cmd_name), rest))
+}
+
+/// Colorize an option line like "  -o, --output <FORMAT>  Description".
+fn colorize_option_line(line: &str) -> Option<String> {
+    static OPT_RE: LazyLock<Regex> = LazyLock::new(|| {
+        // Match: leading spaces, optional short (-x, ), long option (--name or --[no-]name),
+        // optional value (<VAL> or [VAL]), then spaces and description
+        #[allow(clippy::expect_used)]
+        Regex::new(
+            r"^(\s+)((?:-\w,\s+)?)(--\[?[\w-]+\]?[\w-]*)(\s+(?:<[^>]+>|\[[^\]]+\]))?(\s{2,}.+)?$",
+        )
+        .expect("valid regex")
+    });
+
+    let caps = OPT_RE.captures(line)?;
+
+    let indent = caps.get(1).map(|m| m.as_str()).unwrap_or("");
+    let short = caps.get(2).map(|m| m.as_str()).unwrap_or("");
+    let long = caps.get(3).map(|m| m.as_str()).unwrap_or("");
+    let value = caps.get(4).map(|m| m.as_str()).unwrap_or("");
+    let desc = caps.get(5).map(|m| m.as_str()).unwrap_or("");
+
+    // Colorize short option if present
+    let colored_short = if short.is_empty() {
+        String::new()
+    } else {
+        // short is like "-o, " - colorize just the -o part
+        let opt_part = short.trim_end_matches(", ").trim_end();
+        format!("{}, ", color::literal(opt_part))
+    };
+
+    // Colorize long option, handling --[no-]name specially
+    let colored_long = if long.contains("[no-]") {
+        // Split into prefix and name: --[no-]limit -> [no-] + limit
+        let without_dashes = long.strip_prefix("--").unwrap_or(long);
+        let name = without_dashes
+            .strip_prefix("[no-]")
+            .unwrap_or(without_dashes);
+        format!("--{}{}", color::context("[no-]"), color::literal(name))
+    } else {
+        color::literal(long)
+    };
+
+    // Colorize value placeholder
+    let colored_value = if value.is_empty() {
+        String::new()
+    } else {
+        format!(" {}", color::context(value.trim()))
+    };
+
+    Some(format!(
+        "{}{}{}{}{}",
+        indent, colored_short, colored_long, colored_value, desc
+    ))
 }
 
 /// Parsed option line information.

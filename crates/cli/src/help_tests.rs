@@ -156,20 +156,23 @@ fn format_help_with_real_command() {
     let check_cmd = cmd.find_subcommand_mut("check").unwrap();
     let help = format_help(check_cmd);
 
+    // Strip ANSI for content verification
+    let stripped = strip_ansi(&help);
+
     // Verify consolidation happened for limit
     assert!(
-        help.contains("--[no-]limit"),
-        "check --help should have --[no-]limit: {help}"
+        stripped.contains("--[no-]limit"),
+        "check --help should have --[no-]limit: {stripped}"
     );
 
     // Verify standalone --no-cache preserved
     assert!(
-        help.contains("--no-cache"),
-        "check --help should have --no-cache: {help}"
+        stripped.contains("--no-cache"),
+        "check --help should have --no-cache: {stripped}"
     );
     assert!(
-        !help.contains("--[no-]cache"),
-        "Should not consolidate --no-cache: {help}"
+        !stripped.contains("--[no-]cache"),
+        "Should not consolidate --no-cache: {stripped}"
     );
 
     // Verify all check toggles consolidated
@@ -177,8 +180,109 @@ fn format_help_with_real_command() {
         "cloc", "escapes", "agents", "docs", "tests", "git", "build", "license",
     ] {
         assert!(
-            help.contains(&format!("--[no-]{check}")),
-            "check --help should have --[no-]{check}: {help}"
+            stripped.contains(&format!("--[no-]{check}")),
+            "check --help should have --[no-]{check}: {stripped}"
         );
     }
+}
+
+// =============================================================================
+// Colorization tests
+// =============================================================================
+
+/// Strip all ANSI escape sequences from a string (for testing)
+fn strip_ansi(s: &str) -> String {
+    let mut result = String::new();
+    let mut chars = s.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            // Skip until 'm'
+            while let Some(&next) = chars.peek() {
+                chars.next();
+                if next == 'm' {
+                    break;
+                }
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
+#[test]
+fn colorize_help_preserves_structure() {
+    let input = "Usage: quench [OPTIONS]\n\nCommands:\n  check  Run checks\n\nOptions:\n  -h, --help  Print help";
+    let result = colorize_help(input);
+    let stripped = strip_ansi(&result);
+    assert_eq!(stripped, input);
+}
+
+#[test]
+fn is_section_header_matches_known_headers() {
+    assert!(is_section_header("Usage:"));
+    assert!(is_section_header("Commands:"));
+    assert!(is_section_header("Options:"));
+    assert!(is_section_header("Arguments:"));
+    assert!(is_section_header("  Usage:")); // with leading whitespace
+}
+
+#[test]
+fn is_section_header_rejects_non_headers() {
+    assert!(!is_section_header("Description:"));
+    assert!(!is_section_header("Examples:"));
+    assert!(!is_section_header("Usage: quench"));
+    assert!(!is_section_header("--help"));
+}
+
+#[test]
+fn colorize_command_line_simple() {
+    let result = colorize_command_line("  check   Run checks");
+    assert!(result.is_some());
+    let stripped = strip_ansi(&result.unwrap());
+    assert_eq!(stripped, "  check   Run checks");
+}
+
+#[test]
+fn colorize_command_line_rejects_options() {
+    assert!(colorize_command_line("  -h, --help   Print help").is_none());
+    assert!(colorize_command_line("  --verbose   Enable verbose").is_none());
+}
+
+#[test]
+fn colorize_command_line_rejects_wrong_indent() {
+    assert!(colorize_command_line("check   Run checks").is_none()); // no indent
+    assert!(colorize_command_line("   check   Run checks").is_none()); // 3 spaces
+}
+
+#[test]
+fn colorize_option_line_simple() {
+    let result = colorize_option_line("  -h, --help  Print help");
+    assert!(result.is_some());
+    let stripped = strip_ansi(&result.unwrap());
+    assert_eq!(stripped, "  -h, --help  Print help");
+}
+
+#[test]
+fn colorize_option_line_with_value() {
+    let result = colorize_option_line("  -o, --output <FORMAT>  Output format");
+    assert!(result.is_some());
+    let stripped = strip_ansi(&result.unwrap());
+    assert_eq!(stripped, "  -o, --output <FORMAT>  Output format");
+}
+
+#[test]
+fn colorize_option_line_with_no_prefix() {
+    let result = colorize_option_line("      --[no-]limit [N]  Set limit");
+    assert!(result.is_some());
+    let stripped = strip_ansi(&result.unwrap());
+    assert_eq!(stripped, "      --[no-]limit [N]  Set limit");
+}
+
+#[test]
+fn colorize_option_line_long_only() {
+    let result = colorize_option_line("      --verbose  Enable verbose");
+    assert!(result.is_some());
+    let stripped = strip_ansi(&result.unwrap());
+    assert_eq!(stripped, "      --verbose  Enable verbose");
 }
