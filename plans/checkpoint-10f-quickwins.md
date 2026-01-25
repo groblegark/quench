@@ -1,5 +1,7 @@
 # Checkpoint 10F: Quick Wins - Dogfooding Milestone 2
 
+**Root Feature:** `quench-7226`
+
 ## Overview
 
 This checkpoint addresses technical debt and quick improvements identified during dogfooding. With the core features complete (checks, caching, timing, pre-commit hooks), this phase focuses on:
