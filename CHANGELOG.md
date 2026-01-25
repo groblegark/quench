@@ -14,15 +14,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### Commands
 - `quench init` command with language and agent auto-detection
 - `quench report` command with JSON, HTML, and Markdown output formats
-- `quench ratchet` command for quality metrics ratcheting
 - `--timing` flag for performance breakdown analysis
+
+#### Behavior
+- **Ratcheting**: Quality metrics can improve but not regress. Compares current metrics against `.quench/baseline.json`. Use `--fix` to update baseline when metrics improve.
 
 #### Checks
 - **git check**: Conventional commit message validation with `.gitmessage` template generation
 - **git check**: Agent documentation check for AI coding assistants
 - **git check**: Skip merge commits option (`skip_merge`)
 - **tests check**: Source/test correlation with commit-scope checking
-- **tests check**: JS/TS placeholder detection (`todo!`, `unimplemented!` patterns)
+- **tests check**: JS/TS placeholder detection (`test.todo()`, `it.skip()` patterns)
 - **docs check**: Table of contents validation with explicit `toc`/`no-toc` annotations
 - **docs check**: Specs index validation modes (toc, linked, auto)
 - **docs check**: Markdown link validation
