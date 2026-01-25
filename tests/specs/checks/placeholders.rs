@@ -1,101 +1,180 @@
-//! Behavioral specs for the Placeholders check.
+//! Behavioral specs for placeholder metrics in the tests check.
 //!
 //! Tests that quench correctly:
-//! - Detects #[ignore] tests in Rust
-//! - Detects todo!() in Rust test bodies
-//! - Detects test.todo() in JavaScript
-//! - Detects test.fixme() in JavaScript
-//! - Respects check = "off" configuration
-//! - Generates appropriate violations and metrics
+//! - Collects #[ignore] counts from Rust test files
+//! - Collects todo!() counts from Rust test bodies
+//! - Collects test.todo() counts from JavaScript
+//! - Collects test.fixme() counts from JavaScript
+//! - Collects test.skip() counts from JavaScript
+//! - Includes placeholder metrics in tests check JSON output
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use crate::prelude::*;
 
 // =============================================================================
-// RUST PLACEHOLDER SPECS
+// RUST PLACEHOLDER METRICS SPECS
 // =============================================================================
 
-/// Spec: Rust #[ignore] detection
+/// Spec: docs/specs/checks/tests.md#placeholder-metrics
 ///
-/// > When a test has #[ignore] attribute, report a placeholder violation.
+/// > Rust #[ignore] tests are counted in metrics.placeholders.rust.ignore
 #[test]
-fn placeholders_detects_rust_ignore() {
-    check("placeholders")
+fn tests_check_includes_rust_ignore_metrics() {
+    let result = check("tests")
         .on("placeholders/rust-ignore")
-        .fails()
-        .stdout_has("ignore")
-        .stdout_has("test_parser");
+        .json()
+        .passes();
+
+    let metrics = result.require("metrics");
+    let placeholders = metrics
+        .get("placeholders")
+        .expect("missing placeholders metrics");
+    let rust_ignore = placeholders["rust"]["ignore"].as_u64().unwrap();
+    assert_eq!(rust_ignore, 1, "should detect one #[ignore] test");
 }
 
-/// Spec: Rust todo!() detection
+/// Spec: docs/specs/checks/tests.md#placeholder-metrics
 ///
-/// > When a test body contains todo!(), report a placeholder violation.
+/// > Rust todo!() in test bodies are counted in metrics.placeholders.rust.todo
 #[test]
-fn placeholders_detects_rust_todo_body() {
-    check("placeholders")
-        .on("placeholders/rust-todo")
-        .fails()
-        .stdout_has("todo")
-        .stdout_has("test_lexer");
+fn tests_check_includes_rust_todo_metrics() {
+    let result = check("tests").on("placeholders/rust-todo").json().passes();
+
+    let metrics = result.require("metrics");
+    let placeholders = metrics
+        .get("placeholders")
+        .expect("missing placeholders metrics");
+    let rust_todo = placeholders["rust"]["todo"].as_u64().unwrap();
+    assert_eq!(rust_todo, 1, "should detect one todo!() in test body");
 }
 
 // =============================================================================
-// JAVASCRIPT PLACEHOLDER SPECS
+// JAVASCRIPT PLACEHOLDER METRICS SPECS
 // =============================================================================
 
-/// Spec: JavaScript test.todo() detection
+/// Spec: docs/specs/checks/tests.md#placeholder-metrics
 ///
-/// > When a test file contains test.todo('...') or it.todo('...'),
-/// > report placeholder violations.
+/// > JavaScript test.todo() calls are counted in metrics.placeholders.javascript.todo
 #[test]
-fn placeholders_detects_js_test_todo() {
-    check("placeholders")
+fn tests_check_includes_js_todo_metrics() {
+    let result = check("tests")
         .on("placeholders/javascript-todo")
-        .fails()
-        .stdout_has("todo")
-        .stdout_has("should handle edge case");
+        .json()
+        .passes();
+
+    let metrics = result.require("metrics");
+    let placeholders = metrics
+        .get("placeholders")
+        .expect("missing placeholders metrics");
+    let js_todo = placeholders["javascript"]["todo"].as_u64().unwrap();
+    assert_eq!(js_todo, 2, "should detect two test.todo() calls");
 }
 
-/// Spec: JavaScript test.fixme() detection
+/// Spec: docs/specs/checks/tests.md#placeholder-metrics
 ///
-/// > When a test file contains test.fixme('...') or it.fixme('...'),
-/// > report placeholder violations.
+/// > JavaScript test.fixme() calls are counted in metrics.placeholders.javascript.fixme
 #[test]
-fn placeholders_detects_js_test_fixme() {
-    check("placeholders")
+fn tests_check_includes_js_fixme_metrics() {
+    let result = check("tests")
         .on("placeholders/javascript-fixme")
-        .fails()
-        .stdout_has("fixme")
-        .stdout_has("broken on empty input");
+        .json()
+        .passes();
+
+    let metrics = result.require("metrics");
+    let placeholders = metrics
+        .get("placeholders")
+        .expect("missing placeholders metrics");
+    let js_fixme = placeholders["javascript"]["fixme"].as_u64().unwrap();
+    assert_eq!(js_fixme, 2, "should detect two test.fixme() calls");
 }
 
 // =============================================================================
-// CONFIGURATION SPECS
+// PLACEHOLDER METRICS STRUCTURE SPEC
 // =============================================================================
 
-/// Spec: check = "off" disables placeholders check
+/// Spec: docs/specs/checks/tests.md#metrics-structure
 ///
-/// > When configured with check = "off", the check passes even with placeholders.
+/// > JSON output includes placeholders object with rust and javascript subobjects
 #[test]
-fn placeholders_off_config_passes() {
-    check("placeholders").on("placeholders/allowed").passes();
+fn tests_check_placeholder_metrics_structure() {
+    let result = check("tests")
+        .on("placeholders/rust-ignore")
+        .json()
+        .passes();
+
+    let metrics = result.require("metrics");
+    let placeholders = metrics
+        .get("placeholders")
+        .expect("missing placeholders metrics");
+
+    // Verify rust structure
+    let rust = placeholders.get("rust").expect("missing rust metrics");
+    assert!(rust.get("ignore").is_some(), "missing rust.ignore");
+    assert!(rust.get("todo").is_some(), "missing rust.todo");
+
+    // Verify javascript structure
+    let js = placeholders
+        .get("javascript")
+        .expect("missing javascript metrics");
+    assert!(js.get("todo").is_some(), "missing javascript.todo");
+    assert!(js.get("fixme").is_some(), "missing javascript.fixme");
+    assert!(js.get("skip").is_some(), "missing javascript.skip");
 }
 
-/// Spec: warn mode reports but passes
+// =============================================================================
+// CORRELATION BEHAVIOR SPECS (preserved from original)
+// =============================================================================
+
+/// Spec: docs/specs/checks/tests.md#placeholder-tests
 ///
-/// > When configured with check = "warn", violations are reported but check passes.
+/// > When placeholders = "allow", placeholder tests satisfy correlation.
+/// > This behavior is preserved after the refactor.
 #[test]
-fn placeholders_warn_mode_passes_with_warnings() {
+fn tests_check_placeholders_allow_satisfies_correlation() {
     let temp = default_project();
     temp.config(
         r#"
-[check.placeholders]
-check = "warn"
+version = 1
+
+[check.tests.commit]
+check = "error"
+placeholders = "allow"
+"#,
+    );
+    // Source file that would normally need tests
+    temp.file("src/parser.rs", "pub fn parse() {}");
+    // Placeholder test satisfies correlation
+    temp.file(
+        "tests/parser_tests.rs",
+        r#"
+#[test]
+#[ignore = "TODO: implement parser tests"]
+fn test_parser() { todo!() }
+"#,
+    );
+
+    // Should pass because placeholder satisfies correlation
+    check("tests").pwd(temp.path()).passes();
+}
+
+/// Spec: docs/specs/checks/tests.md#correlation-vs-metrics
+///
+/// > Placeholders are always counted in metrics, regardless of correlation setting.
+#[test]
+fn tests_check_metrics_collected_regardless_of_correlation() {
+    let temp = default_project();
+    temp.config(
+        r#"
+version = 1
+
+[check.tests.commit]
+check = "error"
+placeholders = "forbid"
 "#,
     );
     temp.file(
-        "tests/parser_test.rs",
+        "tests/parser_tests.rs",
         r#"
 #[test]
 #[ignore = "TODO"]
@@ -103,80 +182,14 @@ fn test_parser() { todo!() }
 "#,
     );
 
-    check("placeholders")
-        .pwd(temp.path())
-        .passes()
-        .stdout_has("placeholders: WARN")
-        .stdout_has("PASS: placeholders");
-}
-
-// =============================================================================
-// JSON OUTPUT SPECS
-// =============================================================================
-
-/// Spec: JSON output includes metrics
-///
-/// > JSON output includes rust and javascript metrics.
-#[test]
-fn placeholders_json_includes_metrics() {
-    let result = check("placeholders")
-        .on("placeholders/rust-ignore")
-        .json()
-        .fails();
-
+    // Even with placeholders = "forbid", metrics should still be collected
+    let result = check("tests").pwd(temp.path()).json().passes();
     let metrics = result.require("metrics");
-    assert!(metrics.get("rust").is_some(), "missing rust metrics");
+    let placeholders = metrics
+        .get("placeholders")
+        .expect("metrics should include placeholders");
     assert!(
-        metrics.get("javascript").is_some(),
-        "missing javascript metrics"
+        placeholders["rust"]["ignore"].as_u64().unwrap() >= 1,
+        "should count #[ignore] even when correlation disabled"
     );
-}
-
-/// Spec: JSON violation structure
-///
-/// > Each violation has file, line, type, and advice fields.
-#[test]
-fn placeholders_json_violation_structure() {
-    let result = check("placeholders")
-        .on("placeholders/rust-ignore")
-        .json()
-        .fails();
-
-    let violations = result.require("violations").as_array().unwrap();
-    assert!(!violations.is_empty(), "should have violations");
-
-    for violation in violations {
-        assert!(violation.get("file").is_some(), "missing file");
-        assert!(violation.get("line").is_some(), "missing line");
-        assert!(violation.get("type").is_some(), "missing type");
-        assert!(violation.get("advice").is_some(), "missing advice");
-    }
-}
-
-/// Spec: Metrics count placeholders correctly
-///
-/// > Rust ignore count in metrics matches actual ignored tests.
-#[test]
-fn placeholders_metrics_rust_ignore_count() {
-    let result = check("placeholders")
-        .on("placeholders/rust-ignore")
-        .json()
-        .fails();
-
-    let metrics = result.require("metrics");
-    let rust_ignore = metrics["rust"]["ignore"].as_u64().unwrap();
-    assert_eq!(rust_ignore, 1, "should detect one #[ignore] test");
-}
-
-/// Spec: Metrics count JavaScript todo correctly
-#[test]
-fn placeholders_metrics_js_todo_count() {
-    let result = check("placeholders")
-        .on("placeholders/javascript-todo")
-        .json()
-        .fails();
-
-    let metrics = result.require("metrics");
-    let js_todo = metrics["javascript"]["todo"].as_u64().unwrap();
-    assert_eq!(js_todo, 2, "should detect two test.todo() calls");
 }

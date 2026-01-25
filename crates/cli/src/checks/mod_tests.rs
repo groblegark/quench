@@ -8,9 +8,9 @@
 use super::*;
 
 #[test]
-fn all_checks_returns_9_checks() {
+fn all_checks_returns_8_checks() {
     let checks = all_checks();
-    assert_eq!(checks.len(), 9);
+    assert_eq!(checks.len(), 8);
 }
 
 #[test]
@@ -40,10 +40,9 @@ fn filter_with_disabled_excludes_those() {
 #[test]
 fn filter_default_runs_all_checks() {
     let checks = filter_checks(&[], &[]);
-    // All 9 checks run by default
-    assert_eq!(checks.len(), 9);
+    // All 8 checks run by default
+    assert_eq!(checks.len(), 8);
     assert!(checks.iter().any(|c| c.name() == "git"));
     assert!(checks.iter().any(|c| c.name() == "build"));
     assert!(checks.iter().any(|c| c.name() == "license"));
-    assert!(checks.iter().any(|c| c.name() == "placeholders"));
 }
