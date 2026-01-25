@@ -80,6 +80,15 @@ fn template_ends_with_newline() {
 }
 
 #[test]
+fn template_starts_with_blank_line() {
+    let config = GitCommitConfig::default();
+    let template = generate_template(&config);
+
+    // Leading blank line so humans can start typing immediately
+    assert!(template.starts_with('\n'));
+}
+
+#[test]
 fn generates_examples_with_scopes() {
     let config = GitCommitConfig {
         types: Some(vec!["feat".to_string(), "fix".to_string()]),
