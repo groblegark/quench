@@ -88,7 +88,7 @@ impl TestRunner for CargoRunner {
     }
 }
 
-/// Parse cargo test human-readable output.
+/// Parse cargo test human-readable output with optimizations.
 ///
 /// Output format (examples):
 /// ```text
@@ -97,56 +97,67 @@ impl TestRunner for CargoRunner {
 /// test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 /// test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
 /// ```
+///
+/// Optimizations:
+/// - Pre-allocates test vector based on line count hint
+/// - Uses string slices to minimize allocations
+/// - Inline helper for test line parsing
 pub fn parse_cargo_output(stdout: &str, total_time: Duration) -> TestRunResult {
-    let mut tests = Vec::new();
+    // Pre-count lines starting with "test " for capacity hint
+    let test_line_count = stdout
+        .lines()
+        .filter(|l| l.trim_start().starts_with("test "))
+        .count();
+
+    let mut tests = Vec::with_capacity(test_line_count);
     let mut suite_passed = true;
 
     for line in stdout.lines() {
         let line = line.trim();
 
-        // Parse individual test results: "test name ... ok" or "test name ... FAILED"
-        if line.starts_with("test ") && (line.ends_with(" ... ok") || line.ends_with(" ... FAILED"))
+        // Parse individual test results
+        if let Some(rest) = line.strip_prefix("test ")
+            && let Some((name, result)) = parse_test_line(rest)
         {
-            // Extract test name: "test <name> ... <result>"
-            let rest = &line[5..]; // Skip "test "
-            if let Some(name_end) = rest.find(" ... ") {
-                let name = &rest[..name_end];
-                let passed = line.ends_with(" ... ok");
-
-                // We don't have per-test timing from human-readable output
-                let duration = Duration::ZERO;
-                tests.push(if passed {
-                    TestResult::passed(name, duration)
-                } else {
-                    TestResult::failed(name, duration)
-                });
-
-                if !passed {
-                    suite_passed = false;
-                }
-            }
+            let passed = result == "ok";
+            tests.push(if passed {
+                TestResult::passed(name, Duration::ZERO)
+            } else {
+                suite_passed = false;
+                TestResult::failed(name, Duration::ZERO)
+            });
         }
 
-        // Parse suite summary: "test result: ok. X passed; Y failed; ..."
+        // Parse suite summary: "test result: FAILED. X passed; Y failed; ..."
+        // This must be a separate check (not else if) because "test result:"
+        // also matches the "test " prefix above.
         if line.starts_with("test result: ") && line.contains("FAILED") {
             suite_passed = false;
         }
     }
 
-    // Build result
     let mut result = if suite_passed {
         TestRunResult::passed(total_time)
     } else {
         TestRunResult::failed(total_time, "tests failed")
     };
     result.tests = tests;
-
-    // Ensure suite_passed takes precedence
-    if !suite_passed {
-        result.passed = false;
-    }
-
     result
+}
+
+/// Parse a test line after "test " prefix.
+/// Returns (name, result) where result is "ok" or "FAILED".
+#[inline]
+fn parse_test_line(rest: &str) -> Option<(&str, &str)> {
+    // Format: "<name> ... ok" or "<name> ... FAILED"
+    let sep_pos = rest.rfind(" ... ")?;
+    let name = &rest[..sep_pos];
+    let result = &rest[sep_pos + 5..]; // Skip " ... "
+    if result == "ok" || result == "FAILED" {
+        Some((name, result))
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]

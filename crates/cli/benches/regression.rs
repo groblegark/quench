@@ -250,6 +250,75 @@ fn tests_ci_mode_under_30s() {
     );
 }
 
+/// CI mode overhead should be bounded relative to fast mode.
+///
+/// The overhead comes from:
+/// - Running actual tests (vs just correlation checking)
+/// - Coverage collection (if configured)
+///
+/// This test ensures the overhead stays bounded (CI < 3x fast mode).
+#[test]
+fn tests_ci_mode_overhead_bounded() {
+    let path = fixture_path("tests-ci");
+    if !path.exists() {
+        eprintln!("Skipping: tests-ci fixture not found");
+        return;
+    }
+
+    let bin = quench_bin();
+    if !bin.exists() {
+        eprintln!("Skipping: release binary not found");
+        eprintln!("Run: cargo build --release");
+        return;
+    }
+
+    // Fast mode time (correlation only)
+    let fast_start = Instant::now();
+    Command::new(&bin)
+        .args([
+            "check",
+            "--tests",
+            "--no-cloc",
+            "--no-escapes",
+            "--no-agents",
+        ])
+        .current_dir(&path)
+        .output()
+        .expect("fast mode should run");
+    let fast_time = fast_start.elapsed();
+
+    // CI mode time (run tests + metrics)
+    let ci_start = Instant::now();
+    Command::new(&bin)
+        .args([
+            "check",
+            "--tests",
+            "--no-cloc",
+            "--no-escapes",
+            "--no-agents",
+            "--ci",
+        ])
+        .current_dir(&path)
+        .output()
+        .expect("CI mode should run");
+    let ci_time = ci_start.elapsed();
+
+    eprintln!("Fast: {:?}, CI: {:?}", fast_time, ci_time);
+
+    // CI overhead should be less than 200% of fast mode
+    // (CI runs actual tests, so some overhead is expected)
+    let overhead_pct = (ci_time.as_millis() as f64 / fast_time.as_millis().max(1) as f64) * 100.0;
+    eprintln!("CI overhead: {:.1}%", overhead_pct - 100.0);
+
+    assert!(
+        ci_time < fast_time * 3,
+        "CI mode overhead too high: {:?} vs {:?} ({:.1}%)",
+        ci_time,
+        fast_time,
+        overhead_pct - 100.0
+    );
+}
+
 fn main() {
     // This is a test harness, tests are run via cargo test
     println!("Run with: cargo test --bench regression -- --nocapture");
