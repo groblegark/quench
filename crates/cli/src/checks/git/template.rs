@@ -30,6 +30,9 @@ pub fn generate_template(config: &GitCommitConfig) -> String {
 
     let mut lines = Vec::new();
 
+    // Leading blank line so humans can start typing immediately
+    lines.push(String::new());
+
     // Header with format reminder (always show scope as optional)
     lines.push("# <type>(<scope>): <description>".to_string());
     lines.push("#".to_string());
