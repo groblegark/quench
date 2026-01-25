@@ -15,6 +15,7 @@ pub mod error;
 pub mod file_reader;
 pub mod file_size;
 pub mod git;
+pub mod help;
 pub mod init;
 pub mod output;
 pub mod pattern;

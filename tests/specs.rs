@@ -33,6 +33,9 @@ mod cli_timing;
 #[path = "specs/cli/ci_mode.rs"]
 mod cli_ci_mode;
 
+#[path = "specs/cli/help.rs"]
+mod cli_help;
+
 // config/
 #[path = "specs/config/mod.rs"]
 mod config;

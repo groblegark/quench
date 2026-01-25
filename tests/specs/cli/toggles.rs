@@ -60,14 +60,14 @@ fn check_toggles_shown_in_help() {
         .args(["check", "--help"])
         .assert()
         .success()
-        .stdout(predicates::str::contains("--cloc"))
-        .stdout(predicates::str::contains("--escapes"))
-        .stdout(predicates::str::contains("--agents"))
-        .stdout(predicates::str::contains("--docs"))
-        .stdout(predicates::str::contains("--tests"))
-        .stdout(predicates::str::contains("--git"))
-        .stdout(predicates::str::contains("--build"))
-        .stdout(predicates::str::contains("--license"));
+        .stdout(predicates::str::contains("--[no-]cloc"))
+        .stdout(predicates::str::contains("--[no-]escapes"))
+        .stdout(predicates::str::contains("--[no-]agents"))
+        .stdout(predicates::str::contains("--[no-]docs"))
+        .stdout(predicates::str::contains("--[no-]tests"))
+        .stdout(predicates::str::contains("--[no-]git"))
+        .stdout(predicates::str::contains("--[no-]build"))
+        .stdout(predicates::str::contains("--[no-]license"));
 }
 
 // =============================================================================
