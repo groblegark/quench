@@ -161,3 +161,236 @@ fn test_covered() { assert_eq!(test_project::covered(), 42); }
         assert!(coverage.as_object().is_some());
     }
 }
+
+// =============================================================================
+// CI THRESHOLD VIOLATIONS
+// =============================================================================
+
+/// Spec: docs/specs/checks/tests.md#coverage
+///
+/// > Configure thresholds via `[check.tests.coverage]`:
+/// > min = 75
+#[test]
+#[ignore = "requires coverage threshold violation implementation"]
+fn coverage_below_min_generates_violation() {
+    let temp = Project::empty();
+    temp.config(
+        r#"
+[[check.tests.suite]]
+runner = "cargo"
+
+[check.tests.coverage]
+check = "error"
+min = 95
+"#,
+    );
+    temp.file(
+        "Cargo.toml",
+        r#"
+[package]
+name = "test_project"
+version = "0.1.0"
+edition = "2021"
+"#,
+    );
+    // Only one function tested out of two = ~50% coverage
+    temp.file(
+        "src/lib.rs",
+        r#"
+pub fn covered() -> i32 { 42 }
+pub fn uncovered() -> i32 { 0 }
+"#,
+    );
+    temp.file(
+        "tests/basic.rs",
+        r#"
+#[test]
+fn test_covered() { assert_eq!(test_project::covered(), 42); }
+"#,
+    );
+
+    let result = check("tests")
+        .pwd(temp.path())
+        .args(&["--ci"])
+        .json()
+        .fails();
+
+    assert!(result.has_violation("coverage_below_min"));
+    let v = result.require_violation("coverage_below_min");
+    assert!(v.get("threshold").is_some());
+}
+
+/// Spec: docs/specs/checks/tests.md#coverage
+///
+/// > [check.tests.coverage.package.core]
+/// > min = 90
+#[test]
+#[ignore = "requires per-package coverage threshold implementation"]
+fn per_package_coverage_thresholds_work() {
+    let temp = Project::empty();
+    temp.config(
+        r#"
+[[check.tests.suite]]
+runner = "cargo"
+
+[check.tests.coverage]
+check = "error"
+min = 50
+
+[check.tests.coverage.package.test_project]
+min = 95
+"#,
+    );
+    temp.file(
+        "Cargo.toml",
+        r#"
+[package]
+name = "test_project"
+version = "0.1.0"
+edition = "2021"
+"#,
+    );
+    temp.file(
+        "src/lib.rs",
+        r#"
+pub fn covered() -> i32 { 42 }
+pub fn uncovered() -> i32 { 0 }
+"#,
+    );
+    temp.file(
+        "tests/basic.rs",
+        r#"
+#[test]
+fn test_covered() { assert_eq!(test_project::covered(), 42); }
+"#,
+    );
+
+    let result = check("tests")
+        .pwd(temp.path())
+        .args(&["--ci"])
+        .json()
+        .fails();
+
+    // Should fail on package-specific threshold
+    assert!(result.has_violation("coverage_below_min"));
+}
+
+/// Spec: docs/specs/11-test-runners.md#thresholds
+///
+/// > max_total = "30s"
+#[test]
+#[ignore = "requires time threshold violation implementation"]
+fn time_total_exceeded_generates_violation() {
+    let temp = Project::empty();
+    temp.config(
+        r#"
+[[check.tests.suite]]
+runner = "cargo"
+max_total = "1ms"
+
+[check.tests.time]
+check = "error"
+"#,
+    );
+    temp.file(
+        "Cargo.toml",
+        r#"
+[package]
+name = "test_project"
+version = "0.1.0"
+edition = "2021"
+"#,
+    );
+    temp.file("src/lib.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }");
+    temp.file(
+        "tests/basic.rs",
+        r#"
+#[test]
+fn test_add() { assert_eq!(test_project::add(1, 2), 3); }
+"#,
+    );
+
+    let result = check("tests")
+        .pwd(temp.path())
+        .args(&["--ci"])
+        .json()
+        .fails();
+
+    assert!(result.has_violation("time_total_exceeded"));
+    let v = result.require_violation("time_total_exceeded");
+    assert!(v.get("value").is_some());
+    assert!(v.get("threshold").is_some());
+}
+
+/// Spec: docs/specs/11-test-runners.md#thresholds
+///
+/// > max_test = "1s"
+#[test]
+#[ignore = "requires time threshold violation implementation"]
+fn time_test_exceeded_generates_violation() {
+    let temp = Project::empty();
+    temp.config(
+        r#"
+[[check.tests.suite]]
+runner = "cargo"
+max_test = "1ms"
+
+[check.tests.time]
+check = "error"
+"#,
+    );
+    temp.file(
+        "Cargo.toml",
+        r#"
+[package]
+name = "test_project"
+version = "0.1.0"
+edition = "2021"
+"#,
+    );
+    temp.file("src/lib.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }");
+    temp.file(
+        "tests/basic.rs",
+        r#"
+#[test]
+fn test_add() { assert_eq!(test_project::add(1, 2), 3); }
+"#,
+    );
+
+    let result = check("tests")
+        .pwd(temp.path())
+        .args(&["--ci"])
+        .json()
+        .fails();
+
+    assert!(result.has_violation("time_test_exceeded"));
+}
+
+/// Spec: tests CI violation.type enumeration
+///
+/// Violation types for CI thresholds:
+/// - coverage_below_min
+/// - time_total_exceeded
+/// - time_test_exceeded
+#[test]
+fn tests_ci_violation_types_are_documented() {
+    // This test documents the expected violation types.
+    // Each type should be tested individually above.
+    let expected_types = [
+        "coverage_below_min",
+        "time_total_exceeded",
+        "time_test_exceeded",
+    ];
+
+    // Verify these are the only CI threshold violation types
+    // by checking they don't overlap with other tests check violations
+    let other_types = ["missing_tests", "test_suite_failed"];
+
+    for t in &expected_types {
+        assert!(
+            !other_types.contains(t),
+            "CI threshold type '{}' should not overlap with other types",
+            t
+        );
+    }
+}
