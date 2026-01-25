@@ -108,8 +108,11 @@ fn json_formats_empty_violations() {
     let json: serde_json::Value = serde_json::from_slice(&buffer).unwrap();
     let checks = json.get("checks").unwrap().as_array().unwrap();
 
-    // Passed check should not have violations key (skip_serializing_if)
-    assert!(checks[0].get("violations").is_none());
+    // Violations array is always present for consistency (even when empty)
+    let violations = checks[0]
+        .get("violations")
+        .expect("violations should be present");
+    assert!(violations.as_array().unwrap().is_empty());
 }
 
 #[test]

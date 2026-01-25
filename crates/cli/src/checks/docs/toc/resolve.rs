@@ -60,6 +60,24 @@ fn try_resolve_glob(base: &Path, pattern: &str) -> bool {
     false
 }
 
+/// Normalize a TOC path for cross-platform compatibility.
+///
+/// - Converts Windows path separators (backslash to forward slash)
+/// - Strips trailing slashes
+/// - Decodes URL-encoded characters (e.g., %20 to space)
+fn normalize_toc_path(path: &str) -> String {
+    // Convert Windows separators to Unix
+    let path = path.replace('\\', "/");
+
+    // Strip trailing slash
+    let path = path.trim_end_matches('/');
+
+    // Decode URL-encoded characters
+    percent_encoding::percent_decode_str(path)
+        .decode_utf8_lossy()
+        .into_owned()
+}
+
 /// Try to resolve a path using a specific strategy.
 pub(super) fn try_resolve(
     root: &Path,
@@ -67,8 +85,10 @@ pub(super) fn try_resolve(
     entry_path: &str,
     strategy: ResolutionStrategy,
 ) -> bool {
-    // Normalize `.`/`./` prefix for all strategies
-    let normalized = normalize_dot_prefix(entry_path);
+    // Normalize the path (separators, trailing slashes, URL encoding)
+    let normalized_owned = normalize_toc_path(entry_path);
+    // Then normalize `.`/`./` prefix for all strategies
+    let normalized = normalize_dot_prefix(&normalized_owned);
 
     // Handle glob patterns
     if is_glob_pattern(normalized) {

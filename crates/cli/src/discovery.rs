@@ -44,8 +44,13 @@ pub fn resolve_config(explicit: Option<&Path>, cwd: &Path) -> Result<Option<Path
             if path.exists() {
                 Ok(Some(path.to_path_buf()))
             } else {
+                let hint = if path.to_string_lossy().ends_with(".toml") {
+                    "Expected quench.toml in current directory or specify with -C <path>"
+                } else {
+                    "Config path should be a .toml file (e.g., quench.toml)"
+                };
                 Err(Error::Config {
-                    message: format!("config file not found: {}", path.display()),
+                    message: format!("config file not found: {}\n  {}", path.display(), hint),
                     path: Some(path.to_path_buf()),
                 })
             }

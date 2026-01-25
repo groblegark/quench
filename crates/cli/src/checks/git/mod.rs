@@ -43,6 +43,13 @@ impl Check for GitCheck {
             return CheckResult::skipped(self.name(), "Not a git repository");
         }
 
+        // Skip if this is a bare repository (no working tree)
+        if let Ok(repo) = Repository::discover(ctx.root)
+            && repo.is_bare()
+        {
+            return CheckResult::skipped(self.name(), "Bare repository (no working tree)");
+        }
+
         // Get check configuration
         let config = &ctx.config.git.commit;
 
@@ -178,6 +185,17 @@ pub fn validate_commit(
     // Skip merge commits if configured
     if config.skip_merge && is_merge_commit(&commit.message) {
         return false; // Skipped
+    }
+
+    // Handle empty commit messages specially
+    if commit.message.trim().is_empty() {
+        violations.push(Violation::commit_violation(
+            &commit.hash,
+            &commit.message,
+            "empty_message",
+            "Commit message cannot be empty. Use format: <type>(<scope>): <description>",
+        ));
+        return true;
     }
 
     match parse_conventional_commit(&commit.message) {

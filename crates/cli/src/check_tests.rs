@@ -94,11 +94,15 @@ fn violation_omits_none_fields() {
 }
 
 #[test]
-fn check_result_omits_empty_violations() {
+fn check_result_includes_empty_violations_array() {
     let result = CheckResult::passed("cloc");
     let json = serde_json::to_value(&result).unwrap();
 
-    assert!(json.get("violations").is_none());
+    // Violations array should always be present, even when empty
+    let violations = json
+        .get("violations")
+        .expect("violations should be present");
+    assert!(violations.as_array().unwrap().is_empty());
     assert!(json.get("skipped").is_none());
     assert!(json.get("error").is_none());
 }

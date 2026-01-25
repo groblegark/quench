@@ -802,3 +802,115 @@ Just random text
     // But format validation should fail
     assert!(!is_valid_tree_format(&blocks[0]));
 }
+
+// === Cross-platform path edge cases ===
+
+#[test]
+fn toc_handles_trailing_slash_on_file() {
+    use tempfile::TempDir;
+
+    let temp = TempDir::new().unwrap();
+    let root = temp.path();
+
+    // Create directory and file
+    std::fs::create_dir_all(root.join("docs/specs")).unwrap();
+    std::fs::write(root.join("docs/specs/overview.md"), "# Overview").unwrap();
+
+    let md_file = root.join("README.md");
+
+    // Path with trailing slash should still resolve (slash is stripped)
+    assert!(try_resolve(
+        root,
+        &md_file,
+        "docs/specs/overview.md/", // trailing slash
+        ResolutionStrategy::RelativeToRoot
+    ));
+}
+
+#[test]
+fn toc_handles_windows_separators() {
+    use tempfile::TempDir;
+
+    let temp = TempDir::new().unwrap();
+    let root = temp.path();
+
+    // Create file
+    std::fs::create_dir_all(root.join("docs/specs")).unwrap();
+    std::fs::write(root.join("docs/specs/file.md"), "# File").unwrap();
+
+    let md_file = root.join("README.md");
+
+    // Windows-style path should resolve (backslashes converted to forward slashes)
+    assert!(try_resolve(
+        root,
+        &md_file,
+        "docs\\specs\\file.md", // Windows separators
+        ResolutionStrategy::RelativeToRoot
+    ));
+}
+
+#[test]
+fn toc_handles_url_encoded_spaces() {
+    use tempfile::TempDir;
+
+    let temp = TempDir::new().unwrap();
+    let root = temp.path();
+
+    // Create file with space in name
+    std::fs::create_dir_all(root.join("docs")).unwrap();
+    std::fs::write(root.join("docs/my file.md"), "# My File").unwrap();
+
+    let md_file = root.join("README.md");
+
+    // URL-encoded space should be decoded
+    assert!(try_resolve(
+        root,
+        &md_file,
+        "docs/my%20file.md", // URL-encoded space
+        ResolutionStrategy::RelativeToRoot
+    ));
+}
+
+#[test]
+fn toc_handles_url_encoded_special_chars() {
+    use tempfile::TempDir;
+
+    let temp = TempDir::new().unwrap();
+    let root = temp.path();
+
+    // Create file with special characters
+    std::fs::create_dir_all(root.join("docs")).unwrap();
+    std::fs::write(root.join("docs/file&name.md"), "# File").unwrap();
+
+    let md_file = root.join("README.md");
+
+    // URL-encoded ampersand should be decoded
+    assert!(try_resolve(
+        root,
+        &md_file,
+        "docs/file%26name.md", // URL-encoded &
+        ResolutionStrategy::RelativeToRoot
+    ));
+}
+
+#[test]
+fn toc_handles_mixed_path_issues() {
+    use tempfile::TempDir;
+
+    let temp = TempDir::new().unwrap();
+    let root = temp.path();
+
+    // Create file
+    std::fs::create_dir_all(root.join("my docs/specs")).unwrap();
+    std::fs::write(root.join("my docs/specs/file.md"), "# File").unwrap();
+
+    let md_file = root.join("README.md");
+
+    // Combined: Windows separators, trailing slash, URL-encoded space
+    assert!(try_resolve(
+        root,
+        &md_file,
+        "my%20docs\\specs\\file.md/",
+        ResolutionStrategy::RelativeToRoot
+    ));
+}

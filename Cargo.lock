@@ -1432,6 +1432,7 @@ dependencies = [
  "jsonschema",
  "memchr",
  "memmap2",
+ "percent-encoding",
  "postcard",
  "predicates",
  "proptest",

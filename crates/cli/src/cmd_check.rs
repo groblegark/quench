@@ -30,7 +30,11 @@ pub fn run(cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
 
     // Validate flag combinations
     if args.dry_run && !args.fix {
-        eprintln!("--dry-run requires --fix");
+        eprintln!("--dry-run only works with --fix");
+        eprintln!(
+            "  The --dry-run flag lets you preview what --fix would change without applying changes."
+        );
+        eprintln!("  Use: quench check --fix --dry-run");
         return Ok(ExitCode::ConfigError);
     }
 

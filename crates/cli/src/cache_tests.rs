@@ -274,3 +274,106 @@ fn cache_lookup_returns_arc_for_efficient_cloning() {
     // Verify both point to same underlying data (Arc::ptr_eq)
     assert!(Arc::ptr_eq(&arc1, &arc2));
 }
+
+// =============================================================================
+// EDGE CASE TESTS
+// =============================================================================
+
+#[test]
+fn cache_handles_epoch_mtime() {
+    // Test that cache works correctly with epoch mtime (1970-01-01)
+    let cache = FileCache::new(0);
+    let path = PathBuf::from("ancient.rs");
+    let key = FileCacheKey {
+        mtime_secs: 0, // Epoch
+        mtime_nanos: 0,
+        size: 100,
+    };
+
+    // Should not panic or cause issues
+    cache.insert(path.clone(), key.clone(), vec![]);
+    let result = cache.lookup(&path, &key);
+    assert!(result.is_some());
+    assert_eq!(cache.stats().hits, 1);
+}
+
+#[test]
+fn cache_handles_pre_epoch_mtime_gracefully() {
+    // Test that cache works with mtime that represents a time before epoch
+    // (would have negative duration, but from_metadata handles this)
+    let cache = FileCache::new(0);
+    let path = PathBuf::from("very_old.rs");
+
+    // Pre-epoch times get clamped to 0 by from_metadata (unwrap_or_default)
+    // This simulates what would happen
+    let key = FileCacheKey {
+        mtime_secs: 0,
+        mtime_nanos: 0,
+        size: 50,
+    };
+
+    cache.insert(path.clone(), key.clone(), vec![]);
+    let result = cache.lookup(&path, &key);
+    assert!(result.is_some());
+}
+
+#[test]
+fn cache_concurrent_insert_lookup() {
+    use std::sync::Arc;
+    use std::thread;
+
+    let cache = Arc::new(FileCache::new(0));
+    let num_threads = 10;
+    let num_ops = 100;
+
+    let handles: Vec<_> = (0..num_threads)
+        .map(|thread_id| {
+            let cache = Arc::clone(&cache);
+            thread::spawn(move || {
+                for i in 0..num_ops {
+                    let path = PathBuf::from(format!("file_{}.rs", i));
+                    let key = FileCacheKey {
+                        mtime_secs: i as i64,
+                        mtime_nanos: 0,
+                        size: (thread_id * num_ops + i) as u64,
+                    };
+
+                    // Insert
+                    cache.insert(path.clone(), key.clone(), vec![]);
+
+                    // Lookup (may hit or miss depending on race with other threads)
+                    let _ = cache.lookup(&path, &key);
+                }
+            })
+        })
+        .collect();
+
+    // All threads should complete without panic
+    for handle in handles {
+        handle.join().expect("thread panicked");
+    }
+
+    // Cache should have entries (not necessarily all due to overwrites)
+    assert!(cache.stats().entries > 0);
+}
+
+#[test]
+fn file_cache_key_from_walked_file_epoch() {
+    use crate::file_size::FileSizeClass;
+    use crate::walker::WalkedFile;
+
+    // Simulate a file with epoch mtime
+    let walked = WalkedFile {
+        path: PathBuf::from("test.rs"),
+        mtime_secs: 0, // Epoch
+        mtime_nanos: 0,
+        size: 100,
+        depth: 0,
+        size_class: FileSizeClass::Small,
+    };
+
+    let key = FileCacheKey::from_walked_file(&walked);
+    assert_eq!(key.mtime_secs, 0);
+    assert_eq!(key.mtime_nanos, 0);
+    assert_eq!(key.size, 100);
+}

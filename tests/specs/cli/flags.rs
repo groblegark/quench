@@ -144,3 +144,22 @@ fn check_unknown_long_flag_fails() {
         .code(2)
         .stderr(predicates::str::is_match(r"(?i)(unexpected|unknown|unrecognized)").unwrap());
 }
+
+// =============================================================================
+// CONFIG FILE ERROR SPECS
+// =============================================================================
+
+/// Spec: Error messages should be helpful and actionable.
+///
+/// > Missing config file should suggest alternatives.
+#[test]
+fn missing_config_suggests_alternatives() {
+    let temp = Project::empty();
+
+    // Use a non-existent config path
+    cli()
+        .pwd(temp.path())
+        .args(&["-C", "nonexistent.toml", "check"])
+        .exits(2)
+        .stderr_has("quench.toml");
+}

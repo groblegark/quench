@@ -343,8 +343,7 @@ pub struct CheckResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
 
-    /// List of violations (omitted if empty).
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    /// List of violations (always present for consistency, may be empty).
     pub violations: Vec<Violation>,
 
     /// Summary of fixes applied.

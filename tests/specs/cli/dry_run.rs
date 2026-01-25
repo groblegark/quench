@@ -33,7 +33,8 @@ fn dry_run_without_fix_is_error() {
         .pwd(temp.path())
         .args(&["--dry-run"])
         .exits(2) // Configuration error
-        .stderr_has("--dry-run requires --fix");
+        .stderr_has("--fix")
+        .stderr_has("preview");
 }
 
 // =============================================================================

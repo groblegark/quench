@@ -296,6 +296,31 @@ fn format_type_advice_with_custom_list() {
 // EDGE CASE TESTS
 // =============================================================================
 
+#[test]
+fn empty_commit_message_reports_clear_violation() {
+    let commit = test_commit("abc1234", "");
+    let config = GitCommitConfig::default();
+    let mut violations = Vec::new();
+
+    validate_commit(&commit, &config, &mut violations);
+
+    assert_eq!(violations.len(), 1);
+    assert_eq!(violations[0].violation_type, "empty_message");
+    assert!(violations[0].advice.contains("cannot be empty"));
+}
+
+#[test]
+fn whitespace_only_commit_message_reports_clear_violation() {
+    let commit = test_commit("abc1234", "   \n\t  ");
+    let config = GitCommitConfig::default();
+    let mut violations = Vec::new();
+
+    validate_commit(&commit, &config, &mut violations);
+
+    assert_eq!(violations.len(), 1);
+    assert_eq!(violations[0].violation_type, "empty_message");
+}
+
 // =============================================================================
 // MERGE COMMIT HANDLING TESTS
 // =============================================================================
