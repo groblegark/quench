@@ -218,10 +218,7 @@ cargo run --release -- check
 - [ ] Performance within budget
 - [ ] Manual scenarios above completed
 
-## Known Gaps (Low Priority)
+## Related Plans
 
-1. **Git check JSON**: Missing `scope` field in Violation struct
-2. **Report tests**: Missing dedicated json_tests.rs
-3. **Markdown test**: No integration test for markdown format
-
-These are minor and don't affect functionality.
+Gaps identified during review are tracked in:
+- **2026-01-24-close-gaps.md** - Closes all test coverage and API gaps
