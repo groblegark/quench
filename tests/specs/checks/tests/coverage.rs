@@ -15,23 +15,7 @@ use crate::prelude::*;
 /// > `cargo` runner provides implicit Rust coverage via llvm-cov.
 #[test]
 fn cargo_runner_collects_rust_coverage() {
-    let temp = Project::empty();
-    temp.config(
-        r#"
-[[check.tests.suite]]
-runner = "cargo"
-# Implicit: targets Rust code via llvm-cov
-"#,
-    );
-    temp.file(
-        "Cargo.toml",
-        r#"
-[package]
-name = "test_project"
-version = "0.1.0"
-edition = "2021"
-"#,
-    );
+    let temp = Project::cargo("test_project");
     temp.file(
         "src/lib.rs",
         r#"

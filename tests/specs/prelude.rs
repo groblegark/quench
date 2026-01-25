@@ -691,6 +691,51 @@ impl Project {
         }
     }
 
+    /// Create a minimal Cargo project with tests check configured.
+    ///
+    /// Creates:
+    /// - `Cargo.toml` with package name and edition
+    /// - `quench.toml` with cargo test suite
+    /// - `src/lib.rs` with a simple function
+    /// - `tests/basic.rs` with one passing test
+    ///
+    /// # Example
+    /// ```ignore
+    /// let temp = Project::cargo("my_project");
+    /// check("tests").pwd(temp.path()).passes();
+    /// ```
+    pub fn cargo(name: &str) -> Self {
+        let temp = Self::empty();
+        temp.config(
+            r#"
+[[check.tests.suite]]
+runner = "cargo"
+"#,
+        );
+        temp.file(
+            "Cargo.toml",
+            &format!(
+                r#"
+[package]
+name = "{name}"
+version = "0.1.0"
+edition = "2021"
+"#
+            ),
+        );
+        temp.file("src/lib.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }");
+        temp.file(
+            "tests/basic.rs",
+            &format!(
+                r#"
+#[test]
+fn test_add() {{ assert_eq!({name}::add(1, 2), 3); }}
+"#
+            ),
+        );
+        temp
+    }
+
     /// Create a project with default quench.toml and CLAUDE.md
     pub fn with_defaults() -> Self {
         let temp = Self::empty();

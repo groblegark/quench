@@ -15,30 +15,7 @@ use crate::prelude::*;
 /// > cargo test --release -- --format json
 #[test]
 fn cargo_runner_executes_cargo_test() {
-    let temp = Project::empty();
-    temp.config(
-        r#"
-[[check.tests.suite]]
-runner = "cargo"
-"#,
-    );
-    temp.file(
-        "Cargo.toml",
-        r#"
-[package]
-name = "test_project"
-version = "0.1.0"
-edition = "2021"
-"#,
-    );
-    temp.file("src/lib.rs", "pub fn add(a: i32, b: i32) -> i32 { a + b }");
-    temp.file(
-        "tests/basic.rs",
-        r#"
-#[test]
-fn test_add() { assert_eq!(test_project::add(1, 2), 3); }
-"#,
-    );
+    let temp = Project::cargo("test_project");
 
     // Runner should execute cargo test and report results
     check("tests")
