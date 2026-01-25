@@ -1,5 +1,7 @@
 # Checkpoint 10B: Dogfooding Milestone 2 - Validation
 
+**Root Feature:** `quench-512c`
+
 ## Overview
 
 Validate and formally document the completion of Dogfooding Milestone 2. The milestone implementation was completed in checkpoint-10a-precheck; this checkpoint focuses on verification of the criteria and creation of the formal documentation report.
