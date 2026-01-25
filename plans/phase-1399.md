@@ -1,5 +1,7 @@
 # Phase 1399: Timing Mode
 
+**Root Feature:** `quench-588b`
+
 ## Overview
 
 Add a `--timing` flag to display performance breakdown during check execution. Shows phase durations (discovery, checking, output), per-check timing, file counts, and cache statistics. Outputs to stderr for text format, included in JSON object for JSON output.
