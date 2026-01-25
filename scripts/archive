@@ -11,8 +11,8 @@
 # This script:
 #   1. Creates orphan branch v0/plans if it doesn't exist
 #   2. Sets up worktree at .worktrees/plans
-#   3. Copies archived plans to the worktree
-#   4. Commits changes to v0/plans branch
+#   3. Copies archived plans to the worktree and commits
+#   4. Removes archived plans from main branch and commits
 #
 
 set -euo pipefail
@@ -40,7 +40,7 @@ usage() {
     cat <<EOF
 Usage: $(basename "$0") [OPTIONS] [DATE_FOLDER]
 
-Archive plans from plans/archive/ to the v0/plans branch.
+Archive plans from plans/archive/ to the v0/plans branch and remove from main.
 
 Options:
     --all       Archive all date folders in plans/archive/
@@ -167,7 +167,7 @@ show_status() {
     log_info "Checking archive status..."
 
     if [[ ! -d "$ARCHIVE_SRC" ]]; then
-        log_info "No archive folder found at $ARCHIVE_SRC"
+        log_info "No pending archives (plans/archive/ is empty)"
         return 0
     fi
 
@@ -178,32 +178,19 @@ show_status() {
 
         local date_name
         date_name=$(basename "$src_folder")
-        local dst_folder="$ARCHIVE_DST/$date_name"
 
         # Count files in source
         local src_count
         src_count=$(find "$src_folder" -type f -name "*.md" | wc -l | tr -d ' ')
 
-        # Count files in destination (if exists)
-        local dst_count=0
-        if [[ -d "$dst_folder" ]]; then
-            dst_count=$(find "$dst_folder" -type f -name "*.md" | wc -l | tr -d ' ')
-        fi
-
-        if [[ "$src_count" -gt "$dst_count" ]]; then
-            local new_count=$((src_count - dst_count))
-            echo -e "  ${YELLOW}$date_name${NC}: $new_count new file(s) to archive"
+        if [[ "$src_count" -gt 0 ]]; then
+            echo -e "  ${YELLOW}$date_name${NC}: $src_count file(s) to archive"
             has_pending=true
-        elif [[ "$dst_count" -eq 0 ]]; then
-            echo -e "  ${YELLOW}$date_name${NC}: $src_count file(s) to archive (new folder)"
-            has_pending=true
-        else
-            echo -e "  ${GREEN}$date_name${NC}: up to date ($dst_count files)"
         fi
     done < <(get_archive_folders "all")
 
     if ! $has_pending; then
-        log_success "All archives are up to date"
+        log_success "No pending archives"
     fi
 }
 
@@ -220,7 +207,7 @@ archive_folder() {
     # Create destination folder
     mkdir -p "$dst_folder"
 
-    # Copy files (preserving structure)
+    # Copy all files (preserving structure)
     ARCHIVE_COPIED=0
     while IFS= read -r src_file; do
         local rel_path="${src_file#$src_folder/}"
@@ -229,22 +216,17 @@ archive_folder() {
         # Create parent directory if needed
         mkdir -p "$(dirname "$dst_file")"
 
-        # Copy if destination doesn't exist or source is newer
-        if [[ ! -f "$dst_file" ]] || [[ "$src_file" -nt "$dst_file" ]]; then
-            cp "$src_file" "$dst_file"
-            ((ARCHIVE_COPIED++))
-        fi
+        cp "$src_file" "$dst_file"
+        ((ARCHIVE_COPIED++))
     done < <(find "$src_folder" -type f -name "*.md")
 
     if [[ $ARCHIVE_COPIED -gt 0 ]]; then
-        log_success "Copied $ARCHIVE_COPIED file(s) to $date_name"
-    else
-        log_info "No new files to copy for $date_name"
+        log_success "Copied $ARCHIVE_COPIED file(s) to v0/plans"
     fi
 }
 
 # Commit changes in worktree
-commit_changes() {
+commit_worktree() {
     local message="$1"
 
     pushd "$WORKTREE_DIR" >/dev/null
@@ -254,14 +236,54 @@ commit_changes() {
 
     # Check if there are staged changes
     if git diff --cached --quiet; then
-        log_info "No changes to commit"
+        log_info "No changes to commit in v0/plans"
         popd >/dev/null
         return 0
     fi
 
     git commit -m "$message"
 
-    log_success "Committed: $message"
+    log_success "Committed to v0/plans: $message"
+    popd >/dev/null
+}
+
+# Remove archived folders from main and commit
+remove_from_main() {
+    local folders_to_remove=("$@")
+
+    if [[ ${#folders_to_remove[@]} -eq 0 ]]; then
+        return 0
+    fi
+
+    pushd "$REPO_ROOT" >/dev/null
+
+    local removed_dates=()
+    for folder in "${folders_to_remove[@]}"; do
+        if [[ -d "$folder" ]]; then
+            local date_name
+            date_name=$(basename "$folder")
+            rm -rf "$folder"
+            git add "$folder"
+            removed_dates+=("$date_name")
+            log_info "Removed $date_name from main"
+        fi
+    done
+
+    # Check if there are staged changes
+    if git diff --cached --quiet; then
+        log_info "No removals to commit in main"
+        popd >/dev/null
+        return 0
+    fi
+
+    # Build commit message
+    local dates_str
+    dates_str=$(IFS=', '; echo "${removed_dates[*]}")
+    local commit_msg="chore: archive plans to v0/plans ($dates_str)"
+
+    git commit -m "$commit_msg"
+
+    log_success "Committed to main: $commit_msg"
     popd >/dev/null
 }
 
@@ -279,33 +301,36 @@ do_archive() {
     mkdir -p "$ARCHIVE_DST"
 
     local total_copied=0
-    local folders_processed=0
+    local folders_processed=()
 
     while IFS= read -r folder; do
         [[ -z "$folder" ]] && continue
 
         archive_folder "$folder"
-        total_copied=$((total_copied + ARCHIVE_COPIED))
-        ((folders_processed++))
+        if [[ $ARCHIVE_COPIED -gt 0 ]]; then
+            total_copied=$((total_copied + ARCHIVE_COPIED))
+            folders_processed+=("$folder")
+        fi
     done < <(get_archive_folders "$mode" "$specific")
 
-    if [[ $folders_processed -eq 0 ]]; then
+    if [[ ${#folders_processed[@]} -eq 0 ]]; then
         log_warn "No folders to archive"
         return 0
     fi
 
-    # Commit if there were changes
-    if [[ $total_copied -gt 0 ]]; then
-        local date_desc
-        if [[ "$mode" == "all" ]]; then
-            date_desc="all dates"
-        else
-            date_desc="$specific"
-        fi
-        commit_changes "chore: archive plans ($date_desc, $total_copied files)"
+    # Commit to worktree
+    local date_desc
+    if [[ "$mode" == "all" ]]; then
+        date_desc="all dates"
+    else
+        date_desc="$specific"
     fi
+    commit_worktree "chore: archive plans ($date_desc, $total_copied files)"
 
-    log_success "Archived $total_copied file(s) from $folders_processed folder(s)"
+    # Remove from main and commit
+    remove_from_main "${folders_processed[@]}"
+
+    log_success "Archived $total_copied file(s) from ${#folders_processed[@]} folder(s)"
 }
 
 # Main
@@ -326,10 +351,6 @@ main() {
             setup_worktree
             ;;
         --status)
-            if ! worktree_exists; then
-                log_warn "Worktree not set up. Run with --setup first."
-                exit 1
-            fi
             show_status
             ;;
         --all)
