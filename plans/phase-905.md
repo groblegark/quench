@@ -1,6 +1,6 @@
 # Phase 905: CI Mode Infrastructure
 
-**Root Feature:** `quench-ci-infra`
+**Root Feature:** `quench-1230`
 **Follows:** Phase 901 (CI Mode Specs)
 
 ## Overview
