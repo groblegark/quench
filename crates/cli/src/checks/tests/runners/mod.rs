@@ -5,9 +5,11 @@
 //!
 //! Provides abstractions for executing test suites and collecting metrics.
 
+mod cargo;
 mod result;
 mod stub;
 
+pub use cargo::CargoRunner;
 pub use result::{TestResult, TestRunResult};
 pub use stub::StubRunner;
 
@@ -51,8 +53,9 @@ pub trait TestRunner: Send + Sync {
 /// Get all available runners.
 pub fn all_runners() -> Vec<Arc<dyn TestRunner>> {
     vec![
-        // Stub implementations for now - concrete runners in later phases
-        Arc::new(StubRunner::new("cargo")),
+        // Concrete implementations
+        Arc::new(CargoRunner),
+        // Stub implementations for runners not yet implemented
         Arc::new(StubRunner::new("go")),
         Arc::new(StubRunner::new("pytest")),
         Arc::new(StubRunner::new("vitest")),

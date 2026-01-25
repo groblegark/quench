@@ -2,3 +2,6 @@ version = 1
 
 [project]
 name = "rust-simple"
+
+[[check.tests.suite]]
+runner = "cargo"

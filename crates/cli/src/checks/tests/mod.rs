@@ -79,6 +79,11 @@ impl Check for TestsCheck {
     }
 
     fn run(&self, ctx: &CheckContext) -> CheckResult {
+        // Run test suites if configured
+        if !ctx.config.check.tests.suite.is_empty() {
+            return self.run_test_suites(ctx);
+        }
+
         let config = &ctx.config.check.tests.commit;
 
         // Skip if disabled
@@ -109,6 +114,53 @@ impl Check for TestsCheck {
 }
 
 impl TestsCheck {
+    /// Run configured test suites and return results.
+    fn run_test_suites(&self, ctx: &CheckContext) -> CheckResult {
+        let suite_results = match self.run_suites(ctx) {
+            Some(r) => r,
+            None => return CheckResult::passed(self.name()),
+        };
+
+        // Build metrics JSON
+        let metrics = json!({
+            "test_count": suite_results.suites.iter().map(|s| s.test_count).sum::<usize>(),
+            "total_ms": suite_results.suites.iter().map(|s| s.total_ms).sum::<u64>(),
+            "suites": suite_results.suites.iter().map(|s| {
+                let mut obj = json!({
+                    "name": s.name,
+                    "runner": s.runner,
+                    "passed": s.passed,
+                    "test_count": s.test_count,
+                });
+                if let Some(ref err) = s.error {
+                    obj["error"] = json!(err);
+                }
+                obj
+            }).collect::<Vec<_>>(),
+        });
+
+        if suite_results.passed {
+            CheckResult::passed(self.name()).with_metrics(metrics)
+        } else {
+            // Build violations for failed suites
+            let violations: Vec<Violation> = suite_results
+                .suites
+                .iter()
+                .filter(|s| !s.passed && !s.skipped)
+                .map(|s| {
+                    let advice = s
+                        .error
+                        .clone()
+                        .unwrap_or_else(|| "test suite failed".to_string());
+                    // Use suite name as synthetic file path for violations
+                    Violation::file_only(format!("<suite:{}>", s.name), "test_suite_failed", advice)
+                })
+                .collect();
+
+            CheckResult::failed(self.name(), violations).with_metrics(metrics)
+        }
+    }
+
     /// Run branch-scope checking (aggregate all changes).
     fn run_branch_scope(
         &self,
@@ -423,7 +475,6 @@ impl TestsCheck {
     /// Run configured test suites.
     ///
     /// Returns None if no suites are configured.
-    #[allow(dead_code)] // Will be called in future phases
     fn run_suites(&self, ctx: &CheckContext) -> Option<SuiteResults> {
         let suites = &ctx.config.check.tests.suite;
         if suites.is_empty() {

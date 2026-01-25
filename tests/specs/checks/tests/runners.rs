@@ -14,7 +14,6 @@ use crate::prelude::*;
 ///
 /// > cargo test --release -- --format json
 #[test]
-#[ignore = "TODO: Phase 9XX - Test runners implementation"]
 fn cargo_runner_executes_cargo_test() {
     let temp = Project::empty();
     temp.config(
@@ -45,14 +44,13 @@ fn test_add() { assert_eq!(test_project::add(1, 2), 3); }
     check("tests")
         .pwd(temp.path())
         .passes()
-        .stdout_has("tests: PASS");
+        .stdout_has("PASS: tests");
 }
 
 /// Spec: docs/specs/11-test-runners.md#cargo
 ///
 /// > Parses Rust's JSON test output for per-test timing.
 #[test]
-#[ignore = "TODO: Phase 9XX - Test runners implementation"]
 fn cargo_runner_reports_test_count() {
     let temp = Project::empty();
     temp.config(
@@ -79,6 +77,13 @@ edition = "2021"
 
     // Should report test count
     assert_eq!(metrics.get("test_count").and_then(|v| v.as_i64()), Some(3));
+}
+
+/// Spec: Integration test on fixtures/rust-simple
+#[test]
+fn cargo_runner_on_rust_simple_fixture() {
+    // rust-simple fixture has quench.toml with [[check.tests.suite]] runner = "cargo"
+    check("tests").on("rust-simple").passes();
 }
 
 // =============================================================================
