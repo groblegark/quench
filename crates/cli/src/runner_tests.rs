@@ -79,6 +79,7 @@ fn runner_executes_all_checks() {
         ci_mode: false,
         base_branch: None,
         staged: false,
+        verbose: false,
     });
     let config = Config::default();
     let files = vec![];
@@ -105,6 +106,7 @@ fn runner_isolates_panicking_check() {
         ci_mode: false,
         base_branch: None,
         staged: false,
+        verbose: false,
     });
     let config = Config::default();
     let files = vec![];
@@ -140,6 +142,7 @@ fn runner_continues_after_check_failure() {
         ci_mode: false,
         base_branch: None,
         staged: false,
+        verbose: false,
     });
     let config = Config::default();
     let files = vec![];
@@ -173,6 +176,7 @@ fn should_terminate_with_limit() {
         ci_mode: false,
         base_branch: None,
         staged: false,
+        verbose: false,
     });
     assert!(!runner.should_terminate(5));
     assert!(runner.should_terminate(10));
@@ -189,6 +193,7 @@ fn should_terminate_without_limit() {
         ci_mode: false,
         base_branch: None,
         staged: false,
+        verbose: false,
     });
     assert!(!runner.should_terminate(1000));
 }

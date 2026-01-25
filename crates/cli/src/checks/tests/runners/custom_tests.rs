@@ -15,6 +15,7 @@ fn make_config(command: Option<&str>) -> TestSuiteConfig {
         max_total: None,
         max_avg: None,
         max_test: None,
+        timeout: None,
     }
 }
 
@@ -23,6 +24,7 @@ fn make_ctx(root: &std::path::Path) -> RunnerContext<'_> {
         root,
         ci_mode: false,
         collect_coverage: false,
+        verbose: false,
     }
 }
 

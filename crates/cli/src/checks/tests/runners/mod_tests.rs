@@ -46,6 +46,7 @@ fn filter_suites_ci_mode_includes_all() {
             max_total: None,
             max_avg: None,
             max_test: None,
+            timeout: None,
         },
         TestSuiteConfig {
             runner: "pytest".to_string(),
@@ -58,6 +59,7 @@ fn filter_suites_ci_mode_includes_all() {
             max_total: None,
             max_avg: None,
             max_test: None,
+            timeout: None,
         },
     ];
 
@@ -80,6 +82,7 @@ fn filter_suites_fast_mode_excludes_ci_only() {
             max_total: None,
             max_avg: None,
             max_test: None,
+            timeout: None,
         },
         TestSuiteConfig {
             runner: "pytest".to_string(),
@@ -92,6 +95,7 @@ fn filter_suites_fast_mode_excludes_ci_only() {
             max_total: None,
             max_avg: None,
             max_test: None,
+            timeout: None,
         },
     ];
 
@@ -324,4 +328,61 @@ fn aggregated_coverage_has_data() {
         ..Default::default()
     };
     assert!(agg_with_data.has_data());
+}
+
+// =============================================================================
+// Timeout Tests
+// =============================================================================
+
+use std::io::ErrorKind;
+use std::process::Command;
+
+#[test]
+fn run_with_timeout_no_timeout_succeeds() {
+    let child = Command::new("echo")
+        .arg("hello")
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    let result = run_with_timeout(child, None);
+    assert!(result.is_ok());
+    let output = result.unwrap();
+    assert!(output.status.success());
+}
+
+#[test]
+fn run_with_timeout_fast_command_completes() {
+    let child = Command::new("echo")
+        .arg("fast")
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    // 10 second timeout - more than enough for echo
+    let result = run_with_timeout(child, Some(Duration::from_secs(10)));
+    assert!(result.is_ok());
+    let output = result.unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("fast"));
+}
+
+#[test]
+fn run_with_timeout_slow_command_times_out() {
+    // Sleep for 5 seconds but timeout after 100ms
+    let child = Command::new("sleep")
+        .arg("5")
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+
+    let result = run_with_timeout(child, Some(Duration::from_millis(100)));
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert_eq!(err.kind(), ErrorKind::TimedOut);
+    assert!(err.to_string().contains("timed out"));
 }
