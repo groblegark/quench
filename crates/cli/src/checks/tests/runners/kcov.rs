@@ -181,6 +181,7 @@ fn parse_cobertura_xml(xml: &str, duration: Duration, root: &Path) -> CoverageRe
         duration,
         line_coverage: overall_coverage,
         files,
+        packages: std::collections::HashMap::new(),
     }
 }
 

@@ -207,6 +207,19 @@ pub fn merge_coverage_results(a: CoverageResult, b: CoverageResult) -> CoverageR
             .or_insert(coverage);
     }
 
+    // Merge packages by taking max coverage per package
+    let mut packages = a.packages;
+    for (pkg, coverage) in b.packages {
+        packages
+            .entry(pkg)
+            .and_modify(|existing| {
+                if coverage > *existing {
+                    *existing = coverage
+                }
+            })
+            .or_insert(coverage);
+    }
+
     // Recalculate overall percentage from merged files
     let total_coverage = if files.is_empty() {
         // If no per-file data, try to merge overall coverage
@@ -225,6 +238,7 @@ pub fn merge_coverage_results(a: CoverageResult, b: CoverageResult) -> CoverageR
         duration: a.duration + b.duration,
         line_coverage: total_coverage,
         files,
+        packages,
     }
 }
 

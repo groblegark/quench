@@ -78,6 +78,10 @@ impl TestRunner for CargoRunner {
                 cov_map.insert("rust".to_string(), line_coverage);
                 result = result.with_coverage(cov_map);
             }
+            // Add per-package coverage if available
+            if !coverage.packages.is_empty() {
+                result = result.with_package_coverage(coverage.packages);
+            }
         }
 
         result

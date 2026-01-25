@@ -54,6 +54,8 @@ pub struct TestRunResult {
     pub tests: Vec<TestResult>,
     /// Coverage percentage (0-100) by language.
     pub coverage: Option<HashMap<String, f64>>,
+    /// Per-package coverage percentage (0-100).
+    pub coverage_by_package: Option<HashMap<String, f64>>,
 }
 
 impl TestRunResult {
@@ -66,6 +68,7 @@ impl TestRunResult {
             total_time,
             tests: Vec::new(),
             coverage: None,
+            coverage_by_package: None,
         }
     }
 
@@ -78,6 +81,7 @@ impl TestRunResult {
             total_time,
             tests: Vec::new(),
             coverage: None,
+            coverage_by_package: None,
         }
     }
 
@@ -90,6 +94,7 @@ impl TestRunResult {
             total_time: Duration::ZERO,
             tests: Vec::new(),
             coverage: None,
+            coverage_by_package: None,
         }
     }
 
@@ -106,6 +111,12 @@ impl TestRunResult {
     /// Add coverage data.
     pub fn with_coverage(mut self, coverage: HashMap<String, f64>) -> Self {
         self.coverage = Some(coverage);
+        self
+    }
+
+    /// Add per-package coverage data.
+    pub fn with_package_coverage(mut self, packages: HashMap<String, f64>) -> Self {
+        self.coverage_by_package = Some(packages);
         self
     }
 

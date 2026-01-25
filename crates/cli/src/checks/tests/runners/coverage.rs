@@ -23,6 +23,8 @@ pub struct CoverageResult {
     pub line_coverage: Option<f64>,
     /// Per-file coverage data (path -> line coverage %).
     pub files: HashMap<String, f64>,
+    /// Per-package coverage data (package name -> line coverage %).
+    pub packages: HashMap<String, f64>,
 }
 
 impl CoverageResult {
@@ -33,6 +35,7 @@ impl CoverageResult {
             duration,
             line_coverage: None,
             files: HashMap::new(),
+            packages: HashMap::new(),
         }
     }
 
@@ -43,6 +46,7 @@ impl CoverageResult {
             duration: Duration::ZERO,
             line_coverage: None,
             files: HashMap::new(),
+            packages: HashMap::new(),
         }
     }
 }
@@ -151,13 +155,29 @@ fn parse_llvm_cov_json(json: &str, duration: Duration) -> CoverageResult {
     // Extract overall line coverage
     let line_coverage = data.totals.lines.percent;
 
-    // Extract per-file coverage
+    // Extract per-file coverage and group by package
     let mut files = HashMap::new();
+    let mut package_files: HashMap<String, Vec<f64>> = HashMap::new();
+
     for file in &data.files {
         // Normalize path: remove workspace prefix, keep relative
         let path = normalize_coverage_path(&file.filename);
-        files.insert(path, file.summary.lines.percent);
+        let coverage = file.summary.lines.percent;
+        files.insert(path, coverage);
+
+        // Group by package
+        let package = extract_package_name(&file.filename);
+        package_files.entry(package).or_default().push(coverage);
     }
+
+    // Calculate per-package averages
+    let packages: HashMap<String, f64> = package_files
+        .into_iter()
+        .map(|(pkg, coverages)| {
+            let avg = coverages.iter().sum::<f64>() / coverages.len() as f64;
+            (pkg, avg)
+        })
+        .collect();
 
     CoverageResult {
         success: true,
@@ -165,6 +185,7 @@ fn parse_llvm_cov_json(json: &str, duration: Duration) -> CoverageResult {
         duration,
         line_coverage: Some(line_coverage),
         files,
+        packages,
     }
 }
 
@@ -182,6 +203,33 @@ fn normalize_coverage_path(path: &str) -> String {
         .file_name()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| path.to_string())
+}
+
+/// Extract package name from file path.
+///
+/// Heuristics:
+/// - Cargo workspace: look for "crates/<name>/" pattern
+/// - Monorepo: look for "packages/<name>/" pattern
+/// - Single package: use "root" as fallback
+fn extract_package_name(path: &str) -> String {
+    // Check for "crates/<name>/" pattern (Rust workspace)
+    if let Some(idx) = path.find("/crates/") {
+        let rest = &path[idx + 8..];
+        if let Some(end) = rest.find('/') {
+            return rest[..end].to_string();
+        }
+    }
+
+    // Check for "packages/<name>/" pattern (monorepo)
+    if let Some(idx) = path.find("/packages/") {
+        let rest = &path[idx + 10..];
+        if let Some(end) = rest.find('/') {
+            return rest[..end].to_string();
+        }
+    }
+
+    // Fallback to "root"
+    "root".to_string()
 }
 
 #[cfg(test)]

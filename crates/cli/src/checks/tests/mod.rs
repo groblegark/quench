@@ -121,6 +121,9 @@ impl TestsCheck {
             None => return CheckResult::passed(self.name()),
         };
 
+        // Calculate aggregated timing metrics
+        let agg = suite_results.aggregated_metrics();
+
         // Aggregate coverage from all suites
         let mut aggregated_coverage: std::collections::HashMap<String, f64> =
             std::collections::HashMap::new();
@@ -134,10 +137,24 @@ impl TestsCheck {
             }
         }
 
-        // Build metrics JSON
+        // Aggregate per-package coverage from all suites
+        let mut packages_coverage: std::collections::HashMap<String, f64> =
+            std::collections::HashMap::new();
+        for suite in &suite_results.suites {
+            if let Some(ref cov) = suite.coverage_by_package {
+                for (pkg, pct) in cov {
+                    packages_coverage
+                        .entry(pkg.clone())
+                        .and_modify(|existing| *existing = existing.max(*pct))
+                        .or_insert(*pct);
+                }
+            }
+        }
+
+        // Build metrics JSON with top-level aggregates
         let mut metrics = json!({
-            "test_count": suite_results.suites.iter().map(|s| s.test_count).sum::<usize>(),
-            "total_ms": suite_results.suites.iter().map(|s| s.total_ms).sum::<u64>(),
+            "test_count": agg.test_count,
+            "total_ms": agg.total_ms,
             "suites": suite_results.suites.iter().map(|s| {
                 let mut obj = json!({
                     "name": s.name,
@@ -148,13 +165,41 @@ impl TestsCheck {
                 if let Some(ref err) = s.error {
                     obj["error"] = json!(err);
                 }
+                if s.total_ms > 0 {
+                    obj["total_ms"] = json!(s.total_ms);
+                }
+                if let Some(avg) = s.avg_ms {
+                    obj["avg_ms"] = json!(avg);
+                }
+                if let Some(max) = s.max_ms {
+                    obj["max_ms"] = json!(max);
+                }
+                if let Some(ref test) = s.max_test {
+                    obj["max_test"] = json!(test);
+                }
                 obj
             }).collect::<Vec<_>>(),
         });
 
+        // Add optional aggregated timing metrics
+        if let Some(avg) = agg.avg_ms {
+            metrics["avg_ms"] = json!(avg);
+        }
+        if let Some(max) = agg.max_ms {
+            metrics["max_ms"] = json!(max);
+        }
+        if let Some(ref test) = agg.max_test {
+            metrics["max_test"] = json!(test);
+        }
+
         // Add coverage to metrics if available
         if !aggregated_coverage.is_empty() {
             metrics["coverage"] = json!(aggregated_coverage);
+        }
+
+        // Add per-package coverage if available
+        if !packages_coverage.is_empty() {
+            metrics["coverage_by_package"] = json!(packages_coverage);
         }
 
         if suite_results.passed {
@@ -570,6 +615,7 @@ impl TestsCheck {
                 .map(|t| t.duration.as_millis() as u64);
             let max_test = run_result.slowest_test().map(|t| t.name.clone());
             let coverage = run_result.coverage.clone();
+            let coverage_by_package = run_result.coverage_by_package.clone();
 
             results.push(SuiteResult {
                 name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
@@ -583,6 +629,7 @@ impl TestsCheck {
                 max_ms,
                 max_test,
                 coverage,
+                coverage_by_package,
             });
         }
 
@@ -600,6 +647,59 @@ struct SuiteResults {
     passed: bool,
     /// Individual suite results.
     suites: Vec<SuiteResult>,
+}
+
+/// Top-level aggregated metrics across all suites.
+#[derive(Debug)]
+struct AggregatedMetrics {
+    /// Total tests across all suites.
+    test_count: usize,
+    /// Total execution time in milliseconds.
+    total_ms: u64,
+    /// Weighted average time per test in milliseconds.
+    avg_ms: Option<u64>,
+    /// Maximum test time in milliseconds (across all suites).
+    max_ms: Option<u64>,
+    /// Name of the slowest test (across all suites).
+    max_test: Option<String>,
+}
+
+impl SuiteResults {
+    /// Calculate aggregated timing metrics across all suites.
+    fn aggregated_metrics(&self) -> AggregatedMetrics {
+        let test_count: usize = self.suites.iter().map(|s| s.test_count).sum();
+
+        let total_ms: u64 = self.suites.iter().map(|s| s.total_ms).sum();
+
+        // Weighted average: sum of (suite_avg * suite_count) / total_count
+        let avg_ms = if test_count > 0 {
+            let weighted_sum: u64 = self
+                .suites
+                .iter()
+                .filter_map(|s| s.avg_ms.map(|avg| avg * s.test_count as u64))
+                .sum();
+            Some(weighted_sum / test_count as u64)
+        } else {
+            None
+        };
+
+        // Find slowest test across all suites
+        let (max_ms, max_test) = self
+            .suites
+            .iter()
+            .filter_map(|s| s.max_ms.map(|ms| (ms, s.max_test.clone())))
+            .max_by_key(|(ms, _)| *ms)
+            .map(|(ms, name)| (Some(ms), name))
+            .unwrap_or((None, None));
+
+        AggregatedMetrics {
+            test_count,
+            total_ms,
+            avg_ms,
+            max_ms,
+            max_test,
+        }
+    }
 }
 
 impl SuiteResults {
@@ -672,4 +772,6 @@ struct SuiteResult {
     max_test: Option<String>,
     /// Coverage data (language -> percentage).
     coverage: Option<std::collections::HashMap<String, f64>>,
+    /// Per-package coverage data (package name -> percentage).
+    coverage_by_package: Option<std::collections::HashMap<String, f64>>,
 }

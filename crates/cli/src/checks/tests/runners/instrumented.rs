@@ -145,6 +145,7 @@ pub fn collect_instrumented_coverage(build: &InstrumentedBuild, root: &Path) -> 
             duration,
             line_coverage: Some(line_coverage),
             files,
+            packages: std::collections::HashMap::new(),
         },
         Err(e) => CoverageResult::failed(duration, e),
     }

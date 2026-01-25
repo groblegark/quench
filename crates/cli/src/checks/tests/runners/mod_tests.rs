@@ -147,6 +147,7 @@ fn merge_coverage_results_combines_files() {
         duration: Duration::from_secs(1),
         line_coverage: Some(70.0),
         files: [("src/a.rs".to_string(), 70.0)].into_iter().collect(),
+        packages: HashMap::new(),
     };
 
     let b = CoverageResult {
@@ -155,6 +156,7 @@ fn merge_coverage_results_combines_files() {
         duration: Duration::from_secs(2),
         line_coverage: Some(80.0),
         files: [("src/b.rs".to_string(), 80.0)].into_iter().collect(),
+        packages: HashMap::new(),
     };
 
     let merged = merge_coverage_results(a, b);
@@ -173,6 +175,7 @@ fn merge_coverage_results_takes_max_for_same_file() {
         duration: Duration::from_secs(1),
         line_coverage: Some(60.0),
         files: [("src/lib.rs".to_string(), 60.0)].into_iter().collect(),
+        packages: HashMap::new(),
     };
 
     let b = CoverageResult {
@@ -181,6 +184,7 @@ fn merge_coverage_results_takes_max_for_same_file() {
         duration: Duration::from_secs(1),
         line_coverage: Some(80.0),
         files: [("src/lib.rs".to_string(), 80.0)].into_iter().collect(),
+        packages: HashMap::new(),
     };
 
     let merged = merge_coverage_results(a, b);
@@ -197,6 +201,7 @@ fn merge_coverage_results_recalculates_overall() {
         duration: Duration::from_secs(1),
         line_coverage: Some(50.0),
         files: [("src/a.rs".to_string(), 50.0)].into_iter().collect(),
+        packages: HashMap::new(),
     };
 
     let b = CoverageResult {
@@ -205,6 +210,7 @@ fn merge_coverage_results_recalculates_overall() {
         duration: Duration::from_secs(1),
         line_coverage: Some(90.0),
         files: [("src/b.rs".to_string(), 90.0)].into_iter().collect(),
+        packages: HashMap::new(),
     };
 
     let merged = merge_coverage_results(a, b);
@@ -220,6 +226,7 @@ fn merge_coverage_results_handles_empty_files() {
         duration: Duration::from_secs(1),
         line_coverage: Some(60.0),
         files: HashMap::new(),
+        packages: HashMap::new(),
     };
 
     let b = CoverageResult {
@@ -228,6 +235,7 @@ fn merge_coverage_results_handles_empty_files() {
         duration: Duration::from_secs(1),
         line_coverage: Some(80.0),
         files: HashMap::new(),
+        packages: HashMap::new(),
     };
 
     let merged = merge_coverage_results(a, b);
@@ -245,6 +253,7 @@ fn aggregated_coverage_merge_rust() {
         duration: Duration::from_secs(1),
         line_coverage: Some(70.0),
         files: [("src/a.rs".to_string(), 70.0)].into_iter().collect(),
+        packages: HashMap::new(),
     };
 
     let result2 = CoverageResult {
@@ -253,6 +262,7 @@ fn aggregated_coverage_merge_rust() {
         duration: Duration::from_secs(1),
         line_coverage: Some(90.0),
         files: [("src/b.rs".to_string(), 90.0)].into_iter().collect(),
+        packages: HashMap::new(),
     };
 
     agg.merge_rust(result1);
@@ -274,6 +284,7 @@ fn aggregated_coverage_to_coverage_map() {
             duration: Duration::ZERO,
             line_coverage: Some(75.0),
             files: HashMap::new(),
+            packages: HashMap::new(),
         }),
         shell: Some(CoverageResult {
             success: true,
@@ -281,6 +292,7 @@ fn aggregated_coverage_to_coverage_map() {
             duration: Duration::ZERO,
             line_coverage: Some(60.0),
             files: HashMap::new(),
+            packages: HashMap::new(),
         }),
     };
 
@@ -307,6 +319,7 @@ fn aggregated_coverage_has_data() {
             duration: Duration::ZERO,
             line_coverage: Some(50.0),
             files: HashMap::new(),
+            packages: HashMap::new(),
         }),
         ..Default::default()
     };
