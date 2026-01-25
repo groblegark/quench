@@ -11,9 +11,12 @@ mod cargo;
 mod coverage;
 mod custom;
 mod go;
+mod instrumented;
 mod jest;
+mod kcov;
 mod pytest;
 mod result;
+mod targets;
 mod vitest;
 
 pub use bats::BatsRunner;
@@ -22,11 +25,20 @@ pub use cargo::CargoRunner;
 pub use coverage::CoverageResult;
 pub use custom::CustomRunner;
 pub use go::GoRunner;
+pub use instrumented::{
+    InstrumentedBuild, build_instrumented, collect_instrumented_coverage, coverage_env,
+};
 pub use jest::JestRunner;
+pub use kcov::{collect_shell_coverage, kcov_available};
 pub use pytest::PytestRunner;
 pub use result::{TestResult, TestRunResult};
+pub use targets::{
+    ResolvedTarget, TargetResolutionError, is_glob_pattern, resolve_target, resolve_targets,
+    rust_binary_names, shell_script_files,
+};
 pub use vitest::VitestRunner;
 
+use std::collections::HashMap;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::sync::Arc;
@@ -120,6 +132,99 @@ pub fn run_setup_command(setup: &str, root: &Path) -> Result<(), String> {
             Err(format!("setup command failed: {setup}\n{truncated}"))
         }
         Err(e) => Err(format!("failed to execute setup: {e}")),
+    }
+}
+
+// =============================================================================
+// Coverage Aggregation
+// =============================================================================
+
+/// Aggregated coverage across all test suites.
+#[derive(Debug, Default)]
+pub struct AggregatedCoverage {
+    /// Rust coverage result (merged from all Rust sources).
+    pub rust: Option<CoverageResult>,
+    /// Shell coverage result (merged from all shell sources).
+    pub shell: Option<CoverageResult>,
+}
+
+impl AggregatedCoverage {
+    /// Merge coverage from a suite into the aggregate.
+    pub fn merge_rust(&mut self, result: CoverageResult) {
+        self.rust = Some(match self.rust.take() {
+            Some(existing) => merge_coverage_results(existing, result),
+            None => result,
+        });
+    }
+
+    /// Merge shell coverage from a suite into the aggregate.
+    pub fn merge_shell(&mut self, result: CoverageResult) {
+        self.shell = Some(match self.shell.take() {
+            Some(existing) => merge_coverage_results(existing, result),
+            None => result,
+        });
+    }
+
+    /// Convert to a language -> percentage map for metrics.
+    pub fn to_coverage_map(&self) -> HashMap<String, f64> {
+        let mut map = HashMap::new();
+        if let Some(ref rust) = self.rust
+            && let Some(pct) = rust.line_coverage
+        {
+            map.insert("rust".to_string(), pct);
+        }
+        if let Some(ref shell) = self.shell
+            && let Some(pct) = shell.line_coverage
+        {
+            map.insert("shell".to_string(), pct);
+        }
+        map
+    }
+
+    /// Check if any coverage data is available.
+    pub fn has_data(&self) -> bool {
+        self.rust
+            .as_ref()
+            .is_some_and(|r| r.line_coverage.is_some())
+            || self
+                .shell
+                .as_ref()
+                .is_some_and(|r| r.line_coverage.is_some())
+    }
+}
+
+/// Merge two coverage results by taking max coverage per file.
+pub fn merge_coverage_results(a: CoverageResult, b: CoverageResult) -> CoverageResult {
+    let mut files = a.files;
+    for (path, coverage) in b.files {
+        files
+            .entry(path)
+            .and_modify(|existing| {
+                if coverage > *existing {
+                    *existing = coverage
+                }
+            })
+            .or_insert(coverage);
+    }
+
+    // Recalculate overall percentage from merged files
+    let total_coverage = if files.is_empty() {
+        // If no per-file data, try to merge overall coverage
+        match (a.line_coverage, b.line_coverage) {
+            (Some(a_cov), Some(b_cov)) => Some(a_cov.max(b_cov)),
+            (Some(cov), None) | (None, Some(cov)) => Some(cov),
+            (None, None) => None,
+        }
+    } else {
+        Some(files.values().sum::<f64>() / files.len() as f64)
+    };
+
+    CoverageResult {
+        success: a.success && b.success,
+        error: a.error.or(b.error),
+        duration: a.duration + b.duration,
+        line_coverage: total_coverage,
+        files,
     }
 }
 

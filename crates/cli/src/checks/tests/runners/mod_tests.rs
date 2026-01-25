@@ -132,3 +132,183 @@ fn runner_names_contains_expected_entries() {
     assert!(RUNNER_NAMES.contains(&"pytest"));
     assert!(RUNNER_NAMES.contains(&"custom"));
 }
+
+// =============================================================================
+// Coverage Aggregation Tests
+// =============================================================================
+
+use std::time::Duration;
+
+#[test]
+fn merge_coverage_results_combines_files() {
+    let a = CoverageResult {
+        success: true,
+        error: None,
+        duration: Duration::from_secs(1),
+        line_coverage: Some(70.0),
+        files: [("src/a.rs".to_string(), 70.0)].into_iter().collect(),
+    };
+
+    let b = CoverageResult {
+        success: true,
+        error: None,
+        duration: Duration::from_secs(2),
+        line_coverage: Some(80.0),
+        files: [("src/b.rs".to_string(), 80.0)].into_iter().collect(),
+    };
+
+    let merged = merge_coverage_results(a, b);
+    assert!(merged.success);
+    assert_eq!(merged.files.len(), 2);
+    assert_eq!(merged.files.get("src/a.rs"), Some(&70.0));
+    assert_eq!(merged.files.get("src/b.rs"), Some(&80.0));
+    assert_eq!(merged.duration, Duration::from_secs(3));
+}
+
+#[test]
+fn merge_coverage_results_takes_max_for_same_file() {
+    let a = CoverageResult {
+        success: true,
+        error: None,
+        duration: Duration::from_secs(1),
+        line_coverage: Some(60.0),
+        files: [("src/lib.rs".to_string(), 60.0)].into_iter().collect(),
+    };
+
+    let b = CoverageResult {
+        success: true,
+        error: None,
+        duration: Duration::from_secs(1),
+        line_coverage: Some(80.0),
+        files: [("src/lib.rs".to_string(), 80.0)].into_iter().collect(),
+    };
+
+    let merged = merge_coverage_results(a, b);
+    assert_eq!(merged.files.get("src/lib.rs"), Some(&80.0));
+    // Overall should be recalculated from files
+    assert_eq!(merged.line_coverage, Some(80.0));
+}
+
+#[test]
+fn merge_coverage_results_recalculates_overall() {
+    let a = CoverageResult {
+        success: true,
+        error: None,
+        duration: Duration::from_secs(1),
+        line_coverage: Some(50.0),
+        files: [("src/a.rs".to_string(), 50.0)].into_iter().collect(),
+    };
+
+    let b = CoverageResult {
+        success: true,
+        error: None,
+        duration: Duration::from_secs(1),
+        line_coverage: Some(90.0),
+        files: [("src/b.rs".to_string(), 90.0)].into_iter().collect(),
+    };
+
+    let merged = merge_coverage_results(a, b);
+    // Average of 50% and 90% = 70%
+    assert_eq!(merged.line_coverage, Some(70.0));
+}
+
+#[test]
+fn merge_coverage_results_handles_empty_files() {
+    let a = CoverageResult {
+        success: true,
+        error: None,
+        duration: Duration::from_secs(1),
+        line_coverage: Some(60.0),
+        files: HashMap::new(),
+    };
+
+    let b = CoverageResult {
+        success: true,
+        error: None,
+        duration: Duration::from_secs(1),
+        line_coverage: Some(80.0),
+        files: HashMap::new(),
+    };
+
+    let merged = merge_coverage_results(a, b);
+    // With no files, take max of overall
+    assert_eq!(merged.line_coverage, Some(80.0));
+}
+
+#[test]
+fn aggregated_coverage_merge_rust() {
+    let mut agg = AggregatedCoverage::default();
+
+    let result1 = CoverageResult {
+        success: true,
+        error: None,
+        duration: Duration::from_secs(1),
+        line_coverage: Some(70.0),
+        files: [("src/a.rs".to_string(), 70.0)].into_iter().collect(),
+    };
+
+    let result2 = CoverageResult {
+        success: true,
+        error: None,
+        duration: Duration::from_secs(1),
+        line_coverage: Some(90.0),
+        files: [("src/b.rs".to_string(), 90.0)].into_iter().collect(),
+    };
+
+    agg.merge_rust(result1);
+    agg.merge_rust(result2);
+
+    assert!(agg.rust.is_some());
+    let rust = agg.rust.unwrap();
+    assert_eq!(rust.files.len(), 2);
+    // Average of 70% and 90% = 80%
+    assert_eq!(rust.line_coverage, Some(80.0));
+}
+
+#[test]
+fn aggregated_coverage_to_coverage_map() {
+    let agg = AggregatedCoverage {
+        rust: Some(CoverageResult {
+            success: true,
+            error: None,
+            duration: Duration::ZERO,
+            line_coverage: Some(75.0),
+            files: HashMap::new(),
+        }),
+        shell: Some(CoverageResult {
+            success: true,
+            error: None,
+            duration: Duration::ZERO,
+            line_coverage: Some(60.0),
+            files: HashMap::new(),
+        }),
+    };
+
+    let map = agg.to_coverage_map();
+    assert_eq!(map.get("rust"), Some(&75.0));
+    assert_eq!(map.get("shell"), Some(&60.0));
+}
+
+#[test]
+fn aggregated_coverage_has_data() {
+    let agg_empty = AggregatedCoverage::default();
+    assert!(!agg_empty.has_data());
+
+    let agg_skipped = AggregatedCoverage {
+        rust: Some(CoverageResult::skipped()),
+        ..Default::default()
+    };
+    assert!(!agg_skipped.has_data()); // skipped has no line_coverage
+
+    let agg_with_data = AggregatedCoverage {
+        rust: Some(CoverageResult {
+            success: true,
+            error: None,
+            duration: Duration::ZERO,
+            line_coverage: Some(50.0),
+            files: HashMap::new(),
+        }),
+        ..Default::default()
+    };
+    assert!(agg_with_data.has_data());
+}
