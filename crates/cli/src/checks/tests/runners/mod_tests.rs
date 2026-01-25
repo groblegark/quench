@@ -9,8 +9,8 @@ use tempfile::tempdir;
 #[test]
 fn all_runners_returns_expected_count() {
     let runners = all_runners();
-    // cargo, go, pytest, vitest, bun, jest, bats = 7 runners
-    assert_eq!(runners.len(), 7);
+    // cargo, bats, go, pytest, vitest, bun, jest, custom = 8 runners
+    assert_eq!(runners.len(), 8);
 }
 
 #[test]
@@ -99,44 +99,6 @@ fn filter_suites_fast_mode_excludes_ci_only() {
     let filtered = filter_suites_for_mode(&suites, false);
     assert_eq!(filtered.len(), 1);
     assert_eq!(filtered[0].runner, "cargo");
-}
-
-#[test]
-fn stub_runner_is_not_available() {
-    let runner = StubRunner::new("test");
-    let temp = tempdir().unwrap();
-    let ctx = RunnerContext {
-        root: temp.path(),
-        ci_mode: false,
-        collect_coverage: false,
-    };
-    assert!(!runner.available(&ctx));
-}
-
-#[test]
-fn stub_runner_returns_skipped() {
-    let runner = StubRunner::new("test");
-    let temp = tempdir().unwrap();
-    let ctx = RunnerContext {
-        root: temp.path(),
-        ci_mode: false,
-        collect_coverage: false,
-    };
-    let config = TestSuiteConfig {
-        runner: "test".to_string(),
-        name: None,
-        path: None,
-        setup: None,
-        command: None,
-        targets: vec![],
-        ci: false,
-        max_total: None,
-        max_avg: None,
-        max_test: None,
-    };
-    let result = runner.run(&config, &ctx);
-    assert!(result.skipped);
-    assert!(result.error.unwrap().contains("not yet implemented"));
 }
 
 #[test]
