@@ -6,6 +6,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 use serde::Deserialize;
@@ -51,15 +52,23 @@ impl CoverageResult {
     }
 }
 
-/// Check if cargo-llvm-cov is available.
+// Cache llvm-cov availability to avoid repeated checks
+static LLVM_COV_AVAILABLE: OnceLock<bool> = OnceLock::new();
+
+/// Check if cargo-llvm-cov is available (cached).
+///
+/// The result is cached using OnceLock to avoid repeated subprocess
+/// invocations during test suite execution.
 pub fn llvm_cov_available() -> bool {
-    Command::new("cargo")
-        .args(["llvm-cov", "--version"])
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .status()
-        .map(|s| s.success())
-        .unwrap_or(false)
+    *LLVM_COV_AVAILABLE.get_or_init(|| {
+        Command::new("cargo")
+            .args(["llvm-cov", "--version"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()
+            .map(|s| s.success())
+            .unwrap_or(false)
+    })
 }
 
 /// Collect coverage for a Rust project.

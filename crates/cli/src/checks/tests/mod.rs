@@ -17,6 +17,7 @@ mod unit_tests;
 
 use std::sync::Arc;
 
+use rayon::prelude::*;
 use serde_json::json;
 
 use crate::adapter::{Adapter, FileKind, GenericAdapter};
@@ -705,6 +706,10 @@ impl TestsCheck {
     /// Run configured test suites.
     ///
     /// Returns None if no suites are configured.
+    ///
+    /// Execution strategy:
+    /// - CI mode with 2+ suites: Parallel execution via rayon
+    /// - Fast mode: Sequential with early termination on failure
     fn run_suites(&self, ctx: &CheckContext) -> Option<SuiteResults> {
         let suites = &ctx.config.check.tests.suite;
         if suites.is_empty() {
@@ -723,87 +728,109 @@ impl TestsCheck {
             return None;
         }
 
-        let mut results = Vec::new();
+        let mut results = Vec::with_capacity(active_suites.len());
         let mut all_passed = true;
 
-        for suite in active_suites {
-            // Run setup command if configured
-            if let Some(ref setup) = suite.setup
-                && let Err(e) = run_setup_command(setup, ctx.root)
-            {
-                // Setup failure skips the suite
-                results.push(SuiteResult {
-                    name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
-                    runner: suite.runner.clone(),
-                    skipped: true,
-                    error: Some(e),
-                    ..Default::default()
-                });
-                continue;
-            }
+        // Parallel execution in CI mode when multiple suites
+        if ctx.ci_mode && active_suites.len() > 1 {
+            results = active_suites
+                .par_iter()
+                .map(|suite| Self::run_single_suite(suite, &runner_ctx))
+                .collect();
+            all_passed = results.iter().all(|r| r.passed || r.skipped);
+        } else {
+            // Sequential with early termination for fast mode
+            for suite in active_suites {
+                let result = Self::run_single_suite(suite, &runner_ctx);
+                let failed = !result.passed && !result.skipped;
+                results.push(result);
 
-            // Get runner for this suite
-            let runner = match get_runner(&suite.runner) {
-                Some(r) => r,
-                None => {
-                    results.push(SuiteResult {
-                        name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
-                        runner: suite.runner.clone(),
-                        skipped: true,
-                        error: Some(format!("unknown runner: {}", suite.runner)),
-                        ..Default::default()
-                    });
-                    continue;
+                // Early termination in fast mode on first failure
+                if failed && !ctx.ci_mode {
+                    all_passed = false;
+                    break;
                 }
-            };
-
-            // Check runner availability
-            if !runner.available(&runner_ctx) {
-                results.push(SuiteResult {
-                    name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
-                    runner: suite.runner.clone(),
-                    skipped: true,
-                    error: Some(format!("{} not available", suite.runner)),
-                    ..Default::default()
-                });
-                continue;
+                if failed {
+                    all_passed = false;
+                }
             }
-
-            // Execute the runner
-            let run_result = runner.run(suite, &runner_ctx);
-            all_passed = all_passed && run_result.passed;
-
-            // Collect metrics before moving error
-            let test_count = run_result.test_count();
-            let total_ms = run_result.total_time.as_millis() as u64;
-            let avg_ms = run_result.avg_duration().map(|d| d.as_millis() as u64);
-            let max_ms = run_result
-                .slowest_test()
-                .map(|t| t.duration.as_millis() as u64);
-            let max_test = run_result.slowest_test().map(|t| t.name.clone());
-            let coverage = run_result.coverage.clone();
-            let coverage_by_package = run_result.coverage_by_package.clone();
-
-            results.push(SuiteResult {
-                name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
-                runner: suite.runner.clone(),
-                passed: run_result.passed,
-                skipped: run_result.skipped,
-                error: run_result.error,
-                test_count,
-                total_ms,
-                avg_ms,
-                max_ms,
-                max_test,
-                coverage,
-                coverage_by_package,
-            });
         }
 
         Some(SuiteResults {
             passed: all_passed,
             suites: results,
         })
+    }
+
+    /// Execute a single test suite and return its result.
+    fn run_single_suite(suite: &TestSuiteConfig, runner_ctx: &RunnerContext) -> SuiteResult {
+        // Run setup command if configured
+        if let Some(ref setup) = suite.setup
+            && let Err(e) = run_setup_command(setup, runner_ctx.root)
+        {
+            // Setup failure skips the suite
+            return SuiteResult {
+                name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
+                runner: suite.runner.clone(),
+                skipped: true,
+                error: Some(e),
+                ..Default::default()
+            };
+        }
+
+        // Get runner for this suite
+        let runner = match get_runner(&suite.runner) {
+            Some(r) => r,
+            None => {
+                return SuiteResult {
+                    name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
+                    runner: suite.runner.clone(),
+                    skipped: true,
+                    error: Some(format!("unknown runner: {}", suite.runner)),
+                    ..Default::default()
+                };
+            }
+        };
+
+        // Check runner availability
+        if !runner.available(runner_ctx) {
+            return SuiteResult {
+                name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
+                runner: suite.runner.clone(),
+                skipped: true,
+                error: Some(format!("{} not available", suite.runner)),
+                ..Default::default()
+            };
+        }
+
+        // Execute the runner
+        let run_result = runner.run(suite, runner_ctx);
+
+        // Collect metrics before moving error
+        let test_count = run_result.test_count();
+        let total_ms = run_result.total_time.as_millis() as u64;
+        let avg_ms = run_result.avg_duration().map(|d| d.as_millis() as u64);
+        let max_ms = run_result
+            .slowest_test()
+            .map(|t| t.duration.as_millis() as u64);
+        let max_test = run_result.slowest_test().map(|t| t.name.clone());
+        let coverage = run_result.coverage.clone();
+        let coverage_by_package = run_result.coverage_by_package.clone();
+
+        SuiteResult {
+            name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
+            runner: suite.runner.clone(),
+            passed: run_result.passed,
+            skipped: run_result.skipped,
+            error: run_result.error,
+            test_count,
+            total_ms,
+            avg_ms,
+            max_ms,
+            max_test,
+            coverage,
+            coverage_by_package,
+        }
     }
 }
 
