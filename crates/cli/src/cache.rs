@@ -338,10 +338,17 @@ impl FileCache {
     /// spawning the thread to avoid holding locks.
     ///
     /// # Example
-    /// ```ignore
+    /// ```
+    /// # use std::path::PathBuf;
+    /// # use tempfile::tempdir;
+    /// # use quench::cache::FileCache;
+    /// # let dir = tempdir().unwrap();
+    /// # let cache_path = dir.path().join("cache.bin");
+    /// # let cache = FileCache::new(0);
     /// // Fire and forget - cache write happens in background
-    /// let _handle = cache.persist_async(cache_path);
-    /// // Process can exit while write is in progress
+    /// let handle = cache.persist_async(cache_path);
+    /// // Wait for completion (optional - process can exit without waiting)
+    /// handle.join().unwrap().unwrap();
     /// ```
     pub fn persist_async(&self, path: PathBuf) -> JoinHandle<Result<(), CacheError>> {
         // Clone data for the background thread
