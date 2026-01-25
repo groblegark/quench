@@ -1,0 +1,11 @@
+version = 1
+
+[[check.tests.suite]]
+runner = "cargo"
+
+[check.tests.coverage]
+check = "warn"
+min = 50
+
+[check.tests.time]
+check = "warn"
