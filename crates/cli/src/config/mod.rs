@@ -7,6 +7,7 @@
 
 mod checks;
 pub mod defaults;
+pub mod duration;
 mod go;
 mod javascript;
 mod ratchet;
