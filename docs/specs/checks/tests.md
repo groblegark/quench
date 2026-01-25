@@ -148,10 +148,53 @@ it.skip('needs implementation', () => { /* ... */ });
 When placeholder tests exist for a source file, correlation is satisfied even without implementation—the test intent is recorded.
 
 ```toml
-[check.tests]
+[check.tests.commit]
 # Recognize placeholder patterns as valid correlation
-placeholders = "allow"  # default: true
+placeholders = "allow"  # default: "allow", use "forbid" to ignore placeholders
 ```
+
+## Placeholder Metrics
+
+The tests check collects placeholder counts as metrics. These represent test debt—planned tests that haven't been implemented yet. Unlike violations, placeholders don't fail the check; they're measured for visibility.
+
+### Metrics Structure
+
+```json
+{
+  "metrics": {
+    "placeholders": {
+      "rust": {
+        "ignore": 3,
+        "todo": 1
+      },
+      "javascript": {
+        "todo": 2,
+        "fixme": 1,
+        "skip": 0
+      }
+    }
+  }
+}
+```
+
+### Detected Patterns
+
+**Rust:**
+- `#[ignore]` and `#[ignore = "..."]` on test functions
+- `todo!()` and `todo!("...")` in test bodies
+
+**JavaScript/TypeScript:**
+- `test.todo()`, `it.todo()`, `describe.todo()`
+- `test.fixme()`, `it.fixme()`, `describe.fixme()`
+- `test.skip()`, `it.skip()`, `describe.skip()`
+
+### Correlation vs. Metrics
+
+Two distinct concepts:
+
+1. **Correlation** (`placeholders = "allow"`): Whether placeholder tests satisfy the "test exists" requirement for a source file. This affects pass/fail status.
+
+2. **Metrics**: Total placeholder counts across all test files. Always collected regardless of correlation setting. Used for tracking test debt over time.
 
 ## Output
 
@@ -205,7 +248,18 @@ tests: WARN
     "source_files_changed": 5,
     "with_test_changes": 3,
     "without_test_changes": 2,
-    "scope": "branch"
+    "scope": "branch",
+    "placeholders": {
+      "rust": {
+        "ignore": 2,
+        "todo": 0
+      },
+      "javascript": {
+        "todo": 1,
+        "fixme": 0,
+        "skip": 0
+      }
+    }
   }
 }
 ```
