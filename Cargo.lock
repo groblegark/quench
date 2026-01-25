@@ -1419,6 +1419,7 @@ name = "quench"
 version = "0.3.0"
 dependencies = [
  "aho-corasick",
+ "anstyle",
  "anyhow",
  "assert_cmd",
  "chrono",

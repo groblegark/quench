@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Custom help formatting with consolidated --[no-] flags.
+//! Custom help formatting with consolidated --[no-] flags and colorization.
 //!
 //! Clap displays negatable flags as separate lines:
 //!   --color      Force color output
@@ -9,11 +9,37 @@
 //!
 //! This module consolidates them into a single line:
 //!   --[no-]color   Enable/disable color output
+//!
+//! It also provides colorized help output using ANSI 256-color codes.
 
+use crate::color;
 use clap::Command;
+use clap::builder::styling::Styles;
 use regex::Regex;
 use std::collections::HashMap;
 use std::sync::LazyLock;
+
+/// Generate clap Styles for help output with consistent color conventions.
+pub fn styles() -> Styles {
+    if !color::should_colorize() {
+        return Styles::plain();
+    }
+
+    use anstyle::{Ansi256Color, Color, Style};
+
+    let header = Style::new().fg_color(Some(Color::Ansi256(Ansi256Color(color::codes::HEADER))));
+    let literal = Style::new().fg_color(Some(Color::Ansi256(Ansi256Color(color::codes::LITERAL))));
+    let placeholder =
+        Style::new().fg_color(Some(Color::Ansi256(Ansi256Color(color::codes::CONTEXT))));
+    let context = Style::new().fg_color(Some(Color::Ansi256(Ansi256Color(color::codes::CONTEXT))));
+
+    Styles::styled()
+        .header(header)
+        .usage(header)
+        .literal(literal)
+        .placeholder(placeholder)
+        .valid(context)
+}
 
 /// Regex to match option lines in help output.
 /// Captures: (leading_space, short_opt?, long_opt, value?, description)

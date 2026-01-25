@@ -5,6 +5,7 @@
 
 use std::path::PathBuf;
 
+use crate::help;
 use clap::{Parser, Subcommand};
 
 /// A fast linting tool for AI agents that measures quality signals
@@ -12,6 +13,7 @@ use clap::{Parser, Subcommand};
 #[command(name = "quench")]
 #[command(version, about, long_about = None)]
 #[command(propagate_version = true)]
+#[command(styles = help::styles())]
 pub struct Cli {
     /// Use specific config file
     #[arg(short = 'C', long = "config", global = true, env = "QUENCH_CONFIG")]

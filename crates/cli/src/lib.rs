@@ -31,7 +31,7 @@ pub use baseline::{Baseline, BaselineError, BaselineMetrics};
 pub use cache::{CacheStats, FileCache};
 pub use check::{Check, CheckContext, CheckOutput, CheckResult, Violation};
 pub use cli::{CheckArgs, CheckFilter, Cli, Command, InitArgs, OutputFormat, ReportArgs};
-pub use color::resolve_color;
+pub use color::{context, examples, header, literal, resolve_color, should_colorize};
 pub use config::IgnoreConfig;
 pub use error::{Error, ExitCode, Result};
 pub use ratchet::{CurrentMetrics, RatchetResult};
