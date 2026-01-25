@@ -3,70 +3,43 @@
 use super::*;
 
 #[test]
-fn classify_small_file() {
-    // 1KB should be Small
-    assert_eq!(FileSizeClass::from_size(1024), FileSizeClass::Small);
-    // 63KB should be Small
-    assert_eq!(FileSizeClass::from_size(63 * 1024), FileSizeClass::Small);
-    // Exactly at threshold is still Small (<=)
-    assert_eq!(
-        FileSizeClass::from_size(MMAP_THRESHOLD),
-        FileSizeClass::Small
-    );
-}
+fn file_size_classification() {
+    let cases = [
+        // Small class
+        (1024, FileSizeClass::Small, "1KB"),
+        (63 * 1024, FileSizeClass::Small, "63KB"),
+        (MMAP_THRESHOLD, FileSizeClass::Small, "at mmap threshold"),
+        // Normal class
+        (
+            MMAP_THRESHOLD + 1,
+            FileSizeClass::Normal,
+            "just over mmap threshold",
+        ),
+        (500 * 1024, FileSizeClass::Normal, "500KB"),
+        (SOFT_LIMIT_SIZE, FileSizeClass::Normal, "at soft limit"),
+        // Oversized class
+        (
+            SOFT_LIMIT_SIZE + 1,
+            FileSizeClass::Oversized,
+            "just over soft limit",
+        ),
+        (5 * 1024 * 1024, FileSizeClass::Oversized, "5MB"),
+        (MAX_FILE_SIZE, FileSizeClass::Oversized, "at max"),
+        // TooLarge class
+        (MAX_FILE_SIZE + 1, FileSizeClass::TooLarge, "just over max"),
+        (15 * 1024 * 1024, FileSizeClass::TooLarge, "15MB"),
+        (1024 * 1024 * 1024, FileSizeClass::TooLarge, "1GB"),
+    ];
 
-#[test]
-fn classify_normal_file() {
-    // Just over mmap threshold
-    assert_eq!(
-        FileSizeClass::from_size(MMAP_THRESHOLD + 1),
-        FileSizeClass::Normal
-    );
-    // 500KB should be Normal
-    assert_eq!(FileSizeClass::from_size(500 * 1024), FileSizeClass::Normal);
-    // Exactly at soft limit is still Normal (<=)
-    assert_eq!(
-        FileSizeClass::from_size(SOFT_LIMIT_SIZE),
-        FileSizeClass::Normal
-    );
-}
-
-#[test]
-fn classify_oversized_file() {
-    // Just over soft limit
-    assert_eq!(
-        FileSizeClass::from_size(SOFT_LIMIT_SIZE + 1),
-        FileSizeClass::Oversized
-    );
-    // 5MB should be Oversized
-    assert_eq!(
-        FileSizeClass::from_size(5 * 1024 * 1024),
-        FileSizeClass::Oversized
-    );
-    // Exactly at max is still Oversized (<=)
-    assert_eq!(
-        FileSizeClass::from_size(MAX_FILE_SIZE),
-        FileSizeClass::Oversized
-    );
-}
-
-#[test]
-fn classify_too_large_file() {
-    // Just over max
-    assert_eq!(
-        FileSizeClass::from_size(MAX_FILE_SIZE + 1),
-        FileSizeClass::TooLarge
-    );
-    // 15MB should be TooLarge
-    assert_eq!(
-        FileSizeClass::from_size(15 * 1024 * 1024),
-        FileSizeClass::TooLarge
-    );
-    // 1GB should be TooLarge
-    assert_eq!(
-        FileSizeClass::from_size(1024 * 1024 * 1024),
-        FileSizeClass::TooLarge
-    );
+    for (size, expected, desc) in cases {
+        assert_eq!(
+            FileSizeClass::from_size(size),
+            expected,
+            "Failed for {} ({} bytes)",
+            desc,
+            size
+        );
+    }
 }
 
 #[test]

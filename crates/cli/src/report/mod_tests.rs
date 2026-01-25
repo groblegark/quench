@@ -6,6 +6,46 @@
 use super::test_support::{AllChecks, ExcludeChecks, create_test_baseline};
 use super::*;
 
+/// Check if a metric is present in filtered metrics.
+fn metric_is_present(filtered: &FilteredMetrics<'_>, metric: &str) -> bool {
+    match metric {
+        "coverage" => filtered.coverage().is_some(),
+        "escapes" => filtered.escapes().is_some(),
+        "build_time" => filtered.build_time().is_some(),
+        "binary_size" => filtered.binary_size().is_some(),
+        "test_time" => filtered.test_time().is_some(),
+        _ => panic!("Unknown metric: {}", metric),
+    }
+}
+
+/// Assert that excluding certain checks results in expected metric presence.
+fn assert_filter_excludes(
+    baseline: &Baseline,
+    excluded: Vec<&'static str>,
+    should_be_none: &[&str],
+    should_be_some: &[&str],
+) {
+    let filter = ExcludeChecks(excluded.clone());
+    let filtered = FilteredMetrics::new(baseline, &filter);
+
+    for metric in should_be_none {
+        assert!(
+            !metric_is_present(&filtered, metric),
+            "{} should be None when excluding {:?}",
+            metric,
+            excluded
+        );
+    }
+    for metric in should_be_some {
+        assert!(
+            metric_is_present(&filtered, metric),
+            "{} should be Some when excluding {:?}",
+            metric,
+            excluded
+        );
+    }
+}
+
 // --- human_bytes tests ---
 
 #[test]
@@ -61,49 +101,32 @@ fn filtered_metrics_includes_all_with_all_checks() {
 
 #[test]
 fn filtered_metrics_excludes_tests() {
-    let baseline = create_test_baseline();
-    let filter = ExcludeChecks(vec!["tests"]);
-    let filtered = FilteredMetrics::new(&baseline, &filter);
-
-    // Coverage and test_time are linked to "tests" check
-    assert!(filtered.coverage().is_none());
-    assert!(filtered.test_time().is_none());
-
-    // Other metrics should still be present
-    assert!(filtered.escapes().is_some());
-    assert!(filtered.build_time().is_some());
-    assert!(filtered.binary_size().is_some());
+    assert_filter_excludes(
+        &create_test_baseline(),
+        vec!["tests"],
+        &["coverage", "test_time"],
+        &["escapes", "build_time", "binary_size"],
+    );
 }
 
 #[test]
 fn filtered_metrics_excludes_build() {
-    let baseline = create_test_baseline();
-    let filter = ExcludeChecks(vec!["build"]);
-    let filtered = FilteredMetrics::new(&baseline, &filter);
-
-    // Build time and binary size are linked to "build" check
-    assert!(filtered.build_time().is_none());
-    assert!(filtered.binary_size().is_none());
-
-    // Other metrics should still be present
-    assert!(filtered.coverage().is_some());
-    assert!(filtered.escapes().is_some());
-    assert!(filtered.test_time().is_some());
+    assert_filter_excludes(
+        &create_test_baseline(),
+        vec!["build"],
+        &["build_time", "binary_size"],
+        &["coverage", "escapes", "test_time"],
+    );
 }
 
 #[test]
 fn filtered_metrics_excludes_escapes() {
-    let baseline = create_test_baseline();
-    let filter = ExcludeChecks(vec!["escapes"]);
-    let filtered = FilteredMetrics::new(&baseline, &filter);
-
-    assert!(filtered.escapes().is_none());
-
-    // Other metrics should still be present
-    assert!(filtered.coverage().is_some());
-    assert!(filtered.build_time().is_some());
-    assert!(filtered.binary_size().is_some());
-    assert!(filtered.test_time().is_some());
+    assert_filter_excludes(
+        &create_test_baseline(),
+        vec!["escapes"],
+        &["escapes"],
+        &["coverage", "build_time", "binary_size", "test_time"],
+    );
 }
 
 #[test]
