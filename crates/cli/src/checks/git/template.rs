@@ -30,12 +30,8 @@ pub fn generate_template(config: &GitCommitConfig) -> String {
 
     let mut lines = Vec::new();
 
-    // Header with format reminder
-    if scopes.is_some() {
-        lines.push("# <type>(<scope>): <description>".to_string());
-    } else {
-        lines.push("# <type>: <description>".to_string());
-    }
+    // Header with format reminder (always show scope as optional)
+    lines.push("# <type>(<scope>): <description>".to_string());
     lines.push("#".to_string());
 
     // Types line
@@ -45,12 +41,13 @@ pub fn generate_template(config: &GitCommitConfig) -> String {
         lines.push(format!("# Types: {}", types.join(", ")));
     }
 
-    // Scopes line (if configured)
-    if let Some(scopes) = scopes {
-        if scopes.is_empty() {
-            lines.push("# Scope: optional".to_string());
-        } else {
+    // Scopes line (always show, scope is always optional)
+    match scopes {
+        Some(scopes) if !scopes.is_empty() => {
             lines.push(format!("# Scope: optional ({})", scopes.join(", ")));
+        }
+        _ => {
+            lines.push("# Scope: optional".to_string());
         }
     }
 

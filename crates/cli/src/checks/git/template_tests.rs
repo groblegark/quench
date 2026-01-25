@@ -17,8 +17,9 @@ fn generates_template_with_default_config() {
     let config = GitCommitConfig::default();
     let template = generate_template(&config);
 
-    assert!(template.contains("# <type>: <description>"));
+    assert!(template.contains("# <type>(<scope>): <description>"));
     assert!(template.contains("# Types: feat, fix, chore"));
+    assert!(template.contains("# Scope: optional"));
     assert!(template.contains("# Examples:"));
 }
 
