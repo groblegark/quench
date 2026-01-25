@@ -1,5 +1,7 @@
 # Plan: Concise Help Formatting
 
+**Root Feature:** `quench-8d0f`
+
 ## Overview
 
 Consolidate `--flag` / `--no-flag` pairs into single `--[no-]flag` help entries.
