@@ -18,7 +18,11 @@ use std::sync::Arc;
 
 use serde_json::json;
 
+use crate::adapter::{Adapter, FileKind, GenericAdapter};
 use crate::check::{Check, CheckContext, CheckResult, Violation};
+use crate::checks::placeholders::{
+    PlaceholderMetrics, collect_placeholder_metrics, default_js_patterns, default_rust_patterns,
+};
 use crate::config::TestsCommitConfig;
 
 use self::correlation::{
@@ -27,7 +31,7 @@ use self::correlation::{
 use self::diff::{ChangeType, get_base_changes, get_commits_since, get_staged_changes};
 use self::patterns::{Language, candidate_test_paths_for, detect_language};
 use self::placeholder::{has_js_placeholder_test, has_placeholder_test};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// File extension for Rust source files.
 const RUST_EXT: &str = "rs";
@@ -123,8 +127,12 @@ impl TestsCheck {
                 Err(e) => return CheckResult::skipped(self.name(), e),
             }
         } else {
-            // No change context available - pass silently
-            return CheckResult::passed(self.name());
+            // No change context available - pass silently but still collect placeholder metrics
+            let placeholder_metrics = collect_test_file_placeholder_metrics(ctx);
+            let metrics = json!({
+                "placeholders": placeholder_metrics.to_json(),
+            });
+            return CheckResult::passed(self.name()).with_metrics(metrics);
         };
 
         // Analyze correlation
@@ -185,12 +193,16 @@ impl TestsCheck {
             }
         }
 
+        // Collect placeholder metrics from all test files
+        let placeholder_metrics = collect_test_file_placeholder_metrics(ctx);
+
         // Build metrics
         let metrics = json!({
             "source_files_changed": result.with_tests.len() + result.without_tests.len(),
             "with_test_changes": result.with_tests.len(),
             "without_test_changes": result.without_tests.len(),
             "scope": "branch",
+            "placeholders": placeholder_metrics.to_json(),
         });
 
         if violations.is_empty() {
@@ -291,10 +303,14 @@ impl TestsCheck {
         failing_commits.sort();
         failing_commits.dedup();
 
+        // Collect placeholder metrics from all test files
+        let placeholder_metrics = collect_test_file_placeholder_metrics(ctx);
+
         let metrics = json!({
             "commits_checked": commits.len(),
             "commits_failing": failing_commits.len(),
             "scope": "commit",
+            "placeholders": placeholder_metrics.to_json(),
         });
 
         if violations.is_empty() {
@@ -305,6 +321,45 @@ impl TestsCheck {
             CheckResult::failed(self.name(), violations).with_metrics(metrics)
         }
     }
+}
+
+/// Collect test files from context and compute placeholder metrics.
+fn collect_test_file_placeholder_metrics(ctx: &CheckContext) -> PlaceholderMetrics {
+    // Build file adapter to classify test files
+    let test_patterns = if ctx.config.project.tests.is_empty() {
+        default_test_patterns()
+    } else {
+        ctx.config.project.tests.clone()
+    };
+    let file_adapter = GenericAdapter::new(&[], &test_patterns);
+
+    // Collect test file paths
+    let test_files: Vec<PathBuf> = ctx
+        .files
+        .iter()
+        .filter(|f| {
+            let rel_path = f.path.strip_prefix(ctx.root).unwrap_or(&f.path);
+            file_adapter.classify(rel_path) == FileKind::Test
+        })
+        .map(|f| f.path.clone())
+        .collect();
+
+    // Collect placeholder metrics using default patterns
+    let rust_patterns = default_rust_patterns();
+    let js_patterns = default_js_patterns();
+    collect_placeholder_metrics(&test_files, &rust_patterns, &js_patterns)
+}
+
+/// Default test file patterns.
+fn default_test_patterns() -> Vec<String> {
+    vec![
+        "**/tests/**".to_string(),
+        "**/test/**".to_string(),
+        "**/*_test.*".to_string(),
+        "**/*_tests.*".to_string(),
+        "**/*.test.*".to_string(),
+        "**/*.spec.*".to_string(),
+    ]
 }
 
 fn build_correlation_config(config: &TestsCommitConfig) -> CorrelationConfig {

@@ -35,7 +35,8 @@ use crate::check::Violation;
 /// v22: Added agent documentation check to git check.
 /// v23: Added skip_merge option to git check (merge commits now skipped by default).
 /// v24: Test pattern consolidation - hash language-specific patterns for file classification.
-pub const CACHE_VERSION: u32 = 24;
+/// v25: Removed standalone placeholders check, integrated metrics into tests check.
+pub const CACHE_VERSION: u32 = 25;
 
 /// Cache file name within .quench directory.
 pub const CACHE_FILE_NAME: &str = "cache.bin";

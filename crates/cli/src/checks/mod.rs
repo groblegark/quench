@@ -8,7 +8,7 @@
 //! - escapes: Escape hatch detection (enabled by default)
 //! - agents: CLAUDE.md, .cursorrules validation (enabled by default)
 //! - docs: File refs, specs validation (enabled by default)
-//! - tests: Test correlation (enabled by default)
+//! - tests: Test correlation + placeholder metrics (enabled by default)
 //! - git: Commit message format (disabled by default)
 //! - build: Binary/bundle size + build time (disabled by default)
 //! - license: License header validation (disabled by default)
@@ -30,15 +30,7 @@ use crate::check::Check;
 
 /// All registered check names in canonical order.
 pub const CHECK_NAMES: &[&str] = &[
-    "cloc",
-    "escapes",
-    "agents",
-    "docs",
-    "tests",
-    "git",
-    "build",
-    "license",
-    "placeholders",
+    "cloc", "escapes", "agents", "docs", "tests", "git", "build", "license",
 ];
 
 /// Checks enabled by default in fast mode.
@@ -55,7 +47,6 @@ pub fn all_checks() -> Vec<Arc<dyn Check>> {
         Arc::new(git::GitCheck),
         Arc::new(build::BuildCheck),
         Arc::new(stub::StubCheck::new("license", "License headers", false)),
-        Arc::new(placeholders::PlaceholdersCheck),
     ]
 }
 
