@@ -345,6 +345,10 @@ pub struct CheckResult {
     /// Per-package breakdown of metrics.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub by_package: Option<HashMap<String, JsonValue>>,
+
+    /// Execution duration (for --timing flag).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration_ms: Option<u64>,
 }
 
 impl CheckResult {
@@ -361,6 +365,7 @@ impl CheckResult {
             fix_summary: None,
             metrics: None,
             by_package: None,
+            duration_ms: None,
         }
     }
 
@@ -377,6 +382,7 @@ impl CheckResult {
             fix_summary: None,
             metrics: None,
             by_package: None,
+            duration_ms: None,
         }
     }
 
@@ -396,6 +402,7 @@ impl CheckResult {
             fix_summary: None,
             metrics: None,
             by_package: None,
+            duration_ms: None,
         }
     }
 
@@ -412,6 +419,7 @@ impl CheckResult {
             fix_summary: None,
             metrics: None,
             by_package: None,
+            duration_ms: None,
         }
     }
 
@@ -428,6 +436,7 @@ impl CheckResult {
             fix_summary: None,
             metrics: None,
             by_package: None,
+            duration_ms: None,
         }
     }
 
@@ -444,6 +453,7 @@ impl CheckResult {
             fix_summary: Some(summary),
             metrics: None,
             by_package: None,
+            duration_ms: None,
         }
     }
 

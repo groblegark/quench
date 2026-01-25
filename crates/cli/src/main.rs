@@ -4,6 +4,7 @@
 //! Quench CLI entry point.
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use anyhow::Context;
 use clap::{CommandFactory, Parser};
@@ -24,6 +25,7 @@ use quench::output::json::{self, JsonFormatter};
 use quench::output::text::TextFormatter;
 use quench::ratchet::{self, CurrentMetrics};
 use quench::runner::{CheckRunner, RunnerConfig};
+use quench::timing::{PhaseTiming, TimingInfo};
 use quench::walker::{FileWalker, WalkerConfig};
 
 use quench::git::{detect_base_branch, get_changed_files, get_staged_files};
@@ -76,6 +78,8 @@ fn run() -> anyhow::Result<ExitCode> {
 }
 
 fn run_check(cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
+    let total_start = Instant::now();
+
     // Validate flag combinations
     if args.dry_run && !args.fix {
         eprintln!("--dry-run requires --fix");
@@ -246,6 +250,9 @@ fn run_check(cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
         ..Default::default()
     };
 
+    // === Discovery Phase ===
+    let discovery_start = Instant::now();
+
     let walker = FileWalker::new(walker_config);
     let (rx, handle) = walker.walk(&root);
 
@@ -270,6 +277,8 @@ fn run_check(cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
     // Collect files for check
     let files: Vec<_> = rx.iter().collect();
     let stats = handle.join();
+
+    let discovery_ms = discovery_start.elapsed().as_millis() as u64;
 
     // Report stats in verbose mode
     if args.verbose {
@@ -373,8 +382,13 @@ fn run_check(cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
         runner = runner.with_cache(Arc::clone(cache));
     }
 
+    // === Checking Phase ===
+    let checking_start = Instant::now();
+
     // Run checks
     let check_results = runner.run(checks, &files, &config, &root);
+
+    let checking_ms = checking_start.elapsed().as_millis() as u64;
 
     // Persist cache (best effort)
     if let Some(cache) = &cache {
@@ -489,6 +503,31 @@ fn run_check(cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
     };
     let options = FormatOptions { limit };
 
+    // === Build timing info before output ===
+    let timing_info = if args.timing {
+        let stats = cache.as_ref().map(|c| c.stats());
+        Some(TimingInfo {
+            phases: PhaseTiming {
+                discovery_ms,
+                checking_ms,
+                output_ms: 0, // Updated after output
+                total_ms: 0,  // Updated after output
+            },
+            files: files.len(),
+            cache_hits: stats.as_ref().map(|s| s.hits).unwrap_or(0),
+            checks: output
+                .checks
+                .iter()
+                .filter_map(|r| r.duration_ms.map(|d| (r.name.clone(), d)))
+                .collect(),
+        })
+    } else {
+        None
+    };
+
+    // === Output Phase ===
+    let output_start = Instant::now();
+
     // Format output
     match args.output {
         OutputFormat::Text | OutputFormat::Html | OutputFormat::Markdown => {
@@ -512,7 +551,31 @@ fn run_check(cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
         }
         OutputFormat::Json => {
             let mut formatter = JsonFormatter::new(std::io::stdout());
-            formatter.write_with_ratchet(&output, ratchet_result.as_ref())?;
+            formatter.write_with_timing(&output, ratchet_result.as_ref(), timing_info.as_ref())?;
+        }
+    }
+
+    let output_ms = output_start.elapsed().as_millis() as u64;
+    let total_ms = total_start.elapsed().as_millis() as u64;
+
+    // === Print timing to stderr (text mode only) ===
+    if let Some(mut info) = timing_info {
+        info.phases.output_ms = output_ms;
+        info.phases.total_ms = total_ms;
+
+        // Text output goes to stderr
+        if !matches!(args.output, OutputFormat::Json) {
+            eprintln!("{}", info.phases.format_text());
+            // Per-check timing
+            for result in &output.checks {
+                if let Some(ms) = result.duration_ms {
+                    eprintln!("{}: {}ms", result.name, ms);
+                }
+            }
+            // File and cache stats
+            eprintln!("files: {}", info.files);
+            let misses = cache.as_ref().map(|c| c.stats().misses).unwrap_or(0);
+            eprintln!("{}", info.format_cache(misses));
         }
     }
 

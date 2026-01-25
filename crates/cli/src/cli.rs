@@ -97,6 +97,10 @@ pub struct CheckArgs {
     #[arg(long)]
     pub ci: bool,
 
+    /// Show timing breakdown (phases, per-check, cache stats)
+    #[arg(long)]
+    pub timing: bool,
+
     // Check enable flags (run only these checks)
     /// Run only the cloc check
     #[arg(long)]

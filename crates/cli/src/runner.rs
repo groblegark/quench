@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
+use std::time::Instant;
 
 use rayon::prelude::*;
 
@@ -139,16 +140,18 @@ impl CheckRunner {
                     staged: self.config.staged,
                 };
 
-                // Run check on uncached files
-                let result = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                    check.run(&ctx)
-                })) {
+                // Run check on uncached files with timing
+                let check_start = Instant::now();
+                let mut result = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+                    || check.run(&ctx),
+                )) {
                     Ok(result) => result,
                     Err(_) => CheckResult::skipped(
                         check_name,
                         "Internal error: check panicked".to_string(),
                     ),
                 };
+                result.duration_ms = Some(check_start.elapsed().as_millis() as u64);
 
                 // Merge cached violations into result
                 if cached_for_check.is_empty() {
@@ -177,6 +180,7 @@ impl CheckRunner {
                         fix_summary: result.fix_summary,
                         metrics: result.metrics,
                         by_package: result.by_package,
+                        duration_ms: result.duration_ms,
                     }
                 }
             })
@@ -255,8 +259,11 @@ impl CheckRunner {
                     staged: self.config.staged,
                 };
 
-                // Catch panics to ensure error isolation
-                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| check.run(&ctx))) {
+                // Catch panics to ensure error isolation, with timing
+                let check_start = Instant::now();
+                let mut result = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(
+                    || check.run(&ctx),
+                )) {
                     Ok(result) => result,
                     Err(_) => {
                         // Check panicked - return skipped result
@@ -265,7 +272,9 @@ impl CheckRunner {
                             "Internal error: check panicked".to_string(),
                         )
                     }
-                }
+                };
+                result.duration_ms = Some(check_start.elapsed().as_millis() as u64);
+                result
             })
             .collect();
 

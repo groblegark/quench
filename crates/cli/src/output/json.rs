@@ -13,6 +13,7 @@ use serde::Serialize;
 
 use crate::check::{CheckOutput, CheckResult};
 use crate::ratchet::{MetricComparison, MetricImprovement, RatchetResult};
+use crate::timing::TimingInfo;
 
 /// Ratchet comparison result for JSON output.
 #[derive(Debug, Serialize)]
@@ -82,7 +83,7 @@ pub struct JsonFormatter<W: Write> {
     writer: W,
 }
 
-/// Combined output with optional ratchet results.
+/// Combined output with optional ratchet and timing results.
 #[derive(Debug, Serialize)]
 struct CombinedOutput<'a> {
     timestamp: &'a str,
@@ -90,6 +91,8 @@ struct CombinedOutput<'a> {
     checks: &'a [CheckResult],
     #[serde(skip_serializing_if = "Option::is_none")]
     ratchet: Option<RatchetOutput>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    timing: Option<&'a TimingInfo>,
 }
 
 impl<W: Write> JsonFormatter<W> {
@@ -104,17 +107,28 @@ impl<W: Write> JsonFormatter<W> {
         writeln!(self.writer, "{}", json)
     }
 
-    /// Write JSON output with optional ratchet results.
+    /// Write JSON output with optional ratchet results (no timing).
     pub fn write_with_ratchet(
         &mut self,
         output: &CheckOutput,
         ratchet: Option<&RatchetResult>,
+    ) -> std::io::Result<()> {
+        self.write_with_timing(output, ratchet, None)
+    }
+
+    /// Write JSON output with optional ratchet and timing.
+    pub fn write_with_timing(
+        &mut self,
+        output: &CheckOutput,
+        ratchet: Option<&RatchetResult>,
+        timing: Option<&TimingInfo>,
     ) -> std::io::Result<()> {
         let combined = CombinedOutput {
             timestamp: &output.timestamp,
             passed: output.passed && ratchet.as_ref().is_none_or(|r| r.passed),
             checks: &output.checks,
             ratchet: ratchet.map(Into::into),
+            timing,
         };
         let json = serde_json::to_string_pretty(&combined).map_err(std::io::Error::other)?;
         writeln!(self.writer, "{}", json)

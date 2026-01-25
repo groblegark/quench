@@ -19,6 +19,7 @@ pub mod profiles;
 pub mod ratchet;
 pub mod report;
 pub mod runner;
+pub mod timing;
 pub mod tolerance;
 pub mod walker;
 
