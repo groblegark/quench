@@ -209,3 +209,68 @@ fn hash_config_deterministic() {
     let hash2 = hash_config(&config);
     assert_eq!(hash1, hash2);
 }
+
+#[test]
+fn cache_persist_async_completes() {
+    let dir = tempdir().unwrap();
+    let cache_path = dir.path().join("cache.bin");
+    let config_hash = 12345u64;
+
+    // Create and populate cache
+    let cache = FileCache::new(config_hash);
+    let file_path = PathBuf::from("src/lib.rs");
+    let key = FileCacheKey {
+        mtime_secs: 100,
+        mtime_nanos: 500,
+        size: 1000,
+    };
+    cache.insert(file_path.clone(), key.clone(), vec![]);
+
+    // Persist asynchronously and wait for completion
+    let handle = cache.persist_async(cache_path.clone());
+    handle
+        .join()
+        .expect("thread panicked")
+        .expect("persist failed");
+
+    // Verify file exists and can be restored
+    assert!(cache_path.exists());
+    let restored = FileCache::from_persistent(&cache_path, config_hash).unwrap();
+    let result = restored.lookup(&file_path, &key);
+    assert!(result.is_some());
+}
+
+#[test]
+fn cache_lookup_returns_arc_for_efficient_cloning() {
+    use std::sync::Arc;
+
+    let cache = FileCache::new(0);
+    let path = PathBuf::from("src/main.rs");
+    let key = FileCacheKey {
+        mtime_secs: 100,
+        mtime_nanos: 0,
+        size: 50,
+    };
+
+    // Insert violations
+    let violations = vec![CachedViolation {
+        check: "test".to_string(),
+        line: Some(1),
+        violation_type: "test".to_string(),
+        advice: "test".to_string(),
+        value: None,
+        threshold: None,
+        pattern: None,
+        lines: None,
+        nonblank: None,
+        target_path: None,
+    }];
+    cache.insert(path.clone(), key.clone(), violations);
+
+    // Get two references - should be the same Arc (same pointer)
+    let arc1 = cache.lookup(&path, &key).unwrap();
+    let arc2 = cache.lookup(&path, &key).unwrap();
+
+    // Verify both point to same underlying data (Arc::ptr_eq)
+    assert!(Arc::ptr_eq(&arc1, &arc2));
+}
