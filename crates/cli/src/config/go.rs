@@ -56,6 +56,10 @@ impl GoConfig {
         vec!["**/*_test.go".to_string()]
     }
 
+    pub(crate) fn default_ignore() -> Vec<String> {
+        vec!["vendor/**".to_string()]
+    }
+
     pub(crate) fn default_cloc_advice() -> &'static str {
         "Can the code be made more concise?\n\n\
          Look for repetitive patterns that could be extracted into helper functions.\n\n\

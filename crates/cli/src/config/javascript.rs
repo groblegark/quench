@@ -73,6 +73,16 @@ impl JavaScriptConfig {
             "**/test_*.*".to_string(),
         ]
     }
+
+    pub(crate) fn default_ignore() -> Vec<String> {
+        vec![
+            "node_modules/**".to_string(),
+            "dist/**".to_string(),
+            "build/**".to_string(),
+            ".next/**".to_string(),
+            "coverage/**".to_string(),
+        ]
+    }
 }
 
 /// JavaScript/TypeScript lint policy configuration.

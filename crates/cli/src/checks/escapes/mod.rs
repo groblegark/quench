@@ -10,22 +10,19 @@ mod comment;
 mod go_suppress;
 mod javascript_suppress;
 mod lint_policy;
+mod metrics;
 mod patterns;
 mod shell_suppress;
 mod suppress_common;
+mod violations;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::Path;
-use std::sync::atomic::Ordering;
-
-use serde_json::{Value as JsonValue, json};
 
 use crate::adapter::{CfgTestInfo, FileKind, GenericAdapter, parse_suppress_attrs};
 use crate::check::{Check, CheckContext, CheckResult, Violation};
 use crate::config::{CheckLevel, EscapeAction, SuppressConfig, SuppressLevel};
 use crate::file_reader::FileContent;
-
-use crate::pattern::CompiledPattern;
 use go_suppress::check_go_suppress_violations;
 use javascript_suppress::check_javascript_suppress_violations;
 use shell_suppress::check_shell_suppress_violations;
@@ -34,124 +31,11 @@ use suppress_common::{
 };
 
 use comment::{has_justification_comment, is_match_in_comment};
+use metrics::EscapesMetrics;
 use patterns::{
     compile_merged_patterns, default_test_patterns, get_adapter_escape_patterns, merge_patterns,
 };
-
-/// Compiled escape pattern ready for matching.
-struct CompiledEscapePattern {
-    name: String,
-    matcher: CompiledPattern,
-    action: EscapeAction,
-    advice: String,
-    /// Required comment pattern for action = comment.
-    comment: Option<String>,
-    /// Count threshold for action = count (default: 0).
-    threshold: usize,
-}
-
-/// Metrics tracked during escapes check.
-#[derive(Default)]
-struct EscapesMetrics {
-    /// Counts per pattern for source files.
-    source: HashMap<String, usize>,
-    /// Counts per pattern for test files.
-    test: HashMap<String, usize>,
-    /// Per-package breakdown (only if workspace configured).
-    packages: HashMap<String, PackageMetrics>,
-}
-
-#[derive(Default)]
-struct PackageMetrics {
-    source: HashMap<String, usize>,
-    test: HashMap<String, usize>,
-}
-
-impl EscapesMetrics {
-    fn new() -> Self {
-        Self::default()
-    }
-
-    fn increment(&mut self, pattern_name: &str, is_test: bool) {
-        let map = if is_test {
-            &mut self.test
-        } else {
-            &mut self.source
-        };
-        *map.entry(pattern_name.to_string()).or_insert(0) += 1;
-    }
-
-    fn increment_package(&mut self, package: &str, pattern_name: &str, is_test: bool) {
-        let pkg = self.packages.entry(package.to_string()).or_default();
-        let map = if is_test {
-            &mut pkg.test
-        } else {
-            &mut pkg.source
-        };
-        *map.entry(pattern_name.to_string()).or_insert(0) += 1;
-    }
-
-    fn source_count(&self, pattern_name: &str) -> usize {
-        self.source.get(pattern_name).copied().unwrap_or(0)
-    }
-
-    /// Convert to JSON metrics structure.
-    fn to_json(&self, pattern_names: &[String]) -> JsonValue {
-        // Include all configured patterns, even with 0 count
-        let mut source_obj = serde_json::Map::new();
-        let mut test_obj = serde_json::Map::new();
-
-        for name in pattern_names {
-            source_obj.insert(
-                name.clone(),
-                json!(self.source.get(name).copied().unwrap_or(0)),
-            );
-            test_obj.insert(
-                name.clone(),
-                json!(self.test.get(name).copied().unwrap_or(0)),
-            );
-        }
-
-        json!({
-            "source": source_obj,
-            "test": test_obj
-        })
-    }
-
-    /// Convert to by_package structure (only if packages exist).
-    fn to_by_package(&self, pattern_names: &[String]) -> Option<HashMap<String, JsonValue>> {
-        if self.packages.is_empty() {
-            return None;
-        }
-
-        let mut result = HashMap::new();
-        for (pkg_name, pkg_metrics) in &self.packages {
-            let mut source_obj = serde_json::Map::new();
-            let mut test_obj = serde_json::Map::new();
-
-            for name in pattern_names {
-                source_obj.insert(
-                    name.clone(),
-                    json!(pkg_metrics.source.get(name).copied().unwrap_or(0)),
-                );
-                test_obj.insert(
-                    name.clone(),
-                    json!(pkg_metrics.test.get(name).copied().unwrap_or(0)),
-                );
-            }
-
-            result.insert(
-                pkg_name.clone(),
-                json!({
-                    "source": source_obj,
-                    "test": test_obj
-                }),
-            );
-        }
-
-        Some(result)
-    }
-}
+use violations::{create_threshold_violation, format_comment_advice, try_create_violation};
 
 /// The escapes check detects escape hatch patterns.
 pub struct EscapesCheck;
@@ -464,82 +348,6 @@ impl Check for EscapesCheck {
 
     fn default_enabled(&self) -> bool {
         true
-    }
-}
-
-fn default_advice(action: &EscapeAction) -> String {
-    match action {
-        EscapeAction::Forbid => "Remove this escape hatch from production code.".to_string(),
-        EscapeAction::Comment => "Add a justification comment.".to_string(),
-        EscapeAction::Count => "Reduce escape hatch usage.".to_string(),
-    }
-}
-
-fn try_create_violation(
-    ctx: &CheckContext,
-    path: &std::path::Path,
-    line: u32,
-    violation_type: &str,
-    advice: &str,
-    pattern_name: &str,
-) -> Option<Violation> {
-    let current = ctx.violation_count.fetch_add(1, Ordering::SeqCst);
-    if let Some(limit) = ctx.limit
-        && current >= limit
-    {
-        return None;
-    }
-
-    Some(Violation::file(path, line, violation_type, advice).with_pattern(pattern_name))
-}
-
-fn create_threshold_violation(
-    ctx: &CheckContext,
-    pattern_name: &str,
-    count: usize,
-    threshold: usize,
-    advice: &str,
-) -> Option<Violation> {
-    let current = ctx.violation_count.fetch_add(1, Ordering::SeqCst);
-    if let Some(limit) = ctx.limit
-        && current >= limit
-    {
-        return None;
-    }
-
-    Some(Violation {
-        file: None,
-        line: None,
-        violation_type: "threshold_exceeded".to_string(),
-        advice: advice.to_string(),
-        value: Some(count as i64),
-        threshold: Some(threshold as i64),
-        pattern: Some(pattern_name.to_string()),
-        lines: None,
-        nonblank: None,
-        other_file: None,
-        section: None,
-        commit: None,
-        message: None,
-        expected_docs: None,
-        area: None,
-        area_match: None,
-        path: None,
-        target: None,
-        change_type: None,
-        lines_changed: None,
-        scope: None,
-    })
-}
-
-fn format_comment_advice(custom_advice: &str, comment_pattern: &str) -> String {
-    if custom_advice.is_empty() || custom_advice == default_advice(&EscapeAction::Comment) {
-        format!(
-            "Add a {} comment explaining why this is necessary.",
-            comment_pattern
-        )
-    } else {
-        custom_advice.to_string()
     }
 }
 

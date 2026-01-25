@@ -107,3 +107,115 @@ pub fn assert_pattern_at_lines(pattern: &str, content: &str, expected_lines: &[u
         pattern, expected_lines, actual_lines
     );
 }
+
+// =============================================================================
+// GIT HELPERS
+// =============================================================================
+
+/// Git test helpers that operate on a Path.
+///
+/// These helpers are designed to be shared between unit tests and spec tests.
+/// They panic on failure since they're only used in test contexts.
+pub mod git {
+    use std::path::Path;
+    use std::process::Command;
+
+    /// Initialize a git repository with minimal config.
+    pub fn init(path: &Path) {
+        Command::new("git")
+            .args(["init"])
+            .current_dir(path)
+            .output()
+            .expect("git init should succeed");
+
+        Command::new("git")
+            .args(["config", "user.email", "test@example.com"])
+            .current_dir(path)
+            .output()
+            .expect("git config email should succeed");
+
+        Command::new("git")
+            .args(["config", "user.name", "Test User"])
+            .current_dir(path)
+            .output()
+            .expect("git config name should succeed");
+    }
+
+    /// Stage all files and create initial commit.
+    pub fn initial_commit(path: &Path) {
+        Command::new("git")
+            .args(["add", "."])
+            .current_dir(path)
+            .output()
+            .expect("git add should succeed");
+
+        Command::new("git")
+            .args(["commit", "-m", "feat: initial commit"])
+            .current_dir(path)
+            .output()
+            .expect("git commit should succeed");
+    }
+
+    /// Create and checkout a new branch.
+    pub fn create_branch(path: &Path, name: &str) {
+        Command::new("git")
+            .args(["checkout", "-b", name])
+            .current_dir(path)
+            .output()
+            .expect("git checkout -b should succeed");
+    }
+
+    /// Checkout an existing branch.
+    pub fn checkout(path: &Path, branch: &str) {
+        Command::new("git")
+            .args(["checkout", branch])
+            .current_dir(path)
+            .output()
+            .expect("git checkout should succeed");
+    }
+
+    /// Stage all changes.
+    pub fn add_all(path: &Path) {
+        Command::new("git")
+            .args(["add", "-A"])
+            .current_dir(path)
+            .output()
+            .expect("git add should succeed");
+    }
+
+    /// Create a commit with the given message (creates a dummy file if needed).
+    pub fn commit(path: &Path, message: &str) {
+        // Touch a file to ensure we have a change
+        let id = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("time should work")
+            .as_nanos();
+        let dummy_file = path.join(format!("dummy_{}.txt", id));
+        std::fs::write(&dummy_file, "dummy").expect("write should succeed");
+
+        add_all(path);
+
+        Command::new("git")
+            .args(["commit", "-m", message])
+            .current_dir(path)
+            .output()
+            .expect("git commit should succeed");
+    }
+
+    /// Create a commit only staging specific files.
+    pub fn commit_files(path: &Path, files: &[&str], message: &str) {
+        for file in files {
+            Command::new("git")
+                .args(["add", file])
+                .current_dir(path)
+                .output()
+                .expect("git add should succeed");
+        }
+
+        Command::new("git")
+            .args(["commit", "-m", message])
+            .current_dir(path)
+            .output()
+            .expect("git commit should succeed");
+    }
+}
