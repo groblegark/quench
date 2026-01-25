@@ -314,6 +314,7 @@ pub fn run(cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
         ci_mode: args.ci,
         base_branch,
         staged: args.staged,
+        verbose: args.verbose,
     });
 
     // Set up caching (unless --no-cache)

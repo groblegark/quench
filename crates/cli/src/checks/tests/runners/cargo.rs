@@ -4,11 +4,12 @@
 //! Cargo test runner.
 
 use std::collections::HashMap;
+use std::io::ErrorKind;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use super::coverage::collect_rust_coverage;
-use super::{RunnerContext, TestResult, TestRunResult, TestRunner};
+use super::{RunnerContext, TestResult, TestRunResult, TestRunner, run_with_timeout};
 use crate::config::TestSuiteConfig;
 
 /// Cargo test runner for Rust projects.
@@ -50,8 +51,26 @@ impl TestRunner for CargoRunner {
         cmd.stdout(Stdio::piped());
         cmd.stderr(Stdio::piped());
 
-        let output = match cmd.output() {
+        // Spawn and run with optional timeout
+        let child = match cmd.spawn() {
+            Ok(c) => c,
+            Err(e) => {
+                return TestRunResult::failed(
+                    start.elapsed(),
+                    format!("failed to spawn cargo: {e}"),
+                );
+            }
+        };
+
+        let output = match run_with_timeout(child, config.timeout) {
             Ok(out) => out,
+            Err(e) if e.kind() == ErrorKind::TimedOut => {
+                let timeout_msg = config
+                    .timeout
+                    .map(|t| format!("timed out after {:?}", t))
+                    .unwrap_or_else(|| "timed out".to_string());
+                return TestRunResult::failed(start.elapsed(), timeout_msg);
+            }
             Err(e) => {
                 return TestRunResult::failed(start.elapsed(), format!("failed to run cargo: {e}"));
             }
@@ -66,8 +85,10 @@ impl TestRunner for CargoRunner {
 
         // Check if cargo command itself failed (compilation error) with no tests parsed
         if !output.status.success() && result.tests.is_empty() && result.passed {
+            let exit_code = output.status.code();
+            let advice = categorize_cargo_error(&stderr, exit_code);
             let msg = stderr.lines().take(10).collect::<Vec<_>>().join("\n");
-            return TestRunResult::failed(total_time, format!("cargo test failed:\n{msg}"));
+            return TestRunResult::failed(total_time, format!("{advice}\n{msg}"));
         }
 
         // Collect coverage if requested
@@ -119,13 +140,14 @@ pub fn parse_cargo_output(stdout: &str, total_time: Duration) -> TestRunResult {
         if let Some(rest) = line.strip_prefix("test ")
             && let Some((name, result)) = parse_test_line(rest)
         {
-            let passed = result == "ok";
-            tests.push(if passed {
-                TestResult::passed(name, Duration::ZERO)
-            } else {
-                suite_passed = false;
-                TestResult::failed(name, Duration::ZERO)
-            });
+            match result {
+                "ok" => tests.push(TestResult::passed(name, Duration::ZERO)),
+                "ignored" => tests.push(TestResult::skipped(name)),
+                _ => {
+                    suite_passed = false;
+                    tests.push(TestResult::failed(name, Duration::ZERO));
+                }
+            }
         }
 
         // Parse suite summary: "test result: FAILED. X passed; Y failed; ..."
@@ -146,18 +168,51 @@ pub fn parse_cargo_output(stdout: &str, total_time: Duration) -> TestRunResult {
 }
 
 /// Parse a test line after "test " prefix.
-/// Returns (name, result) where result is "ok" or "FAILED".
+/// Returns (name, result) where result is "ok", "FAILED", or "ignored".
 #[inline]
 fn parse_test_line(rest: &str) -> Option<(&str, &str)> {
-    // Format: "<name> ... ok" or "<name> ... FAILED"
+    // Format: "<name> ... ok" or "<name> ... FAILED" or "<name> ... ignored"
     let sep_pos = rest.rfind(" ... ")?;
     let name = &rest[..sep_pos];
     let result = &rest[sep_pos + 5..]; // Skip " ... "
-    if result == "ok" || result == "FAILED" {
+    if result == "ok" || result == "FAILED" || result == "ignored" {
         Some((name, result))
     } else {
         None
     }
+}
+
+/// Categorize cargo test error for better error messaging.
+///
+/// Analyzes stderr output and exit code to provide actionable error messages.
+pub fn categorize_cargo_error(stderr: &str, exit_code: Option<i32>) -> String {
+    // Compilation error
+    if stderr.contains("error[E") || stderr.contains("could not compile") {
+        return "compilation failed - fix build errors first".to_string();
+    }
+
+    // Missing test binary
+    if stderr.contains("no test target") || stderr.contains("can't find") {
+        return "no tests found - check test file paths".to_string();
+    }
+
+    // Timeout (from signal) - SIGKILL is 137, timeout command uses 124
+    if exit_code == Some(137) || exit_code == Some(124) {
+        return "test timed out - check for infinite loops or deadlocks".to_string();
+    }
+
+    // Out of memory - SIGSEGV is 139
+    if stderr.contains("out of memory") || exit_code == Some(139) {
+        return "out of memory - reduce test parallelism or resource usage".to_string();
+    }
+
+    // Linker errors
+    if stderr.contains("linker") || stderr.contains("undefined reference") {
+        return "linking failed - check dependencies and feature flags".to_string();
+    }
+
+    // Generic failure
+    "tests failed".to_string()
 }
 
 #[cfg(test)]

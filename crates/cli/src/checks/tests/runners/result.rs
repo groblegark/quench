@@ -15,6 +15,8 @@ pub struct TestResult {
     pub name: String,
     /// Whether the test passed.
     pub passed: bool,
+    /// Whether the test was skipped/ignored.
+    pub skipped: bool,
     /// Test duration.
     pub duration: Duration,
 }
@@ -25,6 +27,7 @@ impl TestResult {
         Self {
             name: name.into(),
             passed: true,
+            skipped: false,
             duration,
         }
     }
@@ -34,7 +37,18 @@ impl TestResult {
         Self {
             name: name.into(),
             passed: false,
+            skipped: false,
             duration,
+        }
+    }
+
+    /// Create a skipped/ignored test result.
+    pub fn skipped(name: impl Into<String>) -> Self {
+        Self {
+            name: name.into(),
+            passed: true,
+            skipped: true,
+            duration: Duration::ZERO,
         }
     }
 }
@@ -141,12 +155,44 @@ impl TestRunResult {
 
     /// Get count of passed tests.
     pub fn passed_count(&self) -> usize {
-        self.tests.iter().filter(|t| t.passed).count()
+        self.tests.iter().filter(|t| t.passed && !t.skipped).count()
     }
 
     /// Get count of failed tests.
     pub fn failed_count(&self) -> usize {
-        self.tests.iter().filter(|t| !t.passed).count()
+        self.tests
+            .iter()
+            .filter(|t| !t.passed && !t.skipped)
+            .count()
+    }
+
+    /// Get count of skipped/ignored tests.
+    pub fn skipped_count(&self) -> usize {
+        self.tests.iter().filter(|t| t.skipped).count()
+    }
+
+    /// Calculate duration percentile (p50, p90, p99).
+    ///
+    /// Excludes skipped tests from the calculation since they have no timing.
+    /// Returns None if no non-skipped tests exist.
+    pub fn percentile_duration(&self, p: f64) -> Option<Duration> {
+        if self.tests.is_empty() {
+            return None;
+        }
+        let mut durations: Vec<Duration> = self
+            .tests
+            .iter()
+            .filter(|t| !t.skipped)
+            .map(|t| t.duration)
+            .collect();
+        if durations.is_empty() {
+            return None;
+        }
+        durations.sort();
+        let idx = ((durations.len() as f64 * p / 100.0).ceil() as usize)
+            .saturating_sub(1)
+            .min(durations.len() - 1);
+        Some(durations[idx])
     }
 }
 

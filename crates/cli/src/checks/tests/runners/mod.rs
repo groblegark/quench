@@ -21,7 +21,7 @@ mod vitest;
 
 pub use bats::BatsRunner;
 pub use bun::BunRunner;
-pub use cargo::{CargoRunner, parse_cargo_output};
+pub use cargo::{CargoRunner, categorize_cargo_error, parse_cargo_output};
 pub use coverage::CoverageResult;
 pub use custom::CustomRunner;
 pub use go::GoRunner;
@@ -39,9 +39,11 @@ pub use targets::{
 pub use vitest::VitestRunner;
 
 use std::collections::HashMap;
+use std::io::{self, Read};
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Output, Stdio};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use crate::config::TestSuiteConfig;
 
@@ -58,6 +60,8 @@ pub struct RunnerContext<'a> {
     pub ci_mode: bool,
     /// Whether to collect coverage.
     pub collect_coverage: bool,
+    /// Whether verbose output is enabled.
+    pub verbose: bool,
 }
 
 /// Trait for pluggable test runners.
@@ -239,6 +243,69 @@ pub fn merge_coverage_results(a: CoverageResult, b: CoverageResult) -> CoverageR
         line_coverage: total_coverage,
         files,
         packages,
+    }
+}
+
+// =============================================================================
+// Timeout Support
+// =============================================================================
+
+/// Run a child process with an optional timeout.
+///
+/// If timeout is None, waits indefinitely.
+/// If timeout expires, kills the process and returns a TimedOut error.
+pub fn run_with_timeout(mut child: Child, timeout: Option<Duration>) -> io::Result<Output> {
+    match timeout {
+        Some(t) => {
+            let start = Instant::now();
+            let poll_interval = Duration::from_millis(50);
+
+            loop {
+                match child.try_wait() {
+                    Ok(Some(status)) => {
+                        // Process finished - collect output
+                        let stdout = child
+                            .stdout
+                            .take()
+                            .map(|mut s| {
+                                let mut buf = Vec::new();
+                                s.read_to_end(&mut buf).ok();
+                                buf
+                            })
+                            .unwrap_or_default();
+                        let stderr = child
+                            .stderr
+                            .take()
+                            .map(|mut s| {
+                                let mut buf = Vec::new();
+                                s.read_to_end(&mut buf).ok();
+                                buf
+                            })
+                            .unwrap_or_default();
+                        return Ok(Output {
+                            status,
+                            stdout,
+                            stderr,
+                        });
+                    }
+                    Ok(None) => {
+                        // Process still running
+                        if start.elapsed() > t {
+                            // Timeout - kill the process
+                            child.kill().ok();
+                            child.wait().ok();
+                            return Err(io::Error::new(
+                                io::ErrorKind::TimedOut,
+                                format!("command timed out after {:?}", t),
+                            ));
+                        }
+                        std::thread::sleep(poll_interval);
+                    }
+                    Err(e) => return Err(e),
+                }
+            }
+        }
+        None => child.wait_with_output(),
     }
 }
 

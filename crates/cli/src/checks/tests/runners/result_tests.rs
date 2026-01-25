@@ -118,3 +118,119 @@ fn run_result_with_coverage() {
     assert_eq!(cov.get("rust"), Some(&82.5));
     assert_eq!(cov.get("python"), Some(&71.0));
 }
+
+#[test]
+fn test_result_skipped() {
+    let result = TestResult::skipped("test_ignored");
+    assert_eq!(result.name, "test_ignored");
+    assert!(result.passed);
+    assert!(result.skipped);
+    assert_eq!(result.duration, Duration::ZERO);
+}
+
+#[test]
+fn run_result_skipped_count() {
+    let tests = vec![
+        TestResult::passed("test_one", Duration::from_millis(100)),
+        TestResult::skipped("test_two"),
+        TestResult::failed("test_three", Duration::from_millis(200)),
+        TestResult::skipped("test_four"),
+    ];
+    let result = TestRunResult::passed(Duration::from_millis(300)).with_tests(tests);
+    assert_eq!(result.test_count(), 4);
+    assert_eq!(result.passed_count(), 1);
+    assert_eq!(result.failed_count(), 1);
+    assert_eq!(result.skipped_count(), 2);
+}
+
+#[test]
+fn run_result_passed_excludes_skipped() {
+    let tests = vec![
+        TestResult::passed("test_one", Duration::from_millis(100)),
+        TestResult::skipped("test_two"),
+    ];
+    let result = TestRunResult::passed(Duration::from_millis(100)).with_tests(tests);
+    // Only count non-skipped passing tests
+    assert_eq!(result.passed_count(), 1);
+}
+
+#[test]
+fn percentile_duration_empty() {
+    let result = TestRunResult::passed(Duration::from_millis(100));
+    assert!(result.percentile_duration(50.0).is_none());
+}
+
+#[test]
+fn percentile_duration_single_test() {
+    let tests = vec![TestResult::passed("test_one", Duration::from_millis(100))];
+    let result = TestRunResult::passed(Duration::from_millis(100)).with_tests(tests);
+    assert_eq!(
+        result.percentile_duration(50.0),
+        Some(Duration::from_millis(100))
+    );
+    assert_eq!(
+        result.percentile_duration(99.0),
+        Some(Duration::from_millis(100))
+    );
+}
+
+#[test]
+fn percentile_duration_multiple_tests() {
+    let tests = vec![
+        TestResult::passed("t1", Duration::from_millis(10)),
+        TestResult::passed("t2", Duration::from_millis(20)),
+        TestResult::passed("t3", Duration::from_millis(30)),
+        TestResult::passed("t4", Duration::from_millis(40)),
+        TestResult::passed("t5", Duration::from_millis(50)),
+        TestResult::passed("t6", Duration::from_millis(60)),
+        TestResult::passed("t7", Duration::from_millis(70)),
+        TestResult::passed("t8", Duration::from_millis(80)),
+        TestResult::passed("t9", Duration::from_millis(90)),
+        TestResult::passed("t10", Duration::from_millis(100)),
+    ];
+    let result = TestRunResult::passed(Duration::from_millis(550)).with_tests(tests);
+
+    // p50 should be at the 5th element (index 4) = 50ms
+    assert_eq!(
+        result.percentile_duration(50.0),
+        Some(Duration::from_millis(50))
+    );
+    // p90 should be at the 9th element (index 8) = 90ms
+    assert_eq!(
+        result.percentile_duration(90.0),
+        Some(Duration::from_millis(90))
+    );
+    // p99 should be at the 10th element (index 9) = 100ms
+    assert_eq!(
+        result.percentile_duration(99.0),
+        Some(Duration::from_millis(100))
+    );
+}
+
+#[test]
+fn percentile_duration_excludes_skipped() {
+    let tests = vec![
+        TestResult::passed("t1", Duration::from_millis(100)),
+        TestResult::skipped("t2"),
+        TestResult::passed("t3", Duration::from_millis(200)),
+        TestResult::skipped("t4"),
+    ];
+    let result = TestRunResult::passed(Duration::from_millis(300)).with_tests(tests);
+
+    // Only 2 non-skipped tests: 100ms and 200ms
+    assert_eq!(
+        result.percentile_duration(50.0),
+        Some(Duration::from_millis(100))
+    );
+    assert_eq!(
+        result.percentile_duration(99.0),
+        Some(Duration::from_millis(200))
+    );
+}
+
+#[test]
+fn percentile_duration_all_skipped() {
+    let tests = vec![TestResult::skipped("t1"), TestResult::skipped("t2")];
+    let result = TestRunResult::passed(Duration::ZERO).with_tests(tests);
+    assert!(result.percentile_duration(50.0).is_none());
+}

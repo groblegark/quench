@@ -72,6 +72,10 @@ pub struct TestSuiteConfig {
     /// Maximum time for slowest individual test.
     #[serde(default, deserialize_with = "duration::deserialize_option")]
     pub max_test: Option<std::time::Duration>,
+
+    /// Timeout for suite execution (kills process if exceeded).
+    #[serde(default, deserialize_with = "duration::deserialize_option")]
+    pub timeout: Option<std::time::Duration>,
 }
 
 /// Time limit configuration for test suites.

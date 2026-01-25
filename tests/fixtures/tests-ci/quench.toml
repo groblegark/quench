@@ -2,6 +2,7 @@ version = 1
 
 [[check.tests.suite]]
 runner = "cargo"
+timeout = "60s"  # Prevent runaway tests
 
 [check.tests.coverage]
 check = "warn"

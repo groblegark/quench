@@ -163,6 +163,9 @@ impl TestsCheck {
                     "passed": s.passed,
                     "test_count": s.test_count,
                 });
+                if s.skipped_count > 0 {
+                    obj["skipped_count"] = json!(s.skipped_count);
+                }
                 if let Some(ref err) = s.error {
                     obj["error"] = json!(err);
                 }
@@ -177,6 +180,15 @@ impl TestsCheck {
                 }
                 if let Some(ref test) = s.max_test {
                     obj["max_test"] = json!(test);
+                }
+                if let Some(p50) = s.p50_ms {
+                    obj["p50_ms"] = json!(p50);
+                }
+                if let Some(p90) = s.p90_ms {
+                    obj["p90_ms"] = json!(p90);
+                }
+                if let Some(p99) = s.p99_ms {
+                    obj["p99_ms"] = json!(p99);
                 }
                 obj
             }).collect::<Vec<_>>(),
@@ -720,6 +732,7 @@ impl TestsCheck {
             root: ctx.root,
             ci_mode: ctx.ci_mode,
             collect_coverage: ctx.ci_mode, // Coverage only in CI
+            verbose: ctx.verbose,
         };
 
         // Filter suites for current mode
@@ -764,13 +777,23 @@ impl TestsCheck {
 
     /// Execute a single test suite and return its result.
     fn run_single_suite(suite: &TestSuiteConfig, runner_ctx: &RunnerContext) -> SuiteResult {
+        let suite_name = suite.name.clone().unwrap_or_else(|| suite.runner.clone());
+
+        // Verbose: show which suite is starting
+        if runner_ctx.verbose {
+            eprintln!("  Running suite: {} ({})", suite_name, suite.runner);
+        }
+
         // Run setup command if configured
         if let Some(ref setup) = suite.setup
             && let Err(e) = run_setup_command(setup, runner_ctx.root)
         {
             // Setup failure skips the suite
+            if runner_ctx.verbose {
+                eprintln!("  SKIP {} (setup failed)", suite_name);
+            }
             return SuiteResult {
-                name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
+                name: suite_name,
                 runner: suite.runner.clone(),
                 skipped: true,
                 error: Some(e),
@@ -782,8 +805,11 @@ impl TestsCheck {
         let runner = match get_runner(&suite.runner) {
             Some(r) => r,
             None => {
+                if runner_ctx.verbose {
+                    eprintln!("  SKIP {} (unknown runner)", suite_name);
+                }
                 return SuiteResult {
-                    name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
+                    name: suite_name,
                     runner: suite.runner.clone(),
                     skipped: true,
                     error: Some(format!("unknown runner: {}", suite.runner)),
@@ -794,8 +820,11 @@ impl TestsCheck {
 
         // Check runner availability
         if !runner.available(runner_ctx) {
+            if runner_ctx.verbose {
+                eprintln!("  SKIP {} (runner not available)", suite_name);
+            }
             return SuiteResult {
-                name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
+                name: suite_name,
                 runner: suite.runner.clone(),
                 skipped: true,
                 error: Some(format!("{} not available", suite.runner)),
@@ -808,26 +837,49 @@ impl TestsCheck {
 
         // Collect metrics before moving error
         let test_count = run_result.test_count();
+        let skipped_count = run_result.skipped_count();
         let total_ms = run_result.total_time.as_millis() as u64;
         let avg_ms = run_result.avg_duration().map(|d| d.as_millis() as u64);
         let max_ms = run_result
             .slowest_test()
             .map(|t| t.duration.as_millis() as u64);
         let max_test = run_result.slowest_test().map(|t| t.name.clone());
+        let p50_ms = run_result
+            .percentile_duration(50.0)
+            .map(|d| d.as_millis() as u64);
+        let p90_ms = run_result
+            .percentile_duration(90.0)
+            .map(|d| d.as_millis() as u64);
+        let p99_ms = run_result
+            .percentile_duration(99.0)
+            .map(|d| d.as_millis() as u64);
         let coverage = run_result.coverage.clone();
         let coverage_by_package = run_result.coverage_by_package.clone();
 
+        // Verbose: show suite completion
+        if runner_ctx.verbose {
+            let status = if run_result.passed { "PASS" } else { "FAIL" };
+            eprintln!(
+                "  {} {} ({} tests, {}ms)",
+                status, suite_name, test_count, total_ms,
+            );
+        }
+
         SuiteResult {
-            name: suite.name.clone().unwrap_or_else(|| suite.runner.clone()),
+            name: suite_name,
             runner: suite.runner.clone(),
             passed: run_result.passed,
             skipped: run_result.skipped,
             error: run_result.error,
             test_count,
+            skipped_count,
             total_ms,
             avg_ms,
             max_ms,
             max_test,
+            p50_ms,
+            p90_ms,
+            p99_ms,
             coverage,
             coverage_by_package,
         }
@@ -956,6 +1008,8 @@ struct SuiteResult {
     error: Option<String>,
     /// Number of tests run.
     test_count: usize,
+    /// Number of skipped/ignored tests.
+    skipped_count: usize,
     /// Total time in milliseconds.
     total_ms: u64,
     /// Average time per test in milliseconds.
@@ -964,6 +1018,12 @@ struct SuiteResult {
     max_ms: Option<u64>,
     /// Name of the slowest test.
     max_test: Option<String>,
+    /// 50th percentile duration in milliseconds.
+    p50_ms: Option<u64>,
+    /// 90th percentile duration in milliseconds.
+    p90_ms: Option<u64>,
+    /// 99th percentile duration in milliseconds.
+    p99_ms: Option<u64>,
     /// Coverage data (language -> percentage).
     coverage: Option<std::collections::HashMap<String, f64>>,
     /// Per-package coverage data (package name -> percentage).
