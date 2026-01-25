@@ -80,6 +80,12 @@ fn git_mv(temp: &TempDir, old: &str, new: &str) {
         .expect("Failed to rename file");
 }
 
+/// Create a file and stage it.
+fn create_and_stage(temp: &TempDir, filename: &str, content: &str) {
+    std::fs::write(temp.path().join(filename), content).unwrap();
+    git_add(temp, filename);
+}
+
 // =============================================================================
 // GET_STAGED_FILES TESTS
 // =============================================================================
@@ -101,8 +107,7 @@ fn get_staged_files_with_staged_file() {
     create_initial_commit(&temp);
 
     // Create and stage a file
-    std::fs::write(temp.path().join("test.txt"), "content").unwrap();
-    git_add(&temp, "test.txt");
+    create_and_stage(&temp, "test.txt", "content");
 
     let files = get_staged_files(temp.path()).unwrap();
     assert_eq!(files.len(), 1);
@@ -116,10 +121,8 @@ fn get_staged_files_multiple_staged() {
     create_initial_commit(&temp);
 
     // Create and stage multiple files
-    std::fs::write(temp.path().join("a.txt"), "a").unwrap();
-    std::fs::write(temp.path().join("b.txt"), "b").unwrap();
-    git_add(&temp, "a.txt");
-    git_add(&temp, "b.txt");
+    create_and_stage(&temp, "a.txt", "a");
+    create_and_stage(&temp, "b.txt", "b");
 
     let files = get_staged_files(temp.path()).unwrap();
     assert_eq!(files.len(), 2);
@@ -146,8 +149,7 @@ fn get_staged_files_in_subdirectory() {
 
     // Create and stage a file in a subdirectory
     std::fs::create_dir(temp.path().join("subdir")).unwrap();
-    std::fs::write(temp.path().join("subdir/nested.txt"), "content").unwrap();
-    git_add(&temp, "subdir/nested.txt");
+    create_and_stage(&temp, "subdir/nested.txt", "content");
 
     let files = get_staged_files(temp.path()).unwrap();
     assert_eq!(files.len(), 1);
@@ -160,8 +162,7 @@ fn get_staged_files_new_repo_no_commits() {
     init_git_repo(&temp);
 
     // Stage a file in a repo with no commits yet
-    std::fs::write(temp.path().join("first.txt"), "content").unwrap();
-    git_add(&temp, "first.txt");
+    create_and_stage(&temp, "first.txt", "content");
 
     let files = get_staged_files(temp.path()).unwrap();
     assert_eq!(files.len(), 1);
@@ -180,8 +181,7 @@ fn get_changed_files_includes_committed() {
 
     // Create new branch with changes
     git_checkout_b(&temp, "feature");
-    std::fs::write(temp.path().join("new.txt"), "content").unwrap();
-    git_add(&temp, "new.txt");
+    create_and_stage(&temp, "new.txt", "content");
     git_commit(&temp, "feat: add new file");
 
     let files = get_changed_files(temp.path(), "main").unwrap();
@@ -197,8 +197,7 @@ fn get_changed_files_includes_staged() {
 
     // Create new branch with staged changes
     git_checkout_b(&temp, "feature");
-    std::fs::write(temp.path().join("staged.txt"), "content").unwrap();
-    git_add(&temp, "staged.txt");
+    create_and_stage(&temp, "staged.txt", "content");
 
     let files = get_changed_files(temp.path(), "main").unwrap();
     assert_eq!(files.len(), 1);
@@ -232,13 +231,11 @@ fn get_changed_files_combines_all_changes() {
     git_checkout_b(&temp, "feature");
 
     // Add a committed file
-    std::fs::write(temp.path().join("committed.txt"), "content").unwrap();
-    git_add(&temp, "committed.txt");
+    create_and_stage(&temp, "committed.txt", "content");
     git_commit(&temp, "feat: add committed file");
 
     // Add a staged file
-    std::fs::write(temp.path().join("staged.txt"), "content").unwrap();
-    git_add(&temp, "staged.txt");
+    create_and_stage(&temp, "staged.txt", "content");
 
     // Modify an existing file (unstaged)
     std::fs::write(temp.path().join("README.md"), "# Modified\n").unwrap();
@@ -299,8 +296,7 @@ fn get_staged_files_includes_deleted() {
     init_git_repo(&temp);
 
     // Create and commit a file
-    std::fs::write(temp.path().join("to_delete.txt"), "content").unwrap();
-    git_add(&temp, "to_delete.txt");
+    create_and_stage(&temp, "to_delete.txt", "content");
     git_commit(&temp, "feat: add file");
 
     // Delete and stage the deletion
@@ -319,8 +315,7 @@ fn get_changed_files_includes_deleted_committed() {
     create_initial_commit(&temp);
 
     // Add a file on main
-    std::fs::write(temp.path().join("to_delete.txt"), "content").unwrap();
-    git_add(&temp, "to_delete.txt");
+    create_and_stage(&temp, "to_delete.txt", "content");
     git_commit(&temp, "feat: add file");
 
     // Create branch and delete the file
@@ -341,8 +336,7 @@ fn get_changed_files_includes_deleted_staged() {
     create_initial_commit(&temp);
 
     // Add and commit a file
-    std::fs::write(temp.path().join("to_delete.txt"), "content").unwrap();
-    git_add(&temp, "to_delete.txt");
+    create_and_stage(&temp, "to_delete.txt", "content");
     git_commit(&temp, "feat: add file");
 
     // Create branch and stage deletion
@@ -379,8 +373,7 @@ fn get_staged_files_includes_renamed_new_path() {
     init_git_repo(&temp);
 
     // Create and commit a file
-    std::fs::write(temp.path().join("old_name.txt"), "content").unwrap();
-    git_add(&temp, "old_name.txt");
+    create_and_stage(&temp, "old_name.txt", "content");
     git_commit(&temp, "feat: add file");
 
     // Rename the file using git mv
@@ -409,8 +402,7 @@ fn get_changed_files_includes_renamed_new_path() {
     git_checkout_b(&temp, "feature");
 
     // Add and commit a file
-    std::fs::write(temp.path().join("old_name.txt"), "content").unwrap();
-    git_add(&temp, "old_name.txt");
+    create_and_stage(&temp, "old_name.txt", "content");
     git_commit(&temp, "feat: add file");
 
     // Rename using git mv and commit
