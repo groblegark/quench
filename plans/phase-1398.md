@@ -1,5 +1,7 @@
 # Phase 1398: Timing Mode - Specs
 
+**Root Feature:** `quench-3608`
+
 ## Overview
 
 Add `--timing` flag to `quench check` that displays performance timing breakdown. This phase focuses on writing behavioral specs (tests) first, with implementation to follow in a subsequent phase. The timing information helps developers understand where time is spent and identify performance bottlenecks.
