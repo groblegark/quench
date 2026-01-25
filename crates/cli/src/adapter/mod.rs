@@ -14,6 +14,7 @@ pub mod generic;
 pub mod glob;
 pub mod go;
 pub mod javascript;
+pub mod patterns;
 pub mod rust;
 pub mod shell;
 
@@ -288,48 +289,20 @@ impl AdapterRegistry {
     }
 }
 
-/// Resolved patterns for an adapter.
-pub struct ResolvedPatterns {
-    pub source: Vec<String>,
-    pub test: Vec<String>,
-    pub ignore: Vec<String>,
-}
+// Re-export ResolvedPatterns from the patterns module.
+pub use patterns::ResolvedPatterns;
 
 /// Resolve Rust patterns from config.
 fn resolve_rust_patterns(
     config: &crate::config::Config,
     fallback_test: &[String],
 ) -> ResolvedPatterns {
-    use crate::config::RustConfig;
-
-    // Test patterns: rust config -> project config -> defaults
-    let test = if !config.rust.tests.is_empty() {
-        config.rust.tests.clone()
-    } else if !fallback_test.is_empty() {
-        fallback_test.to_vec()
-    } else {
-        RustConfig::default_tests()
-    };
-
-    // Source patterns: rust config -> defaults
-    let source = if !config.rust.source.is_empty() {
-        config.rust.source.clone()
-    } else {
-        RustConfig::default_source()
-    };
-
-    // Ignore patterns: rust config -> defaults
-    let ignore = if !config.rust.ignore.is_empty() {
-        config.rust.ignore.clone()
-    } else {
-        RustConfig::default_ignore()
-    };
-
-    ResolvedPatterns {
-        source,
-        test,
-        ignore,
-    }
+    patterns::resolve_patterns::<crate::config::RustConfig>(
+        &config.rust.source,
+        &config.rust.tests,
+        &config.rust.ignore,
+        fallback_test,
+    )
 }
 
 /// Resolve Go patterns from config.
@@ -337,30 +310,13 @@ fn resolve_go_patterns(
     config: &crate::config::Config,
     fallback_test: &[String],
 ) -> ResolvedPatterns {
-    use crate::config::GoConfig;
-
-    let test = if !config.golang.tests.is_empty() {
-        config.golang.tests.clone()
-    } else if !fallback_test.is_empty() {
-        fallback_test.to_vec()
-    } else {
-        GoConfig::default_tests()
-    };
-
-    let source = if !config.golang.source.is_empty() {
-        config.golang.source.clone()
-    } else {
-        GoConfig::default_source()
-    };
-
-    // Go uses vendor/ ignore by default
-    let ignore = vec!["vendor/**".to_string()];
-
-    ResolvedPatterns {
-        source,
-        test,
-        ignore,
-    }
+    // Go config doesn't have an ignore field, so pass empty slice
+    patterns::resolve_patterns::<crate::config::GoConfig>(
+        &config.golang.source,
+        &config.golang.tests,
+        &[],
+        fallback_test,
+    )
 }
 
 /// Resolve JavaScript patterns from config.
@@ -368,36 +324,13 @@ fn resolve_javascript_patterns(
     config: &crate::config::Config,
     fallback_test: &[String],
 ) -> ResolvedPatterns {
-    use crate::config::JavaScriptConfig;
-
-    let test = if !config.javascript.tests.is_empty() {
-        config.javascript.tests.clone()
-    } else if !fallback_test.is_empty() {
-        fallback_test.to_vec()
-    } else {
-        JavaScriptConfig::default_tests()
-    };
-
-    let source = if !config.javascript.source.is_empty() {
-        config.javascript.source.clone()
-    } else {
-        JavaScriptConfig::default_source()
-    };
-
-    // JavaScript uses node_modules/, dist/, etc. ignore by default
-    let ignore = vec![
-        "node_modules/**".to_string(),
-        "dist/**".to_string(),
-        "build/**".to_string(),
-        ".next/**".to_string(),
-        "coverage/**".to_string(),
-    ];
-
-    ResolvedPatterns {
-        source,
-        test,
-        ignore,
-    }
+    // JavaScript config doesn't have an ignore field, so pass empty slice
+    patterns::resolve_patterns::<crate::config::JavaScriptConfig>(
+        &config.javascript.source,
+        &config.javascript.tests,
+        &[],
+        fallback_test,
+    )
 }
 
 /// Resolve Shell patterns from config.
@@ -405,30 +338,13 @@ fn resolve_shell_patterns(
     config: &crate::config::Config,
     fallback_test: &[String],
 ) -> ResolvedPatterns {
-    use crate::config::ShellConfig;
-
-    let test = if !config.shell.tests.is_empty() {
-        config.shell.tests.clone()
-    } else if !fallback_test.is_empty() {
-        fallback_test.to_vec()
-    } else {
-        ShellConfig::default_tests()
-    };
-
-    let source = if !config.shell.source.is_empty() {
-        config.shell.source.clone()
-    } else {
-        ShellConfig::default_source()
-    };
-
-    // Shell has no ignore patterns by default
-    let ignore = vec![];
-
-    ResolvedPatterns {
-        source,
-        test,
-        ignore,
-    }
+    // Shell config doesn't have an ignore field, so pass empty slice
+    patterns::resolve_patterns::<crate::config::ShellConfig>(
+        &config.shell.source,
+        &config.shell.tests,
+        &[],
+        fallback_test,
+    )
 }
 
 #[cfg(test)]

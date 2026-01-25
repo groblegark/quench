@@ -260,12 +260,12 @@ impl SpecsConfig {
 
     /// Default max lines per spec file (1000).
     pub(super) fn default_max_lines() -> Option<usize> {
-        Some(1000)
+        Some(super::defaults::size::MAX_LINES_SPEC)
     }
 
     /// Default max tokens per spec file (20000).
     pub(super) fn default_max_tokens() -> Option<usize> {
-        Some(20000)
+        Some(super::defaults::size::MAX_TOKENS)
     }
 }
 
@@ -429,44 +429,27 @@ impl Default for ClocConfig {
 
 impl ClocConfig {
     pub(super) fn default_max_lines() -> usize {
-        750
+        super::defaults::size::MAX_LINES
     }
 
     pub(super) fn default_max_lines_test() -> usize {
-        1100
+        super::defaults::size::MAX_LINES_TEST
     }
 
     pub(super) fn default_max_tokens() -> Option<usize> {
-        Some(20000)
+        Some(super::defaults::size::MAX_TOKENS)
     }
 
     pub(super) fn default_test_patterns() -> Vec<String> {
-        vec![
-            "**/tests/**".to_string(),
-            "**/test/**".to_string(),
-            "**/*_test.*".to_string(),
-            "**/*_tests.*".to_string(),
-            "**/*.test.*".to_string(),
-            "**/*.spec.*".to_string(),
-            "**/test_*.*".to_string(),
-        ]
+        super::defaults::test_patterns::generic()
     }
 
     pub(super) fn default_advice() -> String {
-        "Can the code be made more concise?\n\n\
-         Look for repetitive patterns that could be extracted into helper functions\n\
-         or consider refactoring to be more unit testable.\n\n\
-         If not, split large source files into sibling modules or submodules in a folder,\n\n\
-         Avoid picking and removing individual lines to satisfy the linter,\n\
-         prefer properly refactoring out testable code blocks."
-            .to_string()
+        super::defaults::advice::CLOC_SOURCE.to_string()
     }
 
     pub(super) fn default_advice_test() -> String {
-        "Can tests be parameterized or use shared fixtures to be more concise?\n\
-         Look for repetitive patterns that could be extracted into helper functions.\n\
-         If not, split large test files into a folder."
-            .to_string()
+        super::defaults::advice::CLOC_TEST.to_string()
     }
 }
 

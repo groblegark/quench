@@ -13,7 +13,19 @@ use crate::adapter::{
 use crate::config::{EscapeAction, EscapePattern as ConfigEscapePattern};
 use crate::pattern::{CompiledPattern, PatternError};
 
-use super::{CompiledEscapePattern, default_advice};
+use super::violations::default_advice;
+
+/// Compiled escape pattern ready for matching.
+pub(super) struct CompiledEscapePattern {
+    pub(super) name: String,
+    pub(super) matcher: CompiledPattern,
+    pub(super) action: EscapeAction,
+    pub(super) advice: String,
+    /// Required comment pattern for action = comment.
+    pub(super) comment: Option<String>,
+    /// Count threshold for action = count (default: 0).
+    pub(super) threshold: usize,
+}
 
 /// Default test patterns for file classification.
 pub(super) fn default_test_patterns() -> Vec<String> {

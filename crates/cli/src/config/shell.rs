@@ -60,6 +60,10 @@ impl ShellConfig {
         ]
     }
 
+    pub(crate) fn default_ignore() -> Vec<String> {
+        vec![]
+    }
+
     pub(crate) fn default_cloc_advice() -> &'static str {
         "Can the script be made more concise?\n\
          Look for repetitive patterns that could be extracted into helper functions.\n\

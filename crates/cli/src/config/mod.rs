@@ -6,6 +6,7 @@
 //! Handles quench.toml parsing with version validation and unknown key warnings.
 
 mod checks;
+pub mod defaults;
 mod go;
 mod javascript;
 mod ratchet;
@@ -697,3 +698,7 @@ pub fn parse_with_warnings(content: &str, path: &Path) -> Result<Config> {
 #[cfg(test)]
 #[path = "mod_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "suppress_tests.rs"]
+mod suppress_tests;
