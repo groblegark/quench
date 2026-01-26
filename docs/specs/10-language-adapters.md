@@ -19,6 +19,7 @@ Adapters are auto-detected based on project files:
 | `golang` | `go.mod` exists | `**/*.go` |
 | `javascript` | `package.json`, `tsconfig.json`, or `jsconfig.json` exists | `**/*.js`, `**/*.ts`, `**/*.jsx`, `**/*.tsx` |
 | `shell` | `*.sh` files in root, `bin/`, or `scripts/` | `**/*.sh`, `**/*.bash` |
+| `ruby` | `Gemfile`, `*.gemspec`, `config.ru`, `config/application.rb` | `**/*.rb`, `**/*.rake` |
 | `generic` | Always (fallback) | From config |
 
 Multiple adapters can be active. Files match the first applicable adapter.
@@ -130,6 +131,33 @@ check = "error"                  # error | warn | off
 lint_changes = "standalone"
 ```
 
+## Ruby Adapter
+
+See [langs/ruby.md](langs/ruby.md) for full Ruby configuration.
+
+### Summary
+
+- **Test detection**: `*_spec.rb` (RSpec), `*_test.rb` (Minitest), `features/` (Cucumber)
+- **Escape patterns**: `eval(`, `instance_eval`, `class_eval`, debugger statements
+- **Lint suppression**: `# rubocop:disable`, `# standard:disable`
+- **Coverage**: SimpleCov
+
+```toml
+[ruby]
+# source = ["**/*.rb", "**/*.rake", "Rakefile", "Gemfile", "*.gemspec"]
+# tests = ["spec/**/*_spec.rb", "test/**/*_test.rb", "features/**/*.rb"]
+
+[ruby.cloc]
+check = "error"                  # error | warn | off
+
+[ruby.suppress]
+check = "comment"                # forbid | comment | allow
+
+[ruby.policy]
+check = "error"                  # error | warn | off
+lint_changes = "standalone"
+```
+
 ## Generic / Fallback
 
 For unrecognized languages, quench uses patterns from `[project]`:
@@ -155,6 +183,6 @@ tests = ["test/**/*", "tests/**/*", "**/*_test.*", "**/*.spec.*"]
 
 | Adapter | Detection | Test Patterns | Key Escapes |
 |---------|-----------|---------------|-------------|
-| `python` | `pyproject.toml` | `test_*.py`, `*_test.py` | `# type: ignore`, `# noqa` |
+| `python` | `pyproject.toml`, `setup.py` | `test_*.py`, `*_test.py`, `conftest.py` | `# type: ignore`, `# noqa`, `eval()` |
 
 Future adapters will also provide build metrics. See [checks/build.md](checks/build.md) for how adapters integrate with the build check (bundle size, build time, etc.).

@@ -158,6 +158,7 @@ docs/specs/
 └── langs/              # Language-specific details
     ├── golang.md       # Go: build metrics, coverage
     ├── javascript.md   # JS/TS: packages, tests
+    ├── ruby.md         # Ruby: RSpec, Minitest, SimpleCov
     ├── rust.md         # Rust: build metrics, coverage
     └── shell.md        # Shell: bats, kcov coverage
 ```
