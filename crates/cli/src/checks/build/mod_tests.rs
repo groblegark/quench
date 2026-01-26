@@ -98,3 +98,121 @@ fn build_metrics_to_json() {
     assert_eq!(json["time"]["cold"], 10.0);
     assert_eq!(json["time"]["hot"], 2.0);
 }
+
+// =============================================================================
+// JSON STRUCTURE VERIFICATION TESTS
+// =============================================================================
+
+#[test]
+fn build_metrics_json_structure() {
+    let mut metrics = BuildMetrics::default();
+    metrics.sizes.insert("myapp".to_string(), 5_242_880);
+    metrics.sizes.insert("myserver".to_string(), 2_097_152);
+    metrics.time_cold = Some(Duration::from_secs_f64(45.234));
+    metrics.time_hot = Some(Duration::from_secs_f64(2.456));
+
+    let json = metrics.to_json();
+
+    // Verify structure
+    assert!(json.get("size").is_some(), "should have size object");
+    assert!(json.get("time").is_some(), "should have time object");
+
+    // Verify size values
+    let size = json.get("size").unwrap();
+    assert_eq!(
+        size.get("myapp").and_then(|v| v.as_u64()),
+        Some(5_242_880),
+        "myapp size should be 5242880"
+    );
+    assert_eq!(
+        size.get("myserver").and_then(|v| v.as_u64()),
+        Some(2_097_152),
+        "myserver size should be 2097152"
+    );
+
+    // Verify time values (as floats)
+    let time = json.get("time").unwrap();
+    let cold = time.get("cold").and_then(|v| v.as_f64()).unwrap();
+    assert!(
+        (cold - 45.234).abs() < 0.001,
+        "cold time should be ~45.234, got {}",
+        cold
+    );
+    let hot = time.get("hot").and_then(|v| v.as_f64()).unwrap();
+    assert!(
+        (hot - 2.456).abs() < 0.001,
+        "hot time should be ~2.456, got {}",
+        hot
+    );
+}
+
+#[test]
+fn build_metrics_json_empty_time() {
+    let mut metrics = BuildMetrics::default();
+    metrics.sizes.insert("myapp".to_string(), 1024);
+
+    let json = metrics.to_json();
+
+    // Verify time object exists with null cold and hot
+    let time = json.get("time").unwrap();
+    assert!(
+        time.get("cold").unwrap().is_null(),
+        "cold should be null when not measured"
+    );
+    assert!(
+        time.get("hot").unwrap().is_null(),
+        "hot should be null when not measured"
+    );
+}
+
+#[test]
+fn build_metrics_json_empty_sizes() {
+    let metrics = BuildMetrics::default();
+
+    let json = metrics.to_json();
+
+    // Size should be an empty object
+    let size = json.get("size").unwrap();
+    assert!(size.is_object(), "size should be an object");
+    assert!(
+        size.as_object().unwrap().is_empty(),
+        "size should be empty when no targets"
+    );
+}
+
+#[test]
+fn build_metrics_json_size_is_integer() {
+    let mut metrics = BuildMetrics::default();
+    metrics.sizes.insert("myapp".to_string(), 1024);
+
+    let json = metrics.to_json();
+
+    // Size values should be integers, not floats
+    let size_value = json.get("size").unwrap().get("myapp").unwrap();
+    assert!(
+        size_value.is_u64(),
+        "size should be an integer, not a float"
+    );
+}
+
+#[test]
+fn build_metrics_json_time_is_float() {
+    let metrics = BuildMetrics {
+        time_cold: Some(Duration::from_millis(1500)),
+        ..Default::default()
+    };
+
+    let json = metrics.to_json();
+
+    // Time values should be floats (seconds)
+    let cold_value = json.get("time").unwrap().get("cold").unwrap();
+    assert!(
+        cold_value.is_f64(),
+        "time should be a float representing seconds"
+    );
+    let cold_secs = cold_value.as_f64().unwrap();
+    assert!(
+        (cold_secs - 1.5).abs() < 0.001,
+        "1500ms should be 1.5 seconds"
+    );
+}

@@ -295,6 +295,45 @@ impl TextFormatter {
                 }
                 _ => "feature commits without documentation".to_string(),
             },
+            // Build check - size violations with human-readable formatting
+            "size_exceeded" => {
+                let target = v.target.as_deref().unwrap_or("binary");
+                match (v.value, v.threshold) {
+                    (Some(val), Some(thresh)) => {
+                        format!(
+                            "{}: {} (max: {})",
+                            target,
+                            crate::file_size::human_size(val as u64, true),
+                            crate::file_size::human_size(thresh as u64, true)
+                        )
+                    }
+                    _ => format!("{}: size exceeded", target),
+                }
+            }
+            // Build check - time violations
+            "time_cold_exceeded" | "time_hot_exceeded" => {
+                let kind = if v.violation_type == "time_cold_exceeded" {
+                    "cold build"
+                } else {
+                    "hot build"
+                };
+                match (v.value, v.threshold) {
+                    (Some(val), Some(thresh)) => {
+                        format!(
+                            "{}: {:.1}s (max: {:.1}s)",
+                            kind,
+                            val as f64 / 1000.0, // millis to seconds
+                            thresh as f64 / 1000.0
+                        )
+                    }
+                    _ => format!("{} time exceeded", kind),
+                }
+            }
+            // Build check - missing target
+            "missing_target" => {
+                let target = v.target.as_deref().unwrap_or("unknown");
+                format!("target not found: {}", target)
+            }
             // Other checks - existing behavior
             _ => self.format_default_desc(v),
         }
