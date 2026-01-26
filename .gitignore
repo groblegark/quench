@@ -43,3 +43,4 @@ coverage/
 # Test fixture build artifacts
 /tests/fixtures/*/target/
 /tests/fixtures/*/Cargo.lock
+.v0.profile.rc
