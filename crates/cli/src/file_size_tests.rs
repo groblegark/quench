@@ -64,10 +64,21 @@ fn human_size_megabytes() {
 }
 
 #[test]
+fn human_size_gigabytes() {
+    assert_eq!(human_size(1024 * 1024 * 1024, false), "1.0GB");
+    assert_eq!(human_size(2 * 1024 * 1024 * 1024, false), "2.0GB");
+    assert_eq!(
+        human_size(1024 * 1024 * 1024 + 512 * 1024 * 1024, false),
+        "1.5GB"
+    );
+}
+
+#[test]
 fn human_size_spaced() {
     assert_eq!(human_size(0, true), "0 B");
     assert_eq!(human_size(1024, true), "1.0 KB");
     assert_eq!(human_size(1024 * 1024, true), "1.0 MB");
+    assert_eq!(human_size(1024 * 1024 * 1024, true), "1.0 GB");
 }
 
 #[test]

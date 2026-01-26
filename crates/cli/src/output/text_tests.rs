@@ -161,6 +161,81 @@ fn cloc_file_too_large_uses_lines_label() {
 }
 
 // =============================================================================
+// BUILD VIOLATION DESCRIPTION TESTS
+// =============================================================================
+
+#[test]
+fn build_size_exceeded_description() {
+    let formatter = TextFormatter::new(ColorChoice::Never, FormatOptions::default());
+    let violation = Violation::file_only("build", "size_exceeded", "Reduce size")
+        .with_threshold(5_242_880, 5_000_000)
+        .with_target("myapp");
+    let desc = formatter.format_violation_desc(&violation);
+    assert_eq!(desc, "myapp: 5.0 MB (max: 4.8 MB)");
+}
+
+#[test]
+fn build_size_exceeded_without_values() {
+    let formatter = TextFormatter::new(ColorChoice::Never, FormatOptions::default());
+    let violation =
+        Violation::file_only("build", "size_exceeded", "Reduce size").with_target("myapp");
+    let desc = formatter.format_violation_desc(&violation);
+    assert_eq!(desc, "myapp: size exceeded");
+}
+
+#[test]
+fn build_size_exceeded_without_target() {
+    let formatter = TextFormatter::new(ColorChoice::Never, FormatOptions::default());
+    let violation =
+        Violation::file_only("build", "size_exceeded", "Reduce size").with_threshold(1024, 512);
+    let desc = formatter.format_violation_desc(&violation);
+    assert_eq!(desc, "binary: 1.0 KB (max: 512 B)");
+}
+
+#[test]
+fn build_time_cold_exceeded_description() {
+    let formatter = TextFormatter::new(ColorChoice::Never, FormatOptions::default());
+    let violation = Violation::file_only("build", "time_cold_exceeded", "Optimize")
+        .with_threshold(45234, 30000); // millis
+    let desc = formatter.format_violation_desc(&violation);
+    assert_eq!(desc, "cold build: 45.2s (max: 30.0s)");
+}
+
+#[test]
+fn build_time_hot_exceeded_description() {
+    let formatter = TextFormatter::new(ColorChoice::Never, FormatOptions::default());
+    let violation =
+        Violation::file_only("build", "time_hot_exceeded", "Optimize").with_threshold(2456, 1000); // millis
+    let desc = formatter.format_violation_desc(&violation);
+    assert_eq!(desc, "hot build: 2.5s (max: 1.0s)");
+}
+
+#[test]
+fn build_time_exceeded_without_values() {
+    let formatter = TextFormatter::new(ColorChoice::Never, FormatOptions::default());
+    let violation = Violation::file_only("build", "time_cold_exceeded", "Optimize");
+    let desc = formatter.format_violation_desc(&violation);
+    assert_eq!(desc, "cold build time exceeded");
+}
+
+#[test]
+fn build_missing_target_description() {
+    let formatter = TextFormatter::new(ColorChoice::Never, FormatOptions::default());
+    let violation =
+        Violation::file_only("build", "missing_target", "Check target").with_target("myapp");
+    let desc = formatter.format_violation_desc(&violation);
+    assert_eq!(desc, "target not found: myapp");
+}
+
+#[test]
+fn build_missing_target_without_name() {
+    let formatter = TextFormatter::new(ColorChoice::Never, FormatOptions::default());
+    let violation = Violation::file_only("build", "missing_target", "Check target");
+    let desc = formatter.format_violation_desc(&violation);
+    assert_eq!(desc, "target not found: unknown");
+}
+
+// =============================================================================
 // FIXED STATUS TESTS
 // =============================================================================
 

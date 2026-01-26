@@ -54,12 +54,21 @@ impl FileSizeClass {
 ///
 /// If `spaced` is true, adds a space between number and unit (e.g., "1.0 MB").
 /// Otherwise, no space (e.g., "1.0MB").
+///
+/// Examples:
+/// - 512 → "512 B" (spaced) or "512B"
+/// - 1024 → "1.0 KB" (spaced) or "1.0KB"
+/// - 1048576 → "1.0 MB" (spaced) or "1.0MB"
+/// - 1073741824 → "1.0 GB" (spaced) or "1.0GB"
 pub fn human_size(bytes: u64, spaced: bool) -> String {
     const KB: u64 = 1024;
     const MB: u64 = KB * 1024;
+    const GB: u64 = MB * 1024;
     let space = if spaced { " " } else { "" };
 
-    if bytes >= MB {
+    if bytes >= GB {
+        format!("{:.1}{space}GB", bytes as f64 / GB as f64)
+    } else if bytes >= MB {
         format!("{:.1}{space}MB", bytes as f64 / MB as f64)
     } else if bytes >= KB {
         format!("{:.1}{space}KB", bytes as f64 / KB as f64)

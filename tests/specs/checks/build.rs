@@ -840,3 +840,217 @@ edition = "2021"
         "Reduce binary size. Check for unnecessary dependencies."
     );
 }
+
+// =============================================================================
+// TEXT OUTPUT FORMAT SPECS
+// =============================================================================
+
+/// Spec: docs/specs/checks/build.md#text-output
+///
+/// > Size violations show human-readable sizes
+#[test]
+fn build_size_exceeded_text_output() {
+    let temp = Project::empty();
+    temp.config(
+        r#"
+[check.build]
+check = "error"
+size_max = "100 bytes"
+"#,
+    );
+    temp.file(
+        "Cargo.toml",
+        r#"
+[package]
+name = "texttest"
+version = "0.1.0"
+edition = "2021"
+"#,
+    );
+    temp.file("src/main.rs", "fn main() { println!(\"Hello\"); }");
+
+    std::process::Command::new("cargo")
+        .args(["build", "--release"])
+        .current_dir(temp.path())
+        .output()
+        .expect("build should succeed");
+
+    // Verify text output contains human-readable size
+    check("build")
+        .pwd(temp.path())
+        .args(&["--ci"])
+        .fails()
+        .stdout_has("texttest:")
+        .stdout_has("(max: 100 B)");
+}
+
+/// Spec: docs/specs/checks/build.md#json-output
+///
+/// > Per-target breakdown in metrics.size
+#[test]
+fn build_json_per_target_breakdown() {
+    let temp = Project::empty();
+    temp.config(
+        r#"
+[check.build]
+check = "error"
+"#,
+    );
+    temp.file(
+        "Cargo.toml",
+        r#"
+[package]
+name = "multibin"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "app1"
+path = "src/bin/app1.rs"
+
+[[bin]]
+name = "app2"
+path = "src/bin/app2.rs"
+"#,
+    );
+    temp.file("src/bin/app1.rs", "fn main() {}");
+    temp.file("src/bin/app2.rs", "fn main() { println!(\"larger\"); }");
+
+    std::process::Command::new("cargo")
+        .args(["build", "--release"])
+        .current_dir(temp.path())
+        .output()
+        .expect("build should succeed");
+
+    let result = check("build")
+        .pwd(temp.path())
+        .args(&["--ci"])
+        .json()
+        .passes();
+
+    let metrics = result.require("metrics");
+    let size = metrics.get("size").and_then(|v| v.as_object()).unwrap();
+
+    // Both targets should be present
+    assert!(
+        size.contains_key("app1"),
+        "should have app1 in per-target breakdown"
+    );
+    assert!(
+        size.contains_key("app2"),
+        "should have app2 in per-target breakdown"
+    );
+
+    // Both should have non-zero sizes
+    assert!(size.get("app1").and_then(|v| v.as_u64()).unwrap() > 0);
+    assert!(size.get("app2").and_then(|v| v.as_u64()).unwrap() > 0);
+}
+
+/// Spec: docs/specs/checks/build.md#json-output
+///
+/// > Time metrics structure with cold and hot
+#[test]
+fn build_json_time_structure() {
+    let temp = Project::empty();
+    temp.config(
+        r#"
+[check.build]
+check = "error"
+"#,
+    );
+    temp.file(
+        "Cargo.toml",
+        r#"
+[package]
+name = "timestructure"
+version = "0.1.0"
+edition = "2021"
+"#,
+    );
+    temp.file("src/main.rs", "fn main() {}");
+
+    std::process::Command::new("cargo")
+        .args(["build", "--release"])
+        .current_dir(temp.path())
+        .output()
+        .expect("build should succeed");
+
+    let result = check("build")
+        .pwd(temp.path())
+        .args(&["--ci"])
+        .json()
+        .passes();
+
+    let metrics = result.require("metrics");
+
+    // Verify time object exists with cold and hot keys
+    let time = metrics.get("time").unwrap();
+    assert!(time.get("cold").is_some(), "time.cold should exist");
+    assert!(time.get("hot").is_some(), "time.hot should exist");
+}
+
+/// Spec: docs/specs/checks/build.md#text-output
+///
+/// > Time violations show seconds with one decimal
+#[test]
+fn build_time_violation_text_format() {
+    let temp = Project::empty();
+    temp.config(
+        r#"
+[check.build]
+check = "error"
+time_cold_max = "1ms"
+
+[ratchet]
+build_time_cold = true
+"#,
+    );
+    temp.file(
+        "Cargo.toml",
+        r#"
+[package]
+name = "timeformat"
+version = "0.1.0"
+edition = "2021"
+"#,
+    );
+    temp.file("src/main.rs", "fn main() {}");
+
+    check("build")
+        .pwd(temp.path())
+        .args(&["--ci"])
+        .fails()
+        .stdout_has("cold build:")
+        .stdout_has("(max:");
+}
+
+/// Spec: docs/specs/checks/build.md#text-output
+///
+/// > Missing target shows target name
+#[test]
+fn build_missing_target_text_output() {
+    let temp = Project::empty();
+    temp.config(
+        r#"
+[check.build]
+check = "error"
+targets = ["nonexistent"]
+"#,
+    );
+    temp.file(
+        "Cargo.toml",
+        r#"
+[package]
+name = "missingtext"
+version = "0.1.0"
+edition = "2021"
+"#,
+    );
+    temp.file("src/lib.rs", "pub fn foo() {}");
+
+    check("build")
+        .pwd(temp.path())
+        .args(&["--ci"])
+        .fails()
+        .stdout_has("target not found: nonexistent");
+}
