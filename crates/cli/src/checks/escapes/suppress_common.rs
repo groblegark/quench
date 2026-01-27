@@ -1,12 +1,228 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Shared suppress checking logic for Rust and Shell.
+//! Shared suppress checking logic for all language suppress checkers.
 //!
-//! Extracted common patterns from Rust `#[allow(...)]` and Shell `# shellcheck disable=...`
-//! checking to eliminate duplication.
+//! Provides common traits and functions to eliminate duplication across
+//! Go, JavaScript, Shell, Ruby, and Rust suppress checkers.
 
-use crate::config::{SuppressLevel, SuppressScopeConfig};
+use std::path::Path;
+
+use crate::check::{CheckContext, Violation};
+use crate::config::{
+    GoSuppressConfig, RubySuppressConfig, ShellSuppressConfig, SuppressConfig, SuppressLevel,
+    SuppressScopeConfig,
+};
+
+use super::violations::try_create_violation;
+
+// =============================================================================
+// Traits and Types for Generic Suppress Checking
+// =============================================================================
+
+/// Trait for accessing suppress configuration fields uniformly.
+///
+/// Implemented by GoSuppressConfig, ShellSuppressConfig, RubySuppressConfig,
+/// and SuppressConfig (used by JavaScript and Rust).
+pub trait SuppressConfigAccess {
+    /// Get the base check level.
+    fn check(&self) -> SuppressLevel;
+    /// Get the global comment pattern (optional).
+    fn comment(&self) -> Option<&str>;
+    /// Get the source scope configuration.
+    fn source(&self) -> &SuppressScopeConfig;
+    /// Get the test scope configuration.
+    fn test(&self) -> &SuppressScopeConfig;
+}
+
+/// A unified suppress directive for checking.
+///
+/// Each language parser converts its specific directive type to this unified
+/// format before calling the generic checking function.
+pub struct UnifiedSuppressDirective {
+    /// Line number (0-indexed).
+    pub line: usize,
+    /// Lint codes being suppressed.
+    pub codes: Vec<String>,
+    /// Whether a justification comment was found.
+    pub has_comment: bool,
+    /// The comment text if found.
+    pub comment_text: Option<String>,
+    /// Pre-formatted pattern string for violation messages.
+    pub pattern: String,
+}
+
+// =============================================================================
+// SuppressConfigAccess Implementations
+// =============================================================================
+
+impl SuppressConfigAccess for GoSuppressConfig {
+    fn check(&self) -> SuppressLevel {
+        self.check
+    }
+    fn comment(&self) -> Option<&str> {
+        self.comment.as_deref()
+    }
+    fn source(&self) -> &SuppressScopeConfig {
+        &self.source
+    }
+    fn test(&self) -> &SuppressScopeConfig {
+        &self.test
+    }
+}
+
+impl SuppressConfigAccess for ShellSuppressConfig {
+    fn check(&self) -> SuppressLevel {
+        self.check
+    }
+    fn comment(&self) -> Option<&str> {
+        self.comment.as_deref()
+    }
+    fn source(&self) -> &SuppressScopeConfig {
+        &self.source
+    }
+    fn test(&self) -> &SuppressScopeConfig {
+        &self.test
+    }
+}
+
+impl SuppressConfigAccess for RubySuppressConfig {
+    fn check(&self) -> SuppressLevel {
+        self.check
+    }
+    fn comment(&self) -> Option<&str> {
+        self.comment.as_deref()
+    }
+    fn source(&self) -> &SuppressScopeConfig {
+        &self.source
+    }
+    fn test(&self) -> &SuppressScopeConfig {
+        &self.test
+    }
+}
+
+impl SuppressConfigAccess for SuppressConfig {
+    fn check(&self) -> SuppressLevel {
+        self.check
+    }
+    fn comment(&self) -> Option<&str> {
+        self.comment.as_deref()
+    }
+    fn source(&self) -> &SuppressScopeConfig {
+        &self.source
+    }
+    fn test(&self) -> &SuppressScopeConfig {
+        &self.test
+    }
+}
+
+/// Check suppress violations from a list of directives.
+///
+/// This is the main entry point for the generic suppress checking logic.
+/// Each language-specific checker parses directives, converts them to
+/// UnifiedSuppressDirective, then calls this function.
+// TODO(refactor): Consider grouping ctx+path+limit_reached into a CheckState struct
+#[allow(clippy::too_many_arguments)]
+pub fn check_suppress_violations_generic<C: SuppressConfigAccess>(
+    ctx: &CheckContext,
+    path: &Path,
+    directives: Vec<UnifiedSuppressDirective>,
+    config: &C,
+    language: &str,
+    violation_type_prefix: &str,
+    is_test_file: bool,
+    limit_reached: &mut bool,
+) -> Vec<Violation> {
+    let mut violations = Vec::new();
+
+    // Get scope config and check level
+    let (scope_config, scope_check) = if is_test_file {
+        (
+            config.test(),
+            config.test().check.unwrap_or(SuppressLevel::Allow),
+        )
+    } else {
+        (
+            config.source(),
+            config.source().check.unwrap_or(config.check()),
+        )
+    };
+
+    // If allow, no checking needed
+    if scope_check == SuppressLevel::Allow {
+        return violations;
+    }
+
+    for directive in directives {
+        if *limit_reached {
+            break;
+        }
+
+        // Build params for shared checking logic
+        let params = SuppressCheckParams {
+            scope_config,
+            scope_check,
+            global_comment: config.comment(),
+        };
+
+        let attr_info = SuppressAttrInfo {
+            codes: &directive.codes,
+            has_comment: directive.has_comment,
+            comment_text: directive.comment_text.as_deref(),
+        };
+
+        // Use shared checking logic
+        if let Some(violation_kind) = check_suppress_attr(&params, &attr_info) {
+            let (violation_type, advice) = match violation_kind {
+                SuppressViolationKind::Forbidden { ref code } => {
+                    let advice = format!(
+                        "Suppressing `{}` is forbidden. Remove the suppression or address the issue.",
+                        code
+                    );
+                    (format!("{}_forbidden", violation_type_prefix), advice)
+                }
+                SuppressViolationKind::MissingComment {
+                    ref lint_code,
+                    ref required_patterns,
+                } => {
+                    let advice = build_suppress_missing_comment_advice(
+                        language,
+                        lint_code.as_deref(),
+                        required_patterns,
+                    );
+                    (format!("{}_missing_comment", violation_type_prefix), advice)
+                }
+                SuppressViolationKind::AllForbidden => {
+                    let advice =
+                        "Lint suppressions are forbidden. Remove and fix the underlying issue.";
+                    (
+                        format!("{}_forbidden", violation_type_prefix),
+                        advice.to_string(),
+                    )
+                }
+            };
+
+            if let Some(v) = try_create_violation(
+                ctx,
+                path,
+                (directive.line + 1) as u32,
+                &violation_type,
+                &advice,
+                &directive.pattern,
+            ) {
+                violations.push(v);
+            } else {
+                *limit_reached = true;
+            }
+        }
+    }
+
+    violations
+}
+
+// =============================================================================
+// Original Shared Types and Functions
+// =============================================================================
 
 /// Parameters for checking suppress attributes.
 pub struct SuppressCheckParams<'a> {

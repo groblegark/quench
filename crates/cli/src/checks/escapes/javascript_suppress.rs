@@ -10,13 +10,9 @@ use std::path::Path;
 
 use crate::adapter::javascript::{SuppressTool, parse_javascript_suppresses};
 use crate::check::{CheckContext, Violation};
-use crate::config::{SuppressConfig, SuppressLevel};
+use crate::config::SuppressConfig;
 
-use super::suppress_common::{
-    SuppressAttrInfo, SuppressCheckParams, SuppressViolationKind,
-    build_suppress_missing_comment_advice, check_suppress_attr,
-};
-use super::try_create_violation;
+use super::suppress_common::{UnifiedSuppressDirective, check_suppress_violations_generic};
 
 /// Check JavaScript suppress directives and return violations.
 pub fn check_javascript_suppress_violations(
@@ -27,116 +23,47 @@ pub fn check_javascript_suppress_violations(
     is_test_file: bool,
     limit_reached: &mut bool,
 ) -> Vec<Violation> {
-    let mut violations = Vec::new();
-
-    // Determine effective check level based on source vs test
-    let effective_check = if is_test_file {
-        config.test.check.unwrap_or(SuppressLevel::Allow)
-    } else {
-        config.source.check.unwrap_or(config.check)
-    };
-
-    // If allow, no checking needed
-    if effective_check == SuppressLevel::Allow {
-        return violations;
-    }
-
     // Parse JavaScript suppress directives
     let directives = parse_javascript_suppresses(content, config.comment.as_deref());
 
-    // Get scope config (source or test)
-    let (scope_config, scope_check) = if is_test_file {
-        (
-            &config.test,
-            config.test.check.unwrap_or(SuppressLevel::Allow),
-        )
-    } else {
-        (&config.source, config.source.check.unwrap_or(config.check))
-    };
-
-    // If allow, no checking needed
-    if scope_check == SuppressLevel::Allow {
-        return violations;
-    }
-
-    for directive in directives {
-        if *limit_reached {
-            break;
-        }
-
-        // Build params for shared checking logic
-        let params = SuppressCheckParams {
-            scope_config,
-            scope_check,
-            global_comment: config.comment.as_deref(),
-        };
-
-        let attr_info = SuppressAttrInfo {
-            codes: &directive.codes,
-            has_comment: directive.has_comment,
-            comment_text: directive.comment_text.as_deref(),
-        };
-
-        // Use shared checking logic
-        if let Some(violation_kind) = check_suppress_attr(&params, &attr_info) {
-            // Format pattern for reporting
-            let pattern = match directive.tool {
+    // Convert to unified format
+    let unified: Vec<UnifiedSuppressDirective> = directives
+        .into_iter()
+        .map(|d| {
+            let pattern = match d.tool {
                 SuppressTool::Eslint => {
-                    if directive.codes.is_empty() {
+                    if d.codes.is_empty() {
                         "eslint-disable".to_string()
                     } else {
-                        format!("eslint-disable-next-line {}", directive.codes.join(", "))
+                        format!("eslint-disable-next-line {}", d.codes.join(", "))
                     }
                 }
                 SuppressTool::Biome => {
-                    if directive.codes.is_empty() {
+                    if d.codes.is_empty() {
                         "biome-ignore".to_string()
                     } else {
-                        format!("biome-ignore {}", directive.codes.join(" "))
+                        format!("biome-ignore {}", d.codes.join(" "))
                     }
                 }
             };
-
-            let (violation_type, advice) = match violation_kind {
-                SuppressViolationKind::Forbidden { ref code } => {
-                    let advice = format!(
-                        "Suppressing `{}` is forbidden. Remove the suppression or address the issue.",
-                        code
-                    );
-                    ("suppress_forbidden", advice)
-                }
-                SuppressViolationKind::MissingComment {
-                    ref lint_code,
-                    ref required_patterns,
-                } => {
-                    let advice = build_suppress_missing_comment_advice(
-                        "javascript",
-                        lint_code.as_deref(),
-                        required_patterns,
-                    );
-                    ("suppress_missing_comment", advice)
-                }
-                SuppressViolationKind::AllForbidden => {
-                    let advice =
-                        "Lint suppressions are forbidden. Remove and fix the underlying issue.";
-                    ("suppress_forbidden", advice.to_string())
-                }
-            };
-
-            if let Some(v) = try_create_violation(
-                ctx,
-                path,
-                (directive.line + 1) as u32,
-                violation_type,
-                &advice,
-                &pattern,
-            ) {
-                violations.push(v);
-            } else {
-                *limit_reached = true;
+            UnifiedSuppressDirective {
+                line: d.line,
+                codes: d.codes,
+                has_comment: d.has_comment,
+                comment_text: d.comment_text,
+                pattern,
             }
-        }
-    }
+        })
+        .collect();
 
-    violations
+    check_suppress_violations_generic(
+        ctx,
+        path,
+        unified,
+        config,
+        "javascript",
+        "suppress",
+        is_test_file,
+        limit_reached,
+    )
 }
