@@ -23,13 +23,15 @@ project-root/
 ## Config Sections
 
 ```toml
-version = 1    # Config format version (required)
-[project]      # Project identity and file patterns
-[git]          # Git integration settings
-[rust]         # Rust language config (optional, has defaults)
-[shell]        # Shell language config (optional, has defaults)
-[check.*]     # Check-specific configuration
-[ratchet]      # Regression prevention
+version = 1      # Config format version (required)
+[project]        # Project identity and file patterns
+[git]            # Git integration settings
+[rust]           # Rust language config (optional, has defaults)
+[golang]         # Go language config (optional, has defaults)
+[javascript]     # JavaScript/TypeScript config (optional, has defaults)
+[shell]          # Shell language config (optional, has defaults)
+[check.*]        # Check-specific configuration
+[ratchet]        # Regression prevention
 ```
 
 ## Minimal Config
@@ -170,8 +172,14 @@ check = "comment"                      # forbid | comment | allow
 [rust.suppress.test]
 check = "allow"                        # tests can suppress freely
 
+# Per-language cloc settings (overrides [check.cloc])
+[rust.cloc]
+check = "error"                        # error | warn | off (inherits from [check.cloc].check)
+advice = "Custom advice for Rust files."
+
 # Policy
 [rust.policy]
+check = "error"                        # error | warn | off (default: error)
 lint_changes = "standalone"
 lint_config = ["rustfmt.toml", "clippy.toml"]
 ```
@@ -193,9 +201,75 @@ check = "forbid"                       # forbid | comment | allow
 [shell.suppress.test]
 check = "allow"
 
+# Per-language cloc settings (overrides [check.cloc])
+[shell.cloc]
+check = "error"                        # error | warn | off (inherits from [check.cloc].check)
+advice = "Custom advice for shell scripts."
+
 [shell.policy]
+check = "error"                        # error | warn | off (default: error)
 lint_changes = "standalone"
 lint_config = [".shellcheckrc"]
+```
+
+### [golang]
+
+Go language configuration. Auto-detected when `go.mod` exists.
+
+```toml
+[golang]
+# Source/test patterns
+# source = ["**/*.go"]
+# tests = ["**/*_test.go"]
+# ignore = ["vendor/**"]
+
+# Lint suppression (//nolint:)
+[golang.suppress]
+check = "comment"                      # forbid | comment | allow
+
+[golang.suppress.test]
+check = "allow"
+
+# Per-language cloc settings (overrides [check.cloc])
+[golang.cloc]
+check = "error"                        # error | warn | off (inherits from [check.cloc].check)
+advice = "Custom advice for Go files."
+
+# Policy
+[golang.policy]
+check = "error"                        # error | warn | off (default: error)
+lint_changes = "standalone"
+lint_config = [".golangci.yml", ".golangci.yaml", ".golangci.toml"]
+```
+
+### [javascript]
+
+JavaScript/TypeScript language configuration. Auto-detected when `package.json` exists.
+
+```toml
+[javascript]
+# Source/test patterns
+# source = ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx", "**/*.mjs", "**/*.mts"]
+# tests = ["**/tests/**", "**/__tests__/**", "**/*.test.*", "**/*.spec.*"]
+# ignore = ["node_modules/**", "dist/**", "build/**"]
+
+# Lint suppression (eslint-disable)
+[javascript.suppress]
+check = "comment"                      # forbid | comment | allow
+
+[javascript.suppress.test]
+check = "allow"
+
+# Per-language cloc settings (overrides [check.cloc])
+[javascript.cloc]
+check = "error"                        # error | warn | off (inherits from [check.cloc].check)
+advice = "Custom advice for JS/TS files."
+
+# Policy
+[javascript.policy]
+check = "error"                        # error | warn | off (default: error)
+lint_changes = "standalone"
+lint_config = [".eslintrc", ".eslintrc.js", ".eslintrc.json", "eslint.config.js", "tsconfig.json", "biome.json"]
 ```
 
 ### [check.*]
