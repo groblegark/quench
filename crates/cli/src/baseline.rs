@@ -9,6 +9,8 @@ use std::path::Path;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::git::read_git_note;
+
 /// Current baseline format version.
 pub const BASELINE_VERSION: u32 = 1;
 
@@ -124,6 +126,31 @@ impl Baseline {
         }
 
         Ok(Some(baseline))
+    }
+
+    /// Load baseline from git notes for a specific commit.
+    ///
+    /// Returns None if no note exists for the commit.
+    pub fn load_from_notes(root: &Path, commit_ref: &str) -> Result<Option<Self>, BaselineError> {
+        let note_content =
+            read_git_note(root, commit_ref).map_err(|e| BaselineError::Read(e.to_string()))?;
+
+        match note_content {
+            Some(content) => {
+                let baseline: Baseline = serde_json::from_str(&content)
+                    .map_err(|e| BaselineError::Parse(e.to_string()))?;
+
+                if baseline.version > BASELINE_VERSION {
+                    return Err(BaselineError::Version {
+                        found: baseline.version,
+                        supported: BASELINE_VERSION,
+                    });
+                }
+
+                Ok(Some(baseline))
+            }
+            None => Ok(None),
+        }
     }
 
     /// Save baseline to file, creating parent directories if needed.

@@ -234,6 +234,48 @@ pub fn save_to_git_notes(root: &Path, content: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Find the merge-base commit for ratchet comparison.
+///
+/// If --base is provided, uses that ref.
+/// Otherwise, finds merge-base with main/master.
+/// Falls back to HEAD~1 if no merge-base found.
+/// Returns None if repository has no commits (unborn branch).
+pub fn find_ratchet_base(root: &Path, base_ref: Option<&str>) -> anyhow::Result<Option<String>> {
+    let repo = Repository::discover(root)?;
+
+    if let Some(base_ref) = base_ref {
+        // Explicit --base REF provided
+        let commit = repo.revparse_single(base_ref)?.peel_to_commit()?;
+        return Ok(Some(commit.id().to_string()));
+    }
+
+    // Try to get HEAD - may fail if no commits yet (unborn branch)
+    let head = match repo.head() {
+        Ok(head) => match head.peel_to_commit() {
+            Ok(commit) => commit,
+            Err(_) => return Ok(None), // HEAD doesn't point to a commit
+        },
+        Err(_) => return Ok(None), // No HEAD (unborn branch)
+    };
+
+    for main_branch in &["origin/main", "origin/master", "main", "master"] {
+        if let Ok(main_ref) = repo.revparse_single(main_branch)
+            && let Ok(main_commit) = main_ref.peel_to_commit()
+            && let Ok(base) = repo.merge_base(head.id(), main_commit.id())
+        {
+            return Ok(Some(base.to_string()));
+        }
+    }
+
+    // Fallback: use HEAD~1 (parent commit)
+    if let Ok(parent) = head.parent(0) {
+        return Ok(Some(parent.id().to_string()));
+    }
+
+    // Last resort: HEAD itself (initial commit)
+    Ok(Some(head.id().to_string()))
+}
+
 /// Read git note for a specific commit.
 pub fn read_git_note(root: &Path, commit_ref: &str) -> anyhow::Result<Option<String>> {
     let repo = Repository::discover(root).context("Failed to open repository")?;

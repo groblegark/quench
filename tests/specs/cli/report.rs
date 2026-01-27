@@ -217,7 +217,18 @@ fn report_markdown_includes_metadata() {
 /// > -o report.html writes to file instead of stdout
 #[test]
 fn report_writes_to_file() {
-    let temp = Project::with_defaults();
+    let temp = Project::empty();
+    // Use file-based baseline mode since no git repo
+    temp.config(
+        r#"
+[git]
+baseline = ".quench/baseline.json"
+"#,
+    );
+    temp.file(
+        "CLAUDE.md",
+        "# Project\n\n## Directory Structure\n\nMinimal.\n\n## Landing the Plane\n\n- Done\n",
+    );
 
     // Create baseline
     temp.file(

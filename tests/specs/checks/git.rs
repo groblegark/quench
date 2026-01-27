@@ -651,9 +651,10 @@ agents = false
         .unwrap();
 
     // Should pass - merge commit is skipped, feat commit is valid
+    // Use HEAD~1 to check from initial commit (before merge and feature commit)
     check("git")
         .pwd(temp.path())
-        .args(&["--base", "HEAD~2"])
+        .args(&["--base", "HEAD~1"])
         .passes();
 }
 

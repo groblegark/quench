@@ -119,3 +119,106 @@ fn touch_updates_timestamp() {
     baseline.touch();
     assert!(baseline.updated > original);
 }
+
+// =============================================================================
+// LOAD_FROM_NOTES TESTS
+// =============================================================================
+
+use std::process::Command;
+
+fn init_git_repo(temp: &tempfile::TempDir) {
+    Command::new("git")
+        .args(["init"])
+        .current_dir(temp.path())
+        .output()
+        .expect("Failed to init git repo");
+
+    Command::new("git")
+        .args(["config", "user.email", "test@example.com"])
+        .current_dir(temp.path())
+        .output()
+        .expect("Failed to configure git email");
+
+    Command::new("git")
+        .args(["config", "user.name", "Test User"])
+        .current_dir(temp.path())
+        .output()
+        .expect("Failed to configure git name");
+}
+
+fn create_initial_commit(temp: &tempfile::TempDir) {
+    std::fs::write(temp.path().join("README.md"), "# Project\n").unwrap();
+    Command::new("git")
+        .args(["add", "README.md"])
+        .current_dir(temp.path())
+        .output()
+        .expect("Failed to git add");
+    Command::new("git")
+        .args(["commit", "-m", "initial commit"])
+        .current_dir(temp.path())
+        .output()
+        .expect("Failed to git commit");
+}
+
+fn add_git_note(temp: &tempfile::TempDir, content: &str) {
+    Command::new("git")
+        .args(["notes", "--ref=refs/notes/quench", "add", "-m", content])
+        .current_dir(temp.path())
+        .output()
+        .expect("Failed to add git note");
+}
+
+#[test]
+fn load_from_notes_returns_none_for_missing_note() {
+    let temp = tempfile::tempdir().unwrap();
+    init_git_repo(&temp);
+    create_initial_commit(&temp);
+
+    let result = Baseline::load_from_notes(temp.path(), "HEAD").unwrap();
+    assert!(result.is_none());
+}
+
+#[test]
+fn load_from_notes_parses_valid_json() {
+    let temp = tempfile::tempdir().unwrap();
+    init_git_repo(&temp);
+    create_initial_commit(&temp);
+
+    // Add a valid baseline note
+    let baseline_json = r#"{"version":1,"updated":"2026-01-20T00:00:00Z","metrics":{}}"#;
+    add_git_note(&temp, baseline_json);
+
+    let result = Baseline::load_from_notes(temp.path(), "HEAD").unwrap();
+    assert!(result.is_some());
+    assert_eq!(result.unwrap().version, 1);
+}
+
+#[test]
+fn load_from_notes_rejects_future_version() {
+    let temp = tempfile::tempdir().unwrap();
+    init_git_repo(&temp);
+    create_initial_commit(&temp);
+
+    // Add a note with future version
+    let baseline_json = r#"{"version":999,"updated":"2026-01-20T00:00:00Z","metrics":{}}"#;
+    add_git_note(&temp, baseline_json);
+
+    let result = Baseline::load_from_notes(temp.path(), "HEAD");
+    assert!(matches!(
+        result,
+        Err(BaselineError::Version { found: 999, .. })
+    ));
+}
+
+#[test]
+fn load_from_notes_returns_error_for_invalid_json() {
+    let temp = tempfile::tempdir().unwrap();
+    init_git_repo(&temp);
+    create_initial_commit(&temp);
+
+    // Add invalid JSON as note
+    add_git_note(&temp, "not valid json");
+
+    let result = Baseline::load_from_notes(temp.path(), "HEAD");
+    assert!(matches!(result, Err(BaselineError::Parse(_))));
+}

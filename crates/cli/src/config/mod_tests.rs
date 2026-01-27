@@ -961,3 +961,50 @@ check = "off"
     let config = parse(content, &path).unwrap();
     assert_eq!(config.check.tests.time.check, "off");
 }
+
+// Git baseline config tests
+
+#[test]
+fn git_baseline_defaults_to_notes() {
+    let path = PathBuf::from("quench.toml");
+    let content = "version = 1\n";
+    let config = parse(content, &path).unwrap();
+    assert_eq!(config.git.baseline, "notes");
+    assert!(config.git.uses_notes());
+    assert!(config.git.baseline_path().is_none());
+}
+
+#[test]
+fn git_baseline_uses_notes_returns_true_for_notes() {
+    let config = GitConfig {
+        baseline: "notes".to_string(),
+        commit: GitCommitConfig::default(),
+    };
+    assert!(config.uses_notes());
+    assert!(config.baseline_path().is_none());
+}
+
+#[test]
+fn git_baseline_uses_notes_returns_false_for_file_path() {
+    let config = GitConfig {
+        baseline: ".quench/baseline.json".to_string(),
+        commit: GitCommitConfig::default(),
+    };
+    assert!(!config.uses_notes());
+    assert_eq!(config.baseline_path(), Some(".quench/baseline.json"));
+}
+
+#[test]
+fn git_baseline_can_be_set_to_file_path() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[git]
+baseline = ".quench/baseline.json"
+"#;
+    let config = parse(content, &path).unwrap();
+    assert_eq!(config.git.baseline, ".quench/baseline.json");
+    assert!(!config.git.uses_notes());
+    assert_eq!(config.git.baseline_path(), Some(".quench/baseline.json"));
+}

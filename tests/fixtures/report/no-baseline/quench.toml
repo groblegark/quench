@@ -1,4 +1,7 @@
 version = 1
 
+[git]
+baseline = ".quench/baseline.json"
+
 [check.agents]
 required = []

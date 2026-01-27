@@ -118,7 +118,21 @@ impl Default for GitConfig {
 
 impl GitConfig {
     fn default_baseline() -> String {
-        ".quench/baseline.json".to_string()
+        "notes".to_string()
+    }
+
+    /// Check if baseline is configured to use git notes.
+    pub fn uses_notes(&self) -> bool {
+        self.baseline == "notes"
+    }
+
+    /// Get baseline file path (returns None if using notes mode).
+    pub fn baseline_path(&self) -> Option<&str> {
+        if self.uses_notes() {
+            None
+        } else {
+            Some(&self.baseline)
+        }
     }
 }
 

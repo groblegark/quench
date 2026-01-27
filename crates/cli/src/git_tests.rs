@@ -426,3 +426,76 @@ fn get_changed_files_empty_repo() {
     let result = get_changed_files(temp.path(), "main");
     assert!(result.is_err(), "should error when base ref doesn't exist");
 }
+
+// =============================================================================
+// FIND_RATCHET_BASE TESTS
+// =============================================================================
+
+#[test]
+fn find_ratchet_base_uses_explicit_base_ref() {
+    let temp = TempDir::new().unwrap();
+    init_git_repo(&temp);
+    create_initial_commit(&temp);
+
+    // Create second commit
+    create_and_stage(&temp, "file.txt", "content");
+    git_commit(&temp, "feat: add file");
+
+    // Explicit ref should return that commit's SHA
+    let result = find_ratchet_base(temp.path(), Some("HEAD~1")).unwrap();
+    assert!(result.is_some());
+    assert_eq!(result.unwrap().len(), 40); // Full SHA
+}
+
+#[test]
+fn find_ratchet_base_finds_merge_base_with_main() {
+    let temp = TempDir::new().unwrap();
+    init_git_repo(&temp);
+    create_initial_commit(&temp);
+
+    // Create feature branch with commits
+    git_checkout_b(&temp, "feature");
+    create_and_stage(&temp, "feature.txt", "content");
+    git_commit(&temp, "feat: feature work");
+
+    // Without explicit ref, should find merge-base with main
+    let result = find_ratchet_base(temp.path(), None).unwrap();
+    assert!(result.is_some());
+}
+
+#[test]
+fn find_ratchet_base_falls_back_to_parent() {
+    let temp = TempDir::new().unwrap();
+    init_git_repo(&temp);
+    create_initial_commit(&temp);
+
+    // Create second commit (no remote, no main branch to merge with)
+    create_and_stage(&temp, "file.txt", "content");
+    git_commit(&temp, "feat: add file");
+
+    // Should fall back to parent since no remote exists
+    let result = find_ratchet_base(temp.path(), None).unwrap();
+    assert!(result.is_some());
+}
+
+#[test]
+fn find_ratchet_base_handles_initial_commit() {
+    let temp = TempDir::new().unwrap();
+    init_git_repo(&temp);
+    create_initial_commit(&temp);
+
+    // For initial commit with no parent, should return HEAD itself
+    let result = find_ratchet_base(temp.path(), None).unwrap();
+    assert!(result.is_some());
+}
+
+#[test]
+fn find_ratchet_base_returns_none_for_unborn_branch() {
+    let temp = TempDir::new().unwrap();
+    init_git_repo(&temp);
+    // Don't create any commits - unborn branch
+
+    // Should return None since no commits exist
+    let result = find_ratchet_base(temp.path(), None).unwrap();
+    assert!(result.is_none());
+}

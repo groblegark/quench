@@ -13,8 +13,12 @@ const CARGO_TOML: &str = "[package]\nname = \"test\"\nversion = \"0.1.0\"\nediti
 
 // Config that enables ratcheting with escapes in count mode (not comment mode)
 // High threshold (100) ensures the escapes check passes, letting ratchet do the enforcement
+// Uses file-based baseline (not git notes) since these tests don't have git repos
 const RATCHET_CONFIG: &str = r#"
 version = 1
+
+[git]
+baseline = ".quench/baseline.json"
 
 [ratchet]
 check = "error"
@@ -29,6 +33,9 @@ threshold = 100
 
 const RATCHET_OFF_CONFIG: &str = r#"
 version = 1
+
+[git]
+baseline = ".quench/baseline.json"
 
 [ratchet]
 check = "off"
@@ -416,6 +423,9 @@ fn binary_size_regression_fails() {
 const RATCHET_STALE_CONFIG: &str = r#"
 version = 1
 
+[git]
+baseline = ".quench/baseline.json"
+
 [ratchet]
 check = "error"
 escapes = true
@@ -474,6 +484,9 @@ fn stale_baseline_warns() {
 
 const RATCHET_WARN_CONFIG: &str = r#"
 version = 1
+
+[git]
+baseline = ".quench/baseline.json"
 
 [ratchet]
 check = "warn"

@@ -288,7 +288,7 @@ fn save_works_only_with_ci_mode() {
 
 /// Spec: docs/specs/01-cli.md#output-flags
 ///
-/// > --fix saves to git notes by default (was --save-notes)
+/// > --fix saves baseline to git notes by default (for ratcheting)
 #[test]
 fn fix_saves_to_git_notes_by_default() {
     let temp = default_project();
@@ -314,7 +314,15 @@ fn fix_saves_to_git_notes_by_default() {
     let json: serde_json::Value =
         serde_json::from_str(&content).expect("git note should be valid JSON");
 
-    assert!(json.get("checks").is_some(), "should have checks field");
+    // Baseline format: version, updated, metrics
+    assert!(
+        json.get("version").is_some(),
+        "should have version field (baseline format)"
+    );
+    assert!(
+        json.get("metrics").is_some(),
+        "should have metrics field (baseline format)"
+    );
 }
 
 /// Spec: docs/specs/01-cli.md#output-flags (legacy)
