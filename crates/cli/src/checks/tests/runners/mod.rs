@@ -17,6 +17,7 @@ mod instrumented;
 mod jest;
 mod js_coverage;
 mod js_detect;
+mod json_utils;
 mod kcov;
 mod minitest;
 mod pytest;

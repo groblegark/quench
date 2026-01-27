@@ -1,24 +1,56 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use super::*;
+use yare::parameterized;
+
+// =============================================================================
+// JSON TEST DATA
+// =============================================================================
+
+const PASSING_JSON: &str = r#"{
+    "testResults": [
+        {
+            "name": "src/utils.test.ts",
+            "assertionResults": [
+                {"fullName": "adds numbers", "status": "passed", "duration": 45},
+                {"fullName": "multiplies numbers", "status": "passed", "duration": 23}
+            ]
+        }
+    ]
+}"#;
+
+const FAILING_JSON: &str = r#"{
+    "testResults": [
+        {
+            "name": "src/utils.test.ts",
+            "assertionResults": [
+                {"fullName": "adds numbers", "status": "passed", "duration": 45},
+                {"fullName": "handles errors", "status": "failed", "duration": 23}
+            ]
+        }
+    ]
+}"#;
+
+// =============================================================================
+// PARAMETERIZED JSON PARSING TESTS
+// =============================================================================
+
+#[parameterized(
+    passing = { PASSING_JSON, true, 2, 0 },
+    failing = { FAILING_JSON, false, 2, 1 },
+)]
+fn parses_test_results(json: &str, expect_passed: bool, test_count: usize, fail_count: usize) {
+    let result = parse_vitest_json(json, Duration::from_secs(1));
+    assert_eq!(result.passed, expect_passed, "passed mismatch");
+    assert_eq!(result.tests.len(), test_count, "test count mismatch");
+    let actual_fails = result.tests.iter().filter(|t| !t.passed).count();
+    assert_eq!(actual_fails, fail_count, "failure count mismatch");
+}
 
 #[test]
-fn parses_passing_tests() {
-    let output = r#"{
-        "testResults": [
-            {
-                "name": "src/utils.test.ts",
-                "assertionResults": [
-                    {"fullName": "adds numbers", "status": "passed", "duration": 45},
-                    {"fullName": "multiplies numbers", "status": "passed", "duration": 23}
-                ]
-            }
-        ]
-    }"#;
-    let result = parse_vitest_json(output, Duration::from_secs(1));
+fn parses_passing_test_details() {
+    let result = parse_vitest_json(PASSING_JSON, Duration::from_secs(1));
 
-    assert!(result.passed);
-    assert_eq!(result.tests.len(), 2);
     assert!(result.tests[0].passed);
     assert_eq!(result.tests[0].name, "adds numbers");
     assert_eq!(result.tests[0].duration, Duration::from_millis(45));
@@ -28,22 +60,9 @@ fn parses_passing_tests() {
 }
 
 #[test]
-fn parses_failing_tests() {
-    let output = r#"{
-        "testResults": [
-            {
-                "name": "src/utils.test.ts",
-                "assertionResults": [
-                    {"fullName": "adds numbers", "status": "passed", "duration": 45},
-                    {"fullName": "handles errors", "status": "failed", "duration": 23}
-                ]
-            }
-        ]
-    }"#;
-    let result = parse_vitest_json(output, Duration::from_secs(1));
+fn parses_failing_test_details() {
+    let result = parse_vitest_json(FAILING_JSON, Duration::from_secs(1));
 
-    assert!(!result.passed);
-    assert_eq!(result.tests.len(), 2);
     assert!(result.tests[0].passed);
     assert!(!result.tests[1].passed);
     assert_eq!(result.tests[1].name, "handles errors");
@@ -73,17 +92,16 @@ fn parses_multiple_files() {
     assert_eq!(result.tests.len(), 2);
 }
 
-#[test]
-fn handles_empty_output() {
-    let result = parse_vitest_json("", Duration::from_secs(0));
-    assert!(result.passed);
-    assert!(result.tests.is_empty());
-}
+// =============================================================================
+// EDGE CASE TESTS
+// =============================================================================
 
-#[test]
-fn handles_empty_test_results() {
-    let output = r#"{"testResults": []}"#;
-    let result = parse_vitest_json(output, Duration::from_secs(1));
+#[parameterized(
+    empty_string = { "" },
+    empty_results = { r#"{"testResults": []}"# },
+)]
+fn handles_empty_input(json: &str) {
+    let result = parse_vitest_json(json, Duration::from_secs(1));
     assert!(result.passed);
     assert!(result.tests.is_empty());
 }
@@ -120,26 +138,22 @@ stderr output mixed in
 }
 
 #[test]
-fn find_json_object_simple() {
-    let json = find_json_object(r#"prefix {"key": "value"} suffix"#);
-    assert_eq!(json, Some(r#"{"key": "value"}"#));
-}
-
-#[test]
-fn find_json_object_nested() {
-    let json = find_json_object(r#"{"outer": {"inner": 1}}"#);
-    assert_eq!(json, Some(r#"{"outer": {"inner": 1}}"#));
-}
-
-#[test]
-fn find_json_object_none() {
-    assert!(find_json_object("no json here").is_none());
-    assert!(find_json_object("").is_none());
-}
-
-#[test]
 fn detects_failure_without_json() {
     let output = "FAIL tests/example.test.ts\nError: test failed";
     let result = parse_vitest_json(output, Duration::from_secs(1));
     assert!(!result.passed);
+}
+
+// =============================================================================
+// JSON FINDER TESTS
+// =============================================================================
+
+#[parameterized(
+    simple = { r#"prefix {"key": "value"} suffix"#, Some(r#"{"key": "value"}"#) },
+    nested = { r#"{"outer": {"inner": 1}}"#, Some(r#"{"outer": {"inner": 1}}"#) },
+    no_json = { "no json here", None },
+    empty = { "", None },
+)]
+fn find_json_object_cases(input: &str, expected: Option<&str>) {
+    assert_eq!(find_json_object(input), expected);
 }
