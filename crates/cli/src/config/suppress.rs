@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
 //! Shared suppress configuration types.
 //!
 //! Used by Rust, Go, and Shell language adapters.

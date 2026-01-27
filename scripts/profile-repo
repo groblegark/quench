@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
 # Profile quench on a repository with flamegraph and timing metrics
 set -euo pipefail
 

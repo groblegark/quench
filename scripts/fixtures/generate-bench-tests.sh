@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
 # Generate benchmark test fixtures for tests correlation check
 set -euo pipefail
 

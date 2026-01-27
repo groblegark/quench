@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 Alfred Jean LLC
+
 //! Performance regression tests.
 //!
 //! These tests have hard time limits and fail if exceeded.

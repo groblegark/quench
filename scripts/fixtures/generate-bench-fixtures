@@ -1,5 +1,6 @@
 #!/bin/bash
 # SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
 # Generate benchmark fixtures for criterion tests
 set -euo pipefail
 

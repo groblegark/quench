@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
 # Check for performance regressions against baseline
 set -euo pipefail
 

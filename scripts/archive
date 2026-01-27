@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 Alfred Jean LLC
 #
 # archive - Move archived plans to v0/plans branch worktree
 #
