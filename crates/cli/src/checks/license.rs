@@ -62,8 +62,8 @@ impl Check for LicenseCheck {
             None => return CheckResult::passed(self.name()),
         };
 
-        // Copyright holder validation not implemented yet (Phase 1120)
-        let _expected_copyright = config.copyright.as_deref();
+        // Copyright holder for fix mode
+        let expected_copyright = config.copyright.as_deref().unwrap_or("Unknown");
         let current_year = chrono::Utc::now().year();
 
         // Build include patterns matcher (if patterns are configured)
@@ -73,6 +73,7 @@ impl Check for LicenseCheck {
         let exclude_matcher = build_exclude_matcher(&config.exclude);
 
         let mut violations = Vec::new();
+        let mut fixes = LicenseFixes::new();
         let mut files_checked = 0;
         let mut files_with_headers = 0;
         let mut files_missing_headers = 0;
@@ -103,6 +104,9 @@ impl Check for LicenseCheck {
 
             files_checked += 1;
 
+            // Get file extension for comment syntax
+            let ext = file.path.extension().and_then(|e| e.to_str()).unwrap_or("");
+
             // Get first N lines for header check (skip shebang)
             let header_lines = get_header_lines(content, 10);
 
@@ -114,11 +118,30 @@ impl Check for LicenseCheck {
                 (None, _) | (_, None) => {
                     // Missing header
                     files_missing_headers += 1;
-                    violations.push(Violation::file_only(
-                        relative_path,
-                        "missing_header",
-                        "Add SPDX-License-Identifier and Copyright at file start.",
-                    ));
+
+                    if ctx.fix {
+                        // Generate and insert header
+                        let header = generate_header(
+                            expected_license,
+                            expected_copyright,
+                            current_year,
+                            ext,
+                        );
+                        let new_content = insert_header_preserving_shebang(content, &header);
+
+                        if !ctx.dry_run {
+                            let _ = std::fs::write(&file.path, &new_content);
+                        }
+                        fixes
+                            .headers_added
+                            .push(relative_path.display().to_string());
+                    } else {
+                        violations.push(Violation::file_only(
+                            relative_path,
+                            "missing_header",
+                            "missing license header. Add SPDX-License-Identifier and Copyright at file start.",
+                        ));
+                    }
                 }
                 (Some(spdx), Some(copyright)) => {
                     files_with_headers += 1;
@@ -128,6 +151,7 @@ impl Check for LicenseCheck {
                     // Check license identifier
                     if found_license != expected_license {
                         files_wrong_license += 1;
+                        // Don't auto-fix wrong license (too risky), just report
                         violations.push(
                             Violation::file(
                                 relative_path,
@@ -145,18 +169,31 @@ impl Check for LicenseCheck {
                     // Check copyright year includes current year
                     if !year_includes_current(found_year, current_year) {
                         files_outdated_year += 1;
-                        violations.push(
-                            Violation::file(
-                                relative_path,
-                                find_line_number(content, "Copyright"),
-                                "outdated_year",
-                                format!(
-                                    "Expected: {}, found: {}. Update copyright year or run --fix.",
-                                    current_year, found_year
-                                ),
-                            )
-                            .with_expected_found(current_year.to_string(), found_year),
-                        );
+
+                        if ctx.fix {
+                            // Update year in content
+                            let new_content = update_copyright_year(content, current_year);
+
+                            if !ctx.dry_run {
+                                let _ = std::fs::write(&file.path, &new_content);
+                            }
+                            fixes
+                                .years_updated
+                                .push(relative_path.display().to_string());
+                        } else {
+                            violations.push(
+                                Violation::file(
+                                    relative_path,
+                                    find_line_number(content, "Copyright"),
+                                    "outdated_year",
+                                    format!(
+                                        "Expected: {}, found: {}. Update copyright year or run --fix.",
+                                        current_year, found_year
+                                    ),
+                                )
+                                .with_expected_found(current_year.to_string(), found_year),
+                            );
+                        }
                     }
                 }
             }
@@ -177,8 +214,13 @@ impl Check for LicenseCheck {
             "files_wrong_license": files_wrong_license,
         });
 
+        // Determine result based on violations and fixes
         if violations.is_empty() {
-            CheckResult::passed(self.name()).with_metrics(metrics)
+            if !fixes.is_empty() {
+                CheckResult::fixed(self.name(), fixes.to_json()).with_metrics(metrics)
+            } else {
+                CheckResult::passed(self.name()).with_metrics(metrics)
+            }
         } else {
             CheckResult::failed(self.name(), violations).with_metrics(metrics)
         }
@@ -307,6 +349,103 @@ fn year_includes_current(year_str: &str, current_year: i32) -> bool {
             .parse::<i32>()
             .map(|y| y == current_year)
             .unwrap_or(false)
+    }
+}
+
+/// Get comment prefix for a file based on extension.
+fn comment_prefix_for_extension(ext: &str) -> &'static str {
+    match ext {
+        // Line comment languages
+        "rs" | "ts" | "tsx" | "js" | "jsx" | "go" | "c" | "cpp" | "h" => "// ",
+        // Hash comment languages
+        "sh" | "bash" | "py" | "rb" | "yaml" | "yml" => "# ",
+        // Default to line comments
+        _ => "// ",
+    }
+}
+
+/// Generate a license header for a file.
+fn generate_header(license: &str, copyright_holder: &str, year: i32, ext: &str) -> String {
+    let prefix = comment_prefix_for_extension(ext);
+    format!(
+        "{prefix}SPDX-License-Identifier: {license}\n\
+         {prefix}Copyright (c) {year} {copyright_holder}\n"
+    )
+}
+
+/// Insert header at file start, preserving shebang if present.
+fn insert_header_preserving_shebang(content: &str, header: &str) -> String {
+    if content.starts_with("#!") {
+        // Find end of shebang line
+        if let Some(newline_pos) = content.find('\n') {
+            let shebang = &content[..=newline_pos];
+            let rest = &content[newline_pos + 1..];
+            return format!("{shebang}{header}\n{rest}");
+        }
+        // Shebang only, no newline
+        return format!("{content}\n{header}\n");
+    }
+    // No shebang, prepend header
+    format!("{header}\n{content}")
+}
+
+/// Update copyright year in content to include current year.
+fn update_copyright_year(content: &str, current_year: i32) -> String {
+    let mut result = String::with_capacity(content.len() + 10);
+    for line in content.lines() {
+        if let Some(caps) = COPYRIGHT_PATTERN.captures(line) {
+            let year_str = caps.get(1).map(|m| m.as_str()).unwrap_or("");
+            let new_year = if year_str.contains('-') {
+                // Range format: "2020-2025" -> "2020-2026"
+                let parts: Vec<&str> = year_str.split('-').collect();
+                if parts.len() == 2 {
+                    format!("{}-{}", parts[0], current_year)
+                } else {
+                    current_year.to_string()
+                }
+            } else {
+                // Single year: "2020" -> "2020-2026"
+                format!("{}-{}", year_str, current_year)
+            };
+            let new_line = line.replace(year_str, &new_year);
+            result.push_str(&new_line);
+        } else {
+            result.push_str(line);
+        }
+        result.push('\n');
+    }
+    // Remove trailing newline if original didn't have one
+    if !content.ends_with('\n') && result.ends_with('\n') {
+        result.pop();
+    }
+    result
+}
+
+/// Track fixes applied during check execution.
+#[derive(Debug, Default)]
+struct LicenseFixes {
+    headers_added: Vec<String>,
+    years_updated: Vec<String>,
+}
+
+impl LicenseFixes {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.headers_added.is_empty() && self.years_updated.is_empty()
+    }
+
+    fn to_json(&self) -> serde_json::Value {
+        json!({
+            "headers_added": self.headers_added.len(),
+            "years_updated": self.years_updated.len(),
+            "files": {
+                "added": self.headers_added,
+                "updated": self.years_updated,
+            }
+        })
     }
 }
 

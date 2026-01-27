@@ -85,7 +85,6 @@ fn license_outdated_year_generates_violation() {
 ///
 /// > Add missing headers: Insert header at file start
 #[test]
-#[ignore = "TODO: Phase 1120 - License Check Fix"]
 fn license_fix_adds_missing_header() {
     let temp = Project::empty();
     temp.config(
@@ -116,7 +115,6 @@ rust = ["**/*.rs"]
 ///
 /// > Update copyright year: Change year to current year
 #[test]
-#[ignore = "TODO: Phase 1120 - License Check Fix"]
 fn license_fix_updates_outdated_year() {
     let temp = Project::empty();
     temp.config(
@@ -151,7 +149,6 @@ rust = ["**/*.rs"]
 ///
 /// > Shebangs are preserved at the top of shell scripts
 #[test]
-#[ignore = "TODO: Phase 1120 - License Check Fix"]
 fn license_fix_preserves_shebang() {
     let temp = Project::empty();
     temp.config(
@@ -244,7 +241,6 @@ fn license_json_includes_metrics() {
 ///
 /// > FIXED output shows counts
 #[test]
-#[ignore = "TODO: Phase 1120 - License Check Fix"]
 fn exact_fix_output_text() {
     let temp = Project::empty();
     temp.config(
