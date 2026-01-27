@@ -3,6 +3,11 @@
 use std::time::Duration;
 
 use super::*;
+use yare::parameterized;
+
+// =============================================================================
+// SIMPLECOV FORMAT PARSING TESTS
+// =============================================================================
 
 #[test]
 fn parses_modern_simplecov_format() {
@@ -134,16 +139,15 @@ fn extracts_package_from_app() {
     assert!(result.packages.contains_key("controllers"));
 }
 
-#[test]
-fn handles_empty_coverage() {
-    let json = r#"{
-        "RSpec": {
-            "coverage": {},
-            "timestamp": 100
-        }
-    }"#;
-    let result = parse_simplecov_json(json, Duration::from_secs(1));
+// =============================================================================
+// EDGE CASE TESTS
+// =============================================================================
 
+#[parameterized(
+    empty_coverage = { r#"{"RSpec": {"coverage": {}, "timestamp": 100}}"# },
+)]
+fn handles_empty_coverage(json: &str) {
+    let result = parse_simplecov_json(json, Duration::from_secs(1));
     assert!(result.success);
     assert!(result.line_coverage.is_none());
     assert!(result.files.is_empty());
@@ -165,81 +169,55 @@ fn handles_all_null_lines() {
     assert!(result.files.is_empty());
 }
 
-#[test]
-fn handles_invalid_json() {
-    let result = parse_simplecov_json("not json", Duration::from_secs(1));
-    assert!(!result.success);
-    assert!(result.error.is_some());
-}
-
-#[test]
-fn handles_empty_string() {
-    let result = parse_simplecov_json("", Duration::from_secs(1));
+#[parameterized(
+    not_json = { "not json" },
+    empty_string = { "" },
+)]
+fn handles_invalid_json(json: &str) {
+    let result = parse_simplecov_json(json, Duration::from_secs(1));
     assert!(!result.success);
 }
 
-#[test]
-fn calculate_line_coverage_basic() {
-    // 4 relevant lines, 3 covered = 75%
-    let lines = vec![Some(1), Some(1), Some(1), Some(0)];
+// =============================================================================
+// LINE COVERAGE CALCULATION TESTS
+// =============================================================================
+
+#[parameterized(
+    basic = { vec![Some(1), Some(1), Some(1), Some(0)], Some(75.0) },
+    with_nulls = { vec![Some(1), None, Some(0), None], Some(50.0) },
+    all_nulls = { vec![None, None, None], None },
+    empty = { vec![], None },
+)]
+fn calculate_line_coverage_cases(lines: Vec<Option<u64>>, expected: Option<f64>) {
     let coverage = calculate_line_coverage(&lines);
-    assert!((coverage.unwrap() - 75.0).abs() < 0.01);
+    match expected {
+        Some(e) => assert!((coverage.unwrap() - e).abs() < 0.01),
+        None => assert!(coverage.is_none()),
+    }
 }
 
-#[test]
-fn calculate_line_coverage_with_nulls() {
-    // null entries are ignored
-    let lines = vec![Some(1), None, Some(0), None];
-    let coverage = calculate_line_coverage(&lines);
-    assert!((coverage.unwrap() - 50.0).abs() < 0.01);
+// =============================================================================
+// PATH NORMALIZATION TESTS
+// =============================================================================
+
+#[parameterized(
+    lib_path = { "/home/user/project/lib/myapp/model.rb", "lib/myapp/model.rb" },
+    app_path = { "/rails/app/models/user.rb", "app/models/user.rb" },
+    fallback = { "/some/random/path/file.rb", "file.rb" },
+)]
+fn normalize_ruby_path_cases(path: &str, expected: &str) {
+    assert_eq!(normalize_ruby_path(path), expected);
 }
 
-#[test]
-fn calculate_line_coverage_all_nulls() {
-    let lines = vec![None, None, None];
-    let coverage = calculate_line_coverage(&lines);
-    assert!(coverage.is_none());
-}
+// =============================================================================
+// PACKAGE EXTRACTION TESTS
+// =============================================================================
 
-#[test]
-fn calculate_line_coverage_empty() {
-    let lines: Vec<Option<u64>> = vec![];
-    let coverage = calculate_line_coverage(&lines);
-    assert!(coverage.is_none());
-}
-
-#[test]
-fn normalize_ruby_path_lib() {
-    assert_eq!(
-        normalize_ruby_path("/home/user/project/lib/myapp/model.rb"),
-        "lib/myapp/model.rb"
-    );
-}
-
-#[test]
-fn normalize_ruby_path_app() {
-    assert_eq!(
-        normalize_ruby_path("/rails/app/models/user.rb"),
-        "app/models/user.rb"
-    );
-}
-
-#[test]
-fn normalize_ruby_path_fallback() {
-    assert_eq!(normalize_ruby_path("/some/random/path/file.rb"), "file.rb");
-}
-
-#[test]
-fn extract_ruby_package_lib() {
-    assert_eq!(extract_ruby_package("lib/myapp/model.rb"), "myapp");
-}
-
-#[test]
-fn extract_ruby_package_app() {
-    assert_eq!(extract_ruby_package("app/models/user.rb"), "models");
-}
-
-#[test]
-fn extract_ruby_package_root() {
-    assert_eq!(extract_ruby_package("some_file.rb"), "root");
+#[parameterized(
+    lib_package = { "lib/myapp/model.rb", "myapp" },
+    app_package = { "app/models/user.rb", "models" },
+    root = { "some_file.rb", "root" },
+)]
+fn extract_ruby_package_cases(path: &str, expected: &str) {
+    assert_eq!(extract_ruby_package(path), expected);
 }
