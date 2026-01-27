@@ -14,10 +14,12 @@ use std::path::Path;
 
 use globset::GlobSet;
 
+mod bundler;
 mod policy;
 mod suppress;
 mod workspace;
 
+pub use bundler::{Bundler, detect_bundler};
 pub use policy::{PolicyCheckResult, check_lint_policy};
 pub use suppress::{JavaScriptSuppress, SuppressTool, parse_javascript_suppresses};
 pub use workspace::JsWorkspace;
