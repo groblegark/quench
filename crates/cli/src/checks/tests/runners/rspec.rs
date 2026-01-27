@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 
+use super::json_utils::find_json_object;
 use super::{
     RunnerContext, TestResult, TestRunResult, TestRunner, format_timeout_error, run_with_timeout,
 };
@@ -171,33 +172,6 @@ pub(crate) fn parse_rspec_json(stdout: &str, total_time: Duration) -> TestRunRes
     };
     result.tests = tests;
     result
-}
-
-/// Find the first JSON object in the output.
-fn find_json_object(s: &str) -> Option<&str> {
-    let start = s.find('{')?;
-    let mut depth = 0;
-    let mut end = start;
-
-    for (i, c) in s[start..].char_indices() {
-        match c {
-            '{' => depth += 1,
-            '}' => {
-                depth -= 1;
-                if depth == 0 {
-                    end = start + i + 1;
-                    break;
-                }
-            }
-            _ => {}
-        }
-    }
-
-    if depth == 0 && end > start {
-        Some(&s[start..end])
-    } else {
-        None
-    }
 }
 
 #[cfg(test)]

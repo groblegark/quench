@@ -236,9 +236,3 @@ fn handles_empty_output() {
     assert!(result.passed);
     assert!(result.tests.is_empty());
 }
-
-#[test]
-fn find_json_object_simple() {
-    let json = find_json_object(r#"prefix {"key": "value"} suffix"#);
-    assert_eq!(json, Some(r#"{"key": "value"}"#));
-}

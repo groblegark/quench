@@ -176,21 +176,3 @@ fn detects_failure_without_json() {
     let result = parse_rspec_json(output, Duration::from_secs(1));
     assert!(!result.passed);
 }
-
-#[test]
-fn find_json_object_simple() {
-    let json = find_json_object(r#"prefix {"key": "value"} suffix"#);
-    assert_eq!(json, Some(r#"{"key": "value"}"#));
-}
-
-#[test]
-fn find_json_object_nested() {
-    let json = find_json_object(r#"{"outer": {"inner": 1}}"#);
-    assert_eq!(json, Some(r#"{"outer": {"inner": 1}}"#));
-}
-
-#[test]
-fn find_json_object_none() {
-    assert!(find_json_object("no json here").is_none());
-    assert!(find_json_object("").is_none());
-}
