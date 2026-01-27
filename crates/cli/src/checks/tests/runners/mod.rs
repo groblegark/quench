@@ -9,6 +9,7 @@ mod bats;
 mod bun;
 mod cargo;
 mod coverage;
+mod cucumber;
 mod custom;
 mod go;
 mod go_coverage;
@@ -17,8 +18,11 @@ mod jest;
 mod js_coverage;
 mod js_detect;
 mod kcov;
+mod minitest;
 mod pytest;
 mod result;
+mod rspec;
+mod ruby_coverage;
 mod targets;
 mod vitest;
 
@@ -26,6 +30,7 @@ pub use bats::BatsRunner;
 pub use bun::BunRunner;
 pub use cargo::{CargoRunner, categorize_cargo_error, parse_cargo_output};
 pub use coverage::CoverageResult;
+pub use cucumber::CucumberRunner;
 pub use custom::CustomRunner;
 pub use go::GoRunner;
 pub use go_coverage::{collect_go_coverage, go_available};
@@ -36,8 +41,11 @@ pub use jest::JestRunner;
 pub use js_coverage::{collect_bun_coverage, collect_jest_coverage, collect_vitest_coverage};
 pub use js_detect::{DetectionResult, DetectionSource, JsRunner, detect_js_runner};
 pub use kcov::{collect_shell_coverage, kcov_available};
+pub use minitest::MinitestRunner;
 pub use pytest::PytestRunner;
 pub use result::{TestResult, TestRunResult};
+pub use rspec::RspecRunner;
+pub use ruby_coverage::collect_ruby_coverage;
 pub use targets::{
     ResolvedTarget, TargetResolutionError, is_glob_pattern, resolve_target, resolve_targets,
     rust_binary_names, shell_script_files,
@@ -55,7 +63,8 @@ use crate::config::TestSuiteConfig;
 
 /// List of known runner names.
 pub const RUNNER_NAMES: &[&str] = &[
-    "cargo", "go", "pytest", "vitest", "bun", "jest", "bats", "custom",
+    "cargo", "go", "pytest", "vitest", "bun", "jest", "bats", "rspec", "minitest", "cucumber",
+    "custom",
 ];
 
 /// Context passed to test runners during execution.
@@ -94,6 +103,9 @@ pub fn all_runners() -> Vec<Arc<dyn TestRunner>> {
         Arc::new(VitestRunner),
         Arc::new(BunRunner),
         Arc::new(JestRunner),
+        Arc::new(RspecRunner),
+        Arc::new(MinitestRunner),
+        Arc::new(CucumberRunner),
         Arc::new(CustomRunner),
     ]
 }
@@ -158,6 +170,8 @@ pub struct AggregatedCoverage {
     pub go: Option<CoverageResult>,
     /// JavaScript coverage result (merged from all JS sources).
     pub javascript: Option<CoverageResult>,
+    /// Ruby coverage result (merged from all Ruby sources).
+    pub ruby: Option<CoverageResult>,
 }
 
 impl AggregatedCoverage {
@@ -193,6 +207,14 @@ impl AggregatedCoverage {
         });
     }
 
+    /// Merge Ruby coverage from a suite into the aggregate.
+    pub fn merge_ruby(&mut self, result: CoverageResult) {
+        self.ruby = Some(match self.ruby.take() {
+            Some(existing) => merge_coverage_results(existing, result),
+            None => result,
+        });
+    }
+
     /// Convert to a language -> percentage map for metrics.
     pub fn to_coverage_map(&self) -> HashMap<String, f64> {
         let mut map = HashMap::new();
@@ -216,6 +238,11 @@ impl AggregatedCoverage {
         {
             map.insert("javascript".to_string(), pct);
         }
+        if let Some(ref ruby) = self.ruby
+            && let Some(pct) = ruby.line_coverage
+        {
+            map.insert("ruby".to_string(), pct);
+        }
         map
     }
 
@@ -231,6 +258,10 @@ impl AggregatedCoverage {
             || self.go.as_ref().is_some_and(|r| r.line_coverage.is_some())
             || self
                 .javascript
+                .as_ref()
+                .is_some_and(|r| r.line_coverage.is_some())
+            || self
+                .ruby
                 .as_ref()
                 .is_some_and(|r| r.line_coverage.is_some())
     }
@@ -298,6 +329,7 @@ pub fn format_timeout_error(runner: &str, timeout: Duration) -> String {
         "pytest" => "check for slow tests or missing mocks",
         "go" => "check for goroutine leaks or infinite loops",
         "jest" | "vitest" | "bun" => "check for unresolved promises or infinite loops",
+        "rspec" | "minitest" | "cucumber" => "check for slow database queries or missing mocks",
         _ => "check for slow or hanging tests",
     };
     format!("{} - {}", base, advice)

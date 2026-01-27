@@ -9,8 +9,8 @@ use tempfile::tempdir;
 #[test]
 fn all_runners_returns_expected_count() {
     let runners = all_runners();
-    // cargo, bats, go, pytest, vitest, bun, jest, custom = 8 runners
-    assert_eq!(runners.len(), 8);
+    // cargo, bats, go, pytest, vitest, bun, jest, rspec, minitest, cucumber, custom = 11 runners
+    assert_eq!(runners.len(), 11);
 }
 
 #[test]
@@ -300,6 +300,7 @@ fn aggregated_coverage_to_coverage_map() {
         }),
         go: None,
         javascript: None,
+        ruby: None,
     };
 
     let map = agg.to_coverage_map();
