@@ -443,8 +443,7 @@ fn find_ratchet_base_uses_explicit_base_ref() {
 
     // Explicit ref should return that commit's SHA
     let result = find_ratchet_base(temp.path(), Some("HEAD~1")).unwrap();
-    assert!(result.is_some());
-    assert_eq!(result.unwrap().len(), 40); // Full SHA
+    assert_eq!(result.len(), 40); // Full SHA
 }
 
 #[test]
@@ -460,7 +459,7 @@ fn find_ratchet_base_finds_merge_base_with_main() {
 
     // Without explicit ref, should find merge-base with main
     let result = find_ratchet_base(temp.path(), None).unwrap();
-    assert!(result.is_some());
+    assert_eq!(result.len(), 40); // Full SHA
 }
 
 #[test]
@@ -475,7 +474,7 @@ fn find_ratchet_base_falls_back_to_parent() {
 
     // Should fall back to parent since no remote exists
     let result = find_ratchet_base(temp.path(), None).unwrap();
-    assert!(result.is_some());
+    assert_eq!(result.len(), 40); // Full SHA
 }
 
 #[test]
@@ -486,16 +485,16 @@ fn find_ratchet_base_handles_initial_commit() {
 
     // For initial commit with no parent, should return HEAD itself
     let result = find_ratchet_base(temp.path(), None).unwrap();
-    assert!(result.is_some());
+    assert_eq!(result.len(), 40); // Full SHA
 }
 
 #[test]
-fn find_ratchet_base_returns_none_for_unborn_branch() {
+fn find_ratchet_base_errors_for_unborn_branch() {
     let temp = TempDir::new().unwrap();
     init_git_repo(&temp);
     // Don't create any commits - unborn branch
 
-    // Should return None since no commits exist
-    let result = find_ratchet_base(temp.path(), None).unwrap();
-    assert!(result.is_none());
+    // Should error since no commits exist
+    let result = find_ratchet_base(temp.path(), None);
+    assert!(result.is_err());
 }

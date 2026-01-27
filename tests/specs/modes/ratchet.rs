@@ -586,22 +586,77 @@ fn per_package_coverage_ratchet() {
 ///
 /// > Git notes is the default baseline source
 #[test]
-#[ignore = "TODO: Phase 2 - Git notes as default baseline"]
 fn ratchet_reads_baseline_from_git_notes_by_default() {
-    // Setup: create project with git history and notes
-    // Run: quench check (no --save-notes flag)
-    // Assert: compares against notes, not file
+    let temp = Project::empty();
+    // Use default config (no explicit baseline setting) - should use git notes
+    temp.config(
+        r#"
+[ratchet]
+check = "error"
+escapes = true
+
+[[check.escapes.patterns]]
+name = "unsafe"
+pattern = "unsafe"
+action = "count"
+threshold = 100
+"#,
+    );
+    temp.file("CLAUDE.md", CLAUDE_MD);
+    temp.file("Cargo.toml", CARGO_TOML);
+    temp.file("src/lib.rs", "fn f() { unsafe {} }");
+
+    git_init(&temp);
+    git_initial_commit(&temp);
+
+    // Add baseline note with 1 unsafe (matches current)
+    git_add_note(
+        &temp,
+        r#"{"version":1,"updated":"2026-01-20T00:00:00Z","metrics":{"escapes":{"source":{"unsafe":1}}}}"#,
+    );
+
+    // Use --no-git since CLAUDE.md doesn't have Commits section
+    // Should pass because git notes baseline (1 unsafe) matches current (1 unsafe)
+    cli().pwd(temp.path()).args(&["--no-git"]).passes();
 }
 
 /// Spec: docs/specs/04-ratcheting.md#baseline-storage
 ///
 /// > Baseline falls back to file when notes unavailable
 #[test]
-#[ignore = "TODO: Phase 2 - Git notes as default baseline"]
 fn ratchet_falls_back_to_file_when_no_notes() {
-    // Setup: project with baseline.json but no notes
-    // Run: quench check
-    // Assert: uses file baseline
+    let temp = Project::empty();
+    // Explicitly configure file-based baseline (for fallback test)
+    temp.config(
+        r#"
+[git]
+baseline = ".quench/baseline.json"
+
+[ratchet]
+check = "error"
+escapes = true
+
+[[check.escapes.patterns]]
+name = "unsafe"
+pattern = "unsafe"
+action = "count"
+threshold = 100
+"#,
+    );
+    temp.file("CLAUDE.md", CLAUDE_MD);
+    temp.file("Cargo.toml", CARGO_TOML);
+    temp.file("src/lib.rs", "fn f() { unsafe {} }");
+
+    // Create baseline file (no git notes)
+    fs::create_dir_all(temp.path().join(".quench")).unwrap();
+    fs::write(
+        temp.path().join(".quench/baseline.json"),
+        r#"{"version":1,"updated":"2026-01-20T00:00:00Z","metrics":{"escapes":{"source":{"unsafe":1}}}}"#,
+    )
+    .unwrap();
+
+    // Should pass using file baseline (1 unsafe matches current)
+    cli().pwd(temp.path()).passes();
 }
 
 /// Spec: docs/specs/04-ratcheting.md#baseline-storage
