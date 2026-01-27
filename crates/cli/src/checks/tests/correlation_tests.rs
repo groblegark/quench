@@ -3,8 +3,6 @@
 
 //! Unit tests for source/test correlation.
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 use super::*;
 use std::path::Path;
 

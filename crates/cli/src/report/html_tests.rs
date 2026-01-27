@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 use super::*;
 use crate::report::test_support::{
     AllChecks, assert_buffered_matches_streamed, create_test_baseline,

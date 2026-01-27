@@ -3,8 +3,6 @@
 
 //! Unit tests for JSON report formatter.
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 use super::*;
 use crate::baseline::EscapesMetrics;
 use crate::report::test_support::{

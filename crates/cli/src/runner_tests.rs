@@ -3,8 +3,6 @@
 
 //! Unit tests for the check runner.
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 

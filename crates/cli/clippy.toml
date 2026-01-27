@@ -1,0 +1,6 @@
+# Allow panic, unwrap, and expect in test code.
+# This covers code in #[test] functions and #[cfg(test)] modules.
+# Note: This does NOT cover benches/ or integration tests in tests/ directory.
+allow-panic-in-tests = true
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 use super::test_support::{AllChecks, ExcludeChecks, create_test_baseline};
 use super::*;
 

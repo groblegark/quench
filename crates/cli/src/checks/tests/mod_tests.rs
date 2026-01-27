@@ -3,8 +3,6 @@
 
 //! Unit tests for the tests check module.
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 use super::*;
 
 #[test]

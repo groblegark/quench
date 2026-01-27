@@ -5,8 +5,6 @@
 //!
 //! Provides common helpers for unit tests in the cli crate.
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 use std::fs;
 use std::io::Write;
 use std::path::Path;

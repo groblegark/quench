@@ -3,8 +3,6 @@
 
 //! Unit tests for git diff parsing.
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 use super::*;
 
 #[test]

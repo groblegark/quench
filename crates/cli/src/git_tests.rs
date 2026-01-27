@@ -3,8 +3,6 @@
 
 //! Unit tests for git utilities.
 
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 use std::process::Command;
 
 use tempfile::TempDir;

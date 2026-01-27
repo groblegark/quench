@@ -2,7 +2,6 @@
 // Copyright (c) 2026 Alfred Jean LLC
 
 //! Unit tests for Ruby lint policy checking.
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
 use std::path::Path;
 

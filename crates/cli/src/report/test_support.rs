@@ -3,9 +3,6 @@
 
 //! Shared test utilities for report formatter tests.
 
-// Test helpers that use unwrap for clarity (tests should panic on unexpected failures).
-#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
-
 use crate::baseline::{
     Baseline, BaselineMetrics, BuildTimeMetrics, CoverageMetrics, EscapesMetrics, TestTimeMetrics,
 };
