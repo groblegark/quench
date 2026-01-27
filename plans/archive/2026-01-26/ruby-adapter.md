@@ -113,9 +113,9 @@ impl RubyConfig {
 ```
 
 **Verification:**
-- [ ] `cargo check` passes
-- [ ] Config parses from TOML with `[ruby]` section
-- [ ] Defaults are applied when section is empty
+- [x] `cargo check` passes
+- [x] Config parses from TOML with `[ruby]` section
+- [x] Defaults are applied when section is empty
 
 ---
 
@@ -196,12 +196,12 @@ impl Adapter for RubyAdapter {
 - Source patterns match remaining .rb/.rake files
 
 **Verification:**
-- [ ] `cargo test adapter::ruby` passes
-- [ ] `FileKind::Test` for spec/**/*_spec.rb
-- [ ] `FileKind::Test` for test/**/*_test.rb
-- [ ] `FileKind::Test` for features/**/*.rb
-- [ ] `FileKind::Other` for vendor/**/*.rb
-- [ ] `FileKind::Source` for lib/**/*.rb
+- [x] `cargo test adapter::ruby` passes
+- [x] `FileKind::Test` for spec/**/*_spec.rb
+- [x] `FileKind::Test` for test/**/*_test.rb
+- [x] `FileKind::Test` for features/**/*.rb
+- [x] `FileKind::Other` for vendor/**/*.rb
+- [x] `FileKind::Source` for lib/**/*.rb
 
 ---
 
@@ -293,9 +293,9 @@ impl AdapterRegistry {
 - `default_ignores_coverage_directory`
 
 **Verification:**
-- [ ] Detection tests in `tests/specs/adapters/ruby.rs` pass
-- [ ] Ruby projects detected correctly
-- [ ] Pattern resolution hierarchy works
+- [x] Detection tests in `tests/specs/adapters/ruby.rs` pass
+- [x] Ruby projects detected correctly
+- [x] Pattern resolution hierarchy works
 
 ---
 
@@ -321,8 +321,8 @@ impl CommentStyle {
 ```
 
 **Verification:**
-- [ ] `cargo check` passes
-- [ ] RUBY constant available for suppress parsing
+- [x] `cargo check` passes
+- [x] RUBY constant available for suppress parsing
 
 ---
 
@@ -350,10 +350,10 @@ The escape patterns are already defined in Phase 482. This phase ensures:
 - `debugger_allowed_in_test_when_configured`
 
 **Verification:**
-- [ ] Escape tests pass
-- [ ] Debuggers fail in source code
-- [ ] Metaprogramming requires comment in source
-- [ ] Metaprogramming allowed in test code
+- [x] Escape tests pass
+- [x] Debuggers fail in source code
+- [x] Metaprogramming requires comment in source
+- [x] Metaprogramming allowed in test code
 
 ---
 
@@ -444,13 +444,13 @@ fn parse_rubocop_directive(
 - `rubocop_disable_in_test_allowed`
 
 **Verification:**
-- [ ] Suppress parsing tests pass
-- [ ] Single cop parsing works
-- [ ] Multiple cops parsing works
-- [ ] Todo directive detected
-- [ ] Standard directive detected
-- [ ] Inline directive detected
-- [ ] Justification comment detection works
+- [x] Suppress parsing tests pass
+- [x] Single cop parsing works
+- [x] Multiple cops parsing works
+- [x] Todo directive detected
+- [x] Standard directive detected
+- [x] Inline directive detected
+- [x] Justification comment detection works
 
 ---
 
@@ -515,9 +515,9 @@ impl PolicyConfig for RubyPolicyConfig {
 - `lint_config_standalone_passes`
 
 **Verification:**
-- [ ] Policy tests pass
-- [ ] Standalone policy violation detected
-- [ ] Lint-only changes pass
+- [x] Policy tests pass
+- [x] Standalone policy violation detected
+- [x] Lint-only changes pass
 
 ## Key Implementation Details
 

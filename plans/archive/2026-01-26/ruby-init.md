@@ -393,15 +393,15 @@ fn init_with_rb_alias() {
 
 Before committing:
 
-- [ ] Unit tests in sibling `_tests.rs` files (init_tests.rs, profiles_tests.rs if created)
-- [ ] Run `make check`:
+- [x] Unit tests in sibling `_tests.rs` files (init_tests.rs, profiles_tests.rs if created)
+- [x] Run `make check`:
   - `cargo fmt --all -- --check`
   - `cargo clippy --all-targets --all-features -- -D warnings`
   - `cargo test --all`
   - `cargo build --all`
   - `cargo audit`
   - `cargo deny check`
-- [ ] `CACHE_VERSION` does NOT need bumping (profile defaults don't affect check logic)
+- [x] `CACHE_VERSION` does NOT need bumping (profile defaults don't affect check logic)
 
 ## Summary
 

@@ -7,9 +7,9 @@ Complete auto-detection of JavaScript test runners from `package.json` scripts a
 When a JavaScript/TypeScript project is detected but no `[[check.tests.suite]]` is configured, quench should automatically detect and configure the appropriate test runner. This enables zero-config test running for most JS/TS projects.
 
 **Items to complete from Phase 498:**
-- [ ] Auto-detect runner from package.json scripts
-- [ ] Auto-detect runner from config files (vitest.config.ts, jest.config.js)
-- [ ] Integration test: run tests on fixtures/js-simple
+- [x] Auto-detect runner from package.json scripts
+- [x] Auto-detect runner from config files (vitest.config.ts, jest.config.js)
+- [x] Integration test: run tests on fixtures/js-simple
 
 ## Project Structure
 

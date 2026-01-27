@@ -50,12 +50,12 @@ tests/
 RSpec is the most common Ruby testing framework. Implement full JSON parsing.
 
 **Tasks**:
-- [ ] Create `rspec.rs` with `RspecRunner` struct implementing `TestRunner` trait
-- [ ] Implement `available()`: check for `bundle exec rspec --version` and `spec/` directory
-- [ ] Implement `run()`: execute `bundle exec rspec --format json` with timeout
-- [ ] Parse RSpec JSON output structure (see Key Implementation Details)
-- [ ] Extract per-example timing, status (passed/failed/pending)
-- [ ] Create `rspec_tests.rs` with parsing tests
+- [x] Create `rspec.rs` with `RspecRunner` struct implementing `TestRunner` trait
+- [x] Implement `available()`: check for `bundle exec rspec --version` and `spec/` directory
+- [x] Implement `run()`: execute `bundle exec rspec --format json` with timeout
+- [x] Parse RSpec JSON output structure (see Key Implementation Details)
+- [x] Extract per-example timing, status (passed/failed/pending)
+- [x] Create `rspec_tests.rs` with parsing tests
 
 **Verification**:
 ```bash
@@ -67,12 +67,12 @@ cargo test rspec
 Minitest is Ruby's built-in framework. It requires `minitest-reporters` for structured output.
 
 **Tasks**:
-- [ ] Create `minitest.rs` with `MinitestRunner` struct
-- [ ] Implement `available()`: check for `test/` directory and Minitest in Gemfile
-- [ ] Implement `run()`: execute `bundle exec ruby -Itest -e "..."` with JSON reporter
-- [ ] Parse Minitest JSON output (via minitest-reporters)
-- [ ] Fallback: parse standard dot/F/E output when no JSON available
-- [ ] Create `minitest_tests.rs` with parsing tests
+- [x] Create `minitest.rs` with `MinitestRunner` struct
+- [x] Implement `available()`: check for `test/` directory and Minitest in Gemfile
+- [x] Implement `run()`: execute `bundle exec ruby -Itest -e "..."` with JSON reporter
+- [x] Parse Minitest JSON output (via minitest-reporters)
+- [x] Fallback: parse standard dot/F/E output when no JSON available
+- [x] Create `minitest_tests.rs` with parsing tests
 
 **Verification**:
 ```bash
@@ -84,12 +84,12 @@ cargo test minitest
 Cucumber is used for BDD-style acceptance tests.
 
 **Tasks**:
-- [ ] Create `cucumber.rs` with `CucumberRunner` struct
-- [ ] Implement `available()`: check for `features/` directory
-- [ ] Implement `run()`: execute `bundle exec cucumber --format json`
-- [ ] Parse Cucumber JSON output (scenario-level, not step-level)
-- [ ] Extract scenario timing and status
-- [ ] Create `cucumber_tests.rs` with parsing tests
+- [x] Create `cucumber.rs` with `CucumberRunner` struct
+- [x] Implement `available()`: check for `features/` directory
+- [x] Implement `run()`: execute `bundle exec cucumber --format json`
+- [x] Parse Cucumber JSON output (scenario-level, not step-level)
+- [x] Extract scenario timing and status
+- [x] Create `cucumber_tests.rs` with parsing tests
 
 **Verification**:
 ```bash
@@ -101,12 +101,12 @@ cargo test cucumber
 Wire up runners and implement auto-detection logic.
 
 **Tasks**:
-- [ ] Add `mod rspec;`, `mod minitest;`, `mod cucumber;` to `runners/mod.rs`
-- [ ] Add runners to `all_runners()` function
-- [ ] Add `"rspec"`, `"minitest"`, `"cucumber"` to `RUNNER_NAMES`
-- [ ] Add timeout advice in `format_timeout_error()` for Ruby runners
-- [ ] Add `pub ruby: Option<CoverageResult>` to `AggregatedCoverage`
-- [ ] Implement `merge_ruby()` method
+- [x] Add `mod rspec;`, `mod minitest;`, `mod cucumber;` to `runners/mod.rs`
+- [x] Add runners to `all_runners()` function
+- [x] Add `"rspec"`, `"minitest"`, `"cucumber"` to `RUNNER_NAMES`
+- [x] Add timeout advice in `format_timeout_error()` for Ruby runners
+- [x] Add `pub ruby: Option<CoverageResult>` to `AggregatedCoverage`
+- [x] Implement `merge_ruby()` method
 
 **Verification**:
 ```bash
@@ -118,13 +118,13 @@ cargo test runners
 Parse SimpleCov's `.resultset.json` for coverage data.
 
 **Tasks**:
-- [ ] Create `ruby_coverage.rs` with `collect_ruby_coverage()` function
-- [ ] Parse SimpleCov `.resultset.json` format (see Key Implementation Details)
-- [ ] Extract line coverage percentage per file
-- [ ] Calculate package-level coverage (group by top-level directory)
-- [ ] Add `simplecov_available()` check (look for `coverage/` directory after test run)
-- [ ] Integrate coverage collection into Ruby runners
-- [ ] Create `ruby_coverage_tests.rs`
+- [x] Create `ruby_coverage.rs` with `collect_ruby_coverage()` function
+- [x] Parse SimpleCov `.resultset.json` format (see Key Implementation Details)
+- [x] Extract line coverage percentage per file
+- [x] Calculate package-level coverage (group by top-level directory)
+- [x] Add `simplecov_available()` check (look for `coverage/` directory after test run)
+- [x] Integrate coverage collection into Ruby runners
+- [x] Create `ruby_coverage_tests.rs`
 
 **Verification**:
 ```bash
@@ -136,11 +136,11 @@ cargo test ruby_coverage
 End-to-end verification with real Ruby projects.
 
 **Tasks**:
-- [ ] Add SimpleCov configuration to `tests/fixtures/ruby-gem/`
-- [ ] Add behavioral specs in `tests/specs/checks/tests.rs` for Ruby runners
-- [ ] Test runner selection based on directory structure
-- [ ] Test coverage aggregation across multiple Ruby suites
-- [ ] Run `make check` to verify all tests pass
+- [x] Add SimpleCov configuration to `tests/fixtures/ruby-gem/`
+- [x] Add behavioral specs in `tests/specs/checks/tests.rs` for Ruby runners
+- [x] Test runner selection based on directory structure
+- [x] Test coverage aggregation across multiple Ruby suites
+- [x] Run `make check` to verify all tests pass
 
 **Verification**:
 ```bash

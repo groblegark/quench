@@ -401,12 +401,12 @@ check("tests").pwd(temp.path()).args(&["--ci"]).json().fails();
 
 ### Checklist
 
-- [ ] `thresholds.rs` spec file created and passing
-- [ ] All Phase 950 outline items have specs
-- [ ] Coverage below min generates `coverage_below_min` violation
-- [ ] Per-package coverage thresholds work
-- [ ] Time over `max_total` generates `time_total_exceeded` violation
-- [ ] Time over `max_test` generates `time_test_exceeded` violation
-- [ ] Check level error/warn/off behavior verified
-- [ ] Exact output tests added
-- [ ] `make check` passes
+- [x] `thresholds.rs` spec file created and passing
+- [x] All Phase 950 outline items have specs
+- [x] Coverage below min generates `coverage_below_min` violation
+- [x] Per-package coverage thresholds work
+- [x] Time over `max_total` generates `time_total_exceeded` violation
+- [x] Time over `max_test` generates `time_test_exceeded` violation
+- [x] Check level error/warn/off behavior verified
+- [x] Exact output tests added
+- [x] `make check` passes
