@@ -176,6 +176,88 @@ max_lines = 500
 
 /// Spec: docs/specs/performance.md#file-caching
 ///
+/// > Docs violations with target paths (broken_link, broken_toc) are invalidated
+/// > when the target file is created, even if the source file is cached.
+#[test]
+fn docs_cache_invalidated_when_target_created() {
+    let temp = default_project();
+
+    // Create a markdown file with a broken link
+    fs::write(
+        temp.path().join("README.md"),
+        "# Project\n\nSee [missing](missing.md) for info.\n",
+    )
+    .unwrap();
+
+    // First run: should report broken_link violation
+    quench_cmd()
+        .args(["check", "--docs", "-o", "json"])
+        .current_dir(temp.path())
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains("broken_link"));
+
+    // Second run: should still report violation (from cache)
+    quench_cmd()
+        .args(["check", "--docs", "-o", "json", "--timing"])
+        .current_dir(temp.path())
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains("broken_link"))
+        .stdout(predicates::str::contains(r#""cache_hits""#)); // Verify cache is being used
+
+    // Create the missing file (simulating --fix behavior)
+    fs::write(temp.path().join("missing.md"), "# Missing\n").unwrap();
+
+    // Third run: should PASS because target now exists (cache violation invalidated)
+    quench_cmd()
+        .args(["check", "--docs", "-o", "json"])
+        .current_dir(temp.path())
+        .assert()
+        .success()
+        .stdout(predicates::str::contains(r#""passed": true"#));
+}
+
+/// Spec: docs/specs/performance.md#file-caching
+///
+/// > Docs violations are invalidated when target symlinks are created.
+#[test]
+#[cfg(unix)]
+fn docs_cache_invalidated_when_target_symlink_created() {
+    use std::os::unix::fs::symlink;
+
+    let temp = default_project();
+
+    // Create a markdown file with a broken link
+    fs::write(
+        temp.path().join("README.md"),
+        "# Project\n\nSee [missing](missing.md) for info.\n",
+    )
+    .unwrap();
+
+    // First run: should report broken_link violation
+    quench_cmd()
+        .args(["check", "--docs", "-o", "json"])
+        .current_dir(temp.path())
+        .assert()
+        .code(1)
+        .stdout(predicates::str::contains("broken_link"));
+
+    // Create target file and symlink (simulating --fix that creates symlinks)
+    fs::write(temp.path().join("target.md"), "# Target\n").unwrap();
+    symlink("target.md", temp.path().join("missing.md")).unwrap();
+
+    // Second run: should PASS because symlink target exists
+    quench_cmd()
+        .args(["check", "--docs", "-o", "json"])
+        .current_dir(temp.path())
+        .assert()
+        .success()
+        .stdout(predicates::str::contains(r#""passed": true"#));
+}
+
+/// Spec: docs/specs/performance.md#file-caching
+///
 /// > Cache persists across sessions (not just in-memory)
 /// > Format: "Cache: N hits, M misses"
 #[test]

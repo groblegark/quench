@@ -154,6 +154,24 @@ impl CheckRunner {
                         violations
                             .iter()
                             .filter(|v| v.check == check_name)
+                            .filter(|v| {
+                                // For docs violations with target paths (broken_link, broken_toc),
+                                // validate that the target still doesn't exist. If the target now
+                                // exists (e.g., created by --fix), the cached violation is stale.
+                                if check_name == "docs"
+                                    && let Some(target) = &v.target_path
+                                    && let Some(parent) = path.parent()
+                                {
+                                    // Normalize ./prefix and resolve relative to source directory
+                                    let normalized = target.strip_prefix("./").unwrap_or(target);
+                                    let resolved = parent.join(normalized);
+                                    // Skip this cached violation if target now exists
+                                    if resolved.exists() {
+                                        return false;
+                                    }
+                                }
+                                true
+                            })
                             .map(|v| {
                                 // Convert to relative path for display
                                 let display_path = path.strip_prefix(root).unwrap_or(path);
