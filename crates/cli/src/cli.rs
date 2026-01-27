@@ -7,6 +7,7 @@ use std::path::PathBuf;
 
 use crate::help;
 use clap::{Parser, Subcommand};
+use clap_complete::Shell;
 
 /// A fast linting tool for AI agents that measures quality signals
 #[derive(Parser)]
@@ -35,6 +36,8 @@ pub enum Command {
     Report(ReportArgs),
     /// Initialize quench configuration
     Init(InitArgs),
+    /// Generate shell completions
+    Completions(CompletionsArgs),
 }
 
 #[derive(clap::Args)]
@@ -377,6 +380,13 @@ pub struct InitArgs {
     /// Profile(s) to include (e.g., rust, shell, claude)
     #[arg(long = "with", value_delimiter = ',')]
     pub with_profiles: Vec<String>,
+}
+
+#[derive(clap::Args)]
+pub struct CompletionsArgs {
+    /// Shell to generate completions for
+    #[arg(value_enum)]
+    pub shell: Shell,
 }
 
 #[derive(Clone, Copy, Default, clap::ValueEnum)]

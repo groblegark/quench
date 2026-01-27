@@ -3,7 +3,10 @@
 
 //! Quench CLI entry point.
 
+use std::io;
+
 use clap::{CommandFactory, Parser, error::ErrorKind};
+use clap_complete::generate;
 use tracing_subscriber::{EnvFilter, fmt};
 
 use quench::cli::{Cli, Command};
@@ -77,6 +80,11 @@ fn run() -> anyhow::Result<ExitCode> {
             Ok(ExitCode::Success)
         }
         Some(Command::Init(args)) => quench::cmd_init::run(args),
+        Some(Command::Completions(args)) => {
+            let mut cmd = Cli::command();
+            generate(args.shell, &mut cmd, "quench", &mut io::stdout());
+            Ok(ExitCode::Success)
+        }
     }
 }
 
@@ -103,6 +111,11 @@ fn print_custom_help(args: &[String]) {
                 print!("{}", format_help(subcmd));
             }
         }
+        Some("completions") => {
+            if let Some(subcmd) = cmd.find_subcommand_mut("completions") {
+                print!("{}", format_help(subcmd));
+            }
+        }
         Some("help") => {
             // Handle `quench help <subcommand>`
             let next_arg = args.iter().skip(2).find(|arg| !arg.starts_with('-'));
@@ -119,6 +132,11 @@ fn print_custom_help(args: &[String]) {
                 }
                 Some("init") => {
                     if let Some(subcmd) = cmd.find_subcommand_mut("init") {
+                        print!("{}", format_help(subcmd));
+                    }
+                }
+                Some("completions") => {
+                    if let Some(subcmd) = cmd.find_subcommand_mut("completions") {
                         print!("{}", format_help(subcmd));
                     }
                 }
