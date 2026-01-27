@@ -637,6 +637,17 @@ build_scripts: FAIL
 - **Conditional commands**: `[ -f Makefile ] && make check` still validates
 - **Subshells**: Commands in `$()` or backticks are extracted and validated
 
+## Automatic Changelog Updates (Idea)
+
+Automatically generate or update `CHANGELOG.md` based on commit history and semantic versioning.
+
+**Open questions:**
+- Generate from conventional commits vs manual curation?
+- Integration with release workflow
+- Format: Keep a Changelog vs custom?
+- Git conflicts: multiple PRs touching changelog cause merge pain
+- Append-only vs regenerate on release?
+
 ## Notes from Interview
 
 - Primary users are AI agents ("landing the plane")
