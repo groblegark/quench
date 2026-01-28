@@ -3,7 +3,8 @@
 
 //! Vitest test runner.
 //!
-//! Executes JavaScript/TypeScript tests using `vitest run --reporter=json`.
+//! Executes JavaScript/TypeScript tests using the detected package manager's
+//! exec command (e.g., `npx vitest`, `bunx vitest`, `pnpm exec vitest`).
 
 use std::io::ErrorKind;
 use std::process::{Command, Stdio};
@@ -17,6 +18,7 @@ use super::{
     RunnerContext, TestResult, TestRunResult, TestRunner, handle_timeout_error, run_setup_or_fail,
     run_with_timeout,
 };
+use crate::adapter::javascript::PackageManager;
 use crate::config::TestSuiteConfig;
 
 /// Vitest runner for JavaScript/TypeScript test suites.
@@ -28,13 +30,17 @@ impl TestRunner for VitestRunner {
     }
 
     fn available(&self, ctx: &RunnerContext) -> bool {
-        // Check if vitest is available via npx
-        let vitest_installed = Command::new("npx")
-            .args(["vitest", "--version"])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .is_ok_and(|s| s.success());
+        // Check if vitest is available via package manager's exec command
+        let pkg_mgr = PackageManager::detect(ctx.root);
+        let exec_cmd = pkg_mgr.exec_command();
+
+        let mut cmd = Command::new(&exec_cmd[0]);
+        cmd.args(&exec_cmd[1..]);
+        cmd.args(["vitest", "--version"]);
+        cmd.stdout(Stdio::null());
+        cmd.stderr(Stdio::null());
+
+        let vitest_installed = cmd.status().is_ok_and(|s| s.success());
 
         // And project has package.json
         vitest_installed && ctx.root.join("package.json").exists()
@@ -45,8 +51,12 @@ impl TestRunner for VitestRunner {
 
         let start = Instant::now();
 
-        // Build command: npx vitest run --reporter=json
-        let mut cmd = Command::new("npx");
+        // Build command using detected package manager
+        let pkg_mgr = PackageManager::detect(ctx.root);
+        let exec_cmd = pkg_mgr.exec_command();
+
+        let mut cmd = Command::new(&exec_cmd[0]);
+        cmd.args(&exec_cmd[1..]);
         cmd.args(["vitest", "run", "--reporter=json"]);
 
         // Add test path if specified

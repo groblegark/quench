@@ -12,6 +12,7 @@ use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use super::CoverageResult;
+use crate::adapter::javascript::PackageManager;
 
 // =============================================================================
 // Coverage Collection Functions
@@ -19,12 +20,16 @@ use super::CoverageResult;
 
 /// Collect Jest coverage.
 ///
-/// Runs `npx jest --coverage --coverageReporters=lcov` and parses output.
+/// Runs jest with coverage using the detected package manager's exec command.
 /// Returns a skipped result if jest is not available.
 pub fn collect_jest_coverage(root: &Path, test_path: Option<&str>) -> CoverageResult {
     let start = Instant::now();
 
-    let mut cmd = Command::new("npx");
+    let pkg_mgr = PackageManager::detect(root);
+    let exec_cmd = pkg_mgr.exec_command();
+
+    let mut cmd = Command::new(&exec_cmd[0]);
+    cmd.args(&exec_cmd[1..]);
     cmd.args(["jest", "--coverage", "--coverageReporters=lcov"]);
     if let Some(path) = test_path {
         cmd.arg(path);
@@ -66,11 +71,15 @@ pub fn collect_jest_coverage(root: &Path, test_path: Option<&str>) -> CoverageRe
 
 /// Collect Vitest coverage.
 ///
-/// Runs `npx vitest run --coverage --coverage.reporter=lcov` and parses output.
+/// Runs vitest with coverage using the detected package manager's exec command.
 pub fn collect_vitest_coverage(root: &Path, test_path: Option<&str>) -> CoverageResult {
     let start = Instant::now();
 
-    let mut cmd = Command::new("npx");
+    let pkg_mgr = PackageManager::detect(root);
+    let exec_cmd = pkg_mgr.exec_command();
+
+    let mut cmd = Command::new(&exec_cmd[0]);
+    cmd.args(&exec_cmd[1..]);
     cmd.args(["vitest", "run", "--coverage", "--coverage.reporter=lcov"]);
     if let Some(path) = test_path {
         cmd.arg(path);

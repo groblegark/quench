@@ -19,6 +19,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::json;
 
+use crate::adapter::javascript::PackageManager;
 use crate::adapter::{ProjectLanguage, detect_bundler, detect_language};
 use crate::check::{Check, CheckContext, CheckResult, Violation};
 use crate::tolerance::{parse_duration, parse_size};
@@ -423,10 +424,13 @@ fn measure_cold_build(root: &Path, language: ProjectLanguage) -> Option<Duration
                 let _ = std::fs::remove_dir_all(&output_dir);
             }
 
-            // Time the build
+            // Time the build using detected package manager
+            let pkg_mgr = PackageManager::detect(root);
+            let run_cmd = pkg_mgr.run_command("build");
+
             let start = Instant::now();
-            let output = Command::new("npm")
-                .args(["run", "build"])
+            let output = Command::new(&run_cmd[0])
+                .args(&run_cmd[1..])
                 .current_dir(root)
                 .output()
                 .ok()?;
@@ -518,10 +522,13 @@ fn measure_hot_build(root: &Path, language: ProjectLanguage) -> Option<Duration>
                 }
             }
 
-            // Time the build
+            // Time the build using detected package manager
+            let pkg_mgr = PackageManager::detect(root);
+            let run_cmd = pkg_mgr.run_command("build");
+
             let start = Instant::now();
-            let output = Command::new("npm")
-                .args(["run", "build"])
+            let output = Command::new(&run_cmd[0])
+                .args(&run_cmd[1..])
                 .current_dir(root)
                 .output()
                 .ok()?;

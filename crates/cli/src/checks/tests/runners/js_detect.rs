@@ -4,11 +4,15 @@
 //! JavaScript test runner auto-detection.
 //!
 //! Detection priority (first match wins):
-//! 1. Config files (most specific signal)
-//! 2. package.json devDependencies
-//! 3. package.json scripts.test command
+//! 1. Package manager (bun.lock -> Bun if installed)
+//! 2. Config files (most specific signal)
+//! 3. package.json devDependencies
+//! 4. package.json scripts.test command
 
 use std::path::Path;
+use std::process::{Command, Stdio};
+
+use crate::adapter::javascript::PackageManager;
 
 /// Detected JavaScript test runner.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -39,6 +43,8 @@ pub struct DetectionResult {
 /// How the runner was detected.
 #[derive(Debug)]
 pub enum DetectionSource {
+    /// Detected from package manager lock file (e.g., bun.lock).
+    PackageManager(PackageManager),
     /// Detected from a config file (e.g., "vitest.config.ts").
     ConfigFile(String),
     /// Detected from devDependencies (e.g., "vitest").
@@ -51,6 +57,7 @@ impl DetectionSource {
     /// Convert to a string for metrics.
     pub fn to_metric_string(&self) -> String {
         match self {
+            DetectionSource::PackageManager(pm) => format!("package_manager:{}", pm),
             DetectionSource::ConfigFile(name) => format!("config_file:{}", name),
             DetectionSource::DevDependency(name) => format!("dev_dependency:{}", name),
             DetectionSource::TestScript(cmd) => format!("test_script:{}", cmd),
@@ -62,12 +69,17 @@ impl DetectionSource {
 ///
 /// Returns None if no runner can be detected.
 pub fn detect_js_runner(root: &Path) -> Option<DetectionResult> {
-    // 1. Check config files (highest priority)
+    // 1. Check package manager (bun.lock -> Bun if installed)
+    if let Some(result) = detect_from_package_manager(root) {
+        return Some(result);
+    }
+
+    // 2. Check config files (highest priority among framework-specific)
     if let Some(result) = detect_from_config_files(root) {
         return Some(result);
     }
 
-    // 2. Check package.json
+    // 3. Check package.json
     let package_json = root.join("package.json");
     if !package_json.exists() {
         return None;
@@ -76,13 +88,39 @@ pub fn detect_js_runner(root: &Path) -> Option<DetectionResult> {
     let content = std::fs::read_to_string(&package_json).ok()?;
     let json: serde_json::Value = serde_json::from_str(&content).ok()?;
 
-    // 2a. Check devDependencies
+    // 3a. Check devDependencies
     if let Some(result) = detect_from_dependencies(&json) {
         return Some(result);
     }
 
-    // 2b. Check scripts.test
+    // 3b. Check scripts.test
     detect_from_test_script(&json)
+}
+
+/// Detect test runner from package manager lock file.
+///
+/// If bun.lock exists and bun is installed, prefer bun test.
+fn detect_from_package_manager(root: &Path) -> Option<DetectionResult> {
+    let pkg_mgr = PackageManager::detect(root);
+
+    if pkg_mgr == PackageManager::Bun && is_bun_installed() {
+        return Some(DetectionResult {
+            runner: JsRunner::Bun,
+            source: DetectionSource::PackageManager(pkg_mgr),
+        });
+    }
+
+    None
+}
+
+/// Check if bun is installed and available.
+fn is_bun_installed() -> bool {
+    Command::new("bun")
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success())
 }
 
 fn detect_from_config_files(root: &Path) -> Option<DetectionResult> {
