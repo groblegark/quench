@@ -3,7 +3,8 @@
 
 //! Jest test runner.
 //!
-//! Executes JavaScript/TypeScript tests using `jest --json`.
+//! Executes JavaScript/TypeScript tests using the detected package manager's
+//! exec command (e.g., `npx jest`, `bunx jest`, `pnpm exec jest`).
 
 use std::io::ErrorKind;
 use std::process::{Command, Stdio};
@@ -17,6 +18,7 @@ use super::{
     RunnerContext, TestResult, TestRunResult, TestRunner, handle_timeout_error, run_setup_or_fail,
     run_with_timeout,
 };
+use crate::adapter::javascript::PackageManager;
 use crate::config::TestSuiteConfig;
 
 /// Jest runner for JavaScript/TypeScript test suites.
@@ -28,13 +30,17 @@ impl TestRunner for JestRunner {
     }
 
     fn available(&self, ctx: &RunnerContext) -> bool {
-        // Check if jest is available via npx
-        let jest_installed = Command::new("npx")
-            .args(["jest", "--version"])
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .is_ok_and(|s| s.success());
+        // Check if jest is available via package manager's exec command
+        let pkg_mgr = PackageManager::detect(ctx.root);
+        let exec_cmd = pkg_mgr.exec_command();
+
+        let mut cmd = Command::new(&exec_cmd[0]);
+        cmd.args(&exec_cmd[1..]);
+        cmd.args(["jest", "--version"]);
+        cmd.stdout(Stdio::null());
+        cmd.stderr(Stdio::null());
+
+        let jest_installed = cmd.status().is_ok_and(|s| s.success());
 
         // And project has package.json
         jest_installed && ctx.root.join("package.json").exists()
@@ -45,8 +51,12 @@ impl TestRunner for JestRunner {
 
         let start = Instant::now();
 
-        // Build command: npx jest --json
-        let mut cmd = Command::new("npx");
+        // Build command using detected package manager
+        let pkg_mgr = PackageManager::detect(ctx.root);
+        let exec_cmd = pkg_mgr.exec_command();
+
+        let mut cmd = Command::new(&exec_cmd[0]);
+        cmd.args(&exec_cmd[1..]);
         cmd.args(["jest", "--json"]);
 
         // Add test path if specified

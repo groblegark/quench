@@ -272,6 +272,9 @@ fn js_runner_name_returns_correct_strings() {
 
 #[test]
 fn detection_source_to_metric_string() {
+    let pkg = DetectionSource::PackageManager(PackageManager::Bun);
+    assert_eq!(pkg.to_metric_string(), "package_manager:bun");
+
     let config = DetectionSource::ConfigFile("vitest.config.ts".to_string());
     assert_eq!(config.to_metric_string(), "config_file:vitest.config.ts");
 
@@ -280,4 +283,61 @@ fn detection_source_to_metric_string() {
 
     let script = DetectionSource::TestScript("vitest run".to_string());
     assert_eq!(script.to_metric_string(), "test_script:vitest run");
+}
+
+// =============================================================================
+// PACKAGE MANAGER DETECTION
+// =============================================================================
+
+/// Note: Package manager detection tests for Bun depend on bun being installed.
+/// When bun is installed and bun.lock exists, detect_js_runner returns Bun.
+/// When bun is not installed, it falls through to other detection methods.
+#[test]
+fn bun_lock_detection_respects_bun_installation() {
+    let temp = temp_project();
+    fs::write(temp.path().join("bun.lock"), "").unwrap();
+    fs::write(
+        temp.path().join("package.json"),
+        r#"{"devDependencies": {"vitest": "^2.0.0"}}"#,
+    )
+    .unwrap();
+
+    let result = detect_js_runner(temp.path());
+    assert!(result.is_some());
+    let result = result.unwrap();
+
+    // If bun is installed, should detect from package manager
+    // If not, should fall through to vitest from devDependencies
+    if is_bun_installed() {
+        assert_eq!(result.runner, JsRunner::Bun);
+        assert!(matches!(result.source, DetectionSource::PackageManager(_)));
+    } else {
+        assert_eq!(result.runner, JsRunner::Vitest);
+        assert!(matches!(result.source, DetectionSource::DevDependency(_)));
+    }
+}
+
+#[test]
+fn bun_lockb_detection_respects_bun_installation() {
+    let temp = temp_project();
+    fs::write(temp.path().join("bun.lockb"), "").unwrap();
+    fs::write(
+        temp.path().join("package.json"),
+        r#"{"scripts": {"test": "jest"}}"#,
+    )
+    .unwrap();
+
+    let result = detect_js_runner(temp.path());
+    assert!(result.is_some());
+    let result = result.unwrap();
+
+    // If bun is installed, should detect from package manager
+    // If not, should fall through to jest from test script
+    if is_bun_installed() {
+        assert_eq!(result.runner, JsRunner::Bun);
+        assert!(matches!(result.source, DetectionSource::PackageManager(_)));
+    } else {
+        assert_eq!(result.runner, JsRunner::Jest);
+        assert!(matches!(result.source, DetectionSource::TestScript(_)));
+    }
 }

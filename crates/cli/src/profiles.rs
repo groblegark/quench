@@ -5,6 +5,9 @@
 //!
 //! Provides configuration templates for various languages and agent types.
 
+use std::path::Path;
+
+use crate::adapter::javascript::PackageManager;
 use crate::init::{CursorMarker, DetectedAgent};
 
 // =============================================================================
@@ -67,6 +70,42 @@ action = "comment"
 advice = "Add a comment explaining why this rule is disabled."
 "#
     .to_string()
+}
+
+/// JavaScript-specific Landing the Plane checklist items.
+///
+/// Returns default npm-based items for consistency with other languages.
+pub fn javascript_landing_items() -> &'static [&'static str] {
+    &[
+        "npm run lint",
+        "npm run typecheck",
+        "npm test",
+        "npm run build",
+    ]
+}
+
+/// JavaScript-specific Landing the Plane checklist items with package manager detection.
+///
+/// Detects the package manager from lock files and returns appropriate commands.
+pub fn javascript_landing_items_for(root: &Path) -> Vec<String> {
+    let pkg_mgr = PackageManager::detect(root);
+    let exe = pkg_mgr.executable();
+
+    // Helper to generate run commands - yarn uses `yarn <script>` without "run"
+    let run_cmd = |script: &str| {
+        if pkg_mgr == PackageManager::Yarn {
+            format!("yarn {script}")
+        } else {
+            format!("{exe} run {script}")
+        }
+    };
+
+    vec![
+        run_cmd("lint"),
+        run_cmd("typecheck"),
+        format!("{exe} test"),
+        run_cmd("build"),
+    ]
 }
 
 /// Default Rust profile configuration for quench init.
@@ -535,3 +574,7 @@ pub fn default_template() -> String {
         default_template_suffix()
     )
 }
+
+#[cfg(test)]
+#[path = "profiles_tests.rs"]
+mod tests;
