@@ -648,6 +648,42 @@ Automatically generate or update `CHANGELOG.md` based on commit history and sema
 - Git conflicts: multiple PRs touching changelog cause merge pain
 - Append-only vs regenerate on release?
 
+## Markdown Table Auto-Formatting
+
+Auto-format markdown tables to align columns and normalize spacing via `--fix`.
+
+### Motivation
+
+Markdown tables are tedious to keep aligned manually. When columns change width, all rows need adjustment. Auto-formatting ensures consistent, readable tables without manual effort.
+
+### Behavior
+
+```markdown
+<!-- Before -->
+| Name | Type | Description |
+|---|---|---|
+| check | string | error, warn, off |
+| max_lines | int | Maximum lines per file |
+
+<!-- After -->
+| Name      | Type   | Description            |
+|-----------|--------|------------------------|
+| check     | string | error, warn, off       |
+| max_lines | int    | Maximum lines per file |
+```
+
+### Rules
+
+- Pad cells to column width with spaces
+- Align separator row dashes to column width
+- Preserve existing alignment markers (`:---`, `:---:`, `---:`)
+- Normalize to single space padding inside cells
+- Handle multi-byte characters correctly (emoji, CJK)
+
+### Integration
+
+Part of `quench check --fix` for markdown files. Could also be exposed as standalone `quench fmt` subcommand.
+
 ## Notes from Interview
 
 - Primary users are AI agents ("landing the plane")
