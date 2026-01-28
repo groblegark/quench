@@ -18,6 +18,7 @@ Adapters are auto-detected based on project files:
 | `rust` | `Cargo.toml` exists | `**/*.rs` |
 | `golang` | `go.mod` exists | `**/*.go` |
 | `javascript` | `package.json`, `tsconfig.json`, or `jsconfig.json` exists | `**/*.js`, `**/*.ts`, `**/*.jsx`, `**/*.tsx` |
+| `python` | `pyproject.toml`, `setup.py`, `setup.cfg`, or `requirements.txt` exists | `**/*.py` |
 | `shell` | `*.sh` files in root, `bin/`, or `scripts/` | `**/*.sh`, `**/*.bash` |
 | `ruby` | `Gemfile`, `*.gemspec`, `config.ru`, `config/application.rb` | `**/*.rb`, `**/*.rake` |
 | `generic` | Always (fallback) | From config |
@@ -105,6 +106,32 @@ check = "error"                  # error | warn | off
 lint_changes = "standalone"
 ```
 
+## Python Adapter
+
+See [langs/python.md](langs/python.md) for full Python configuration.
+
+### Summary
+
+- **Test detection**: `tests/**/*.py`, `test_*.py`, `*_test.py`, `conftest.py`
+- **Escape patterns**: `eval(`, `exec(`, `__import__(`, debugger statements
+- **Lint suppression**: `# noqa`, `# type: ignore`, `# pylint: disable=`
+
+```toml
+[python]
+# source = ["**/*.py"]
+# tests = ["tests/**/*.py", "test_*.py", "*_test.py", "conftest.py"]
+# ignore = [".venv/", "__pycache__/", ".mypy_cache/", ".pytest_cache/", "dist/", "build/", "*.egg-info/"]
+
+[python.cloc]
+check = "error"                  # error | warn | off
+
+[python.suppress]
+check = "comment"                # forbid | comment | allow
+
+[python.policy]
+lint_changes = "standalone"
+```
+
 ## Shell Adapter
 
 See [langs/shell.md](langs/shell.md) for full Shell configuration.
@@ -181,8 +208,4 @@ tests = ["test/**/*", "tests/**/*", "**/*_test.*", "**/*.spec.*"]
 
 ## Future Adapters
 
-| Adapter | Detection | Test Patterns | Key Escapes |
-|---------|-----------|---------------|-------------|
-| `python` | `pyproject.toml`, `setup.py` | `test_*.py`, `*_test.py`, `conftest.py` | `# type: ignore`, `# noqa`, `eval()` |
-
-Future adapters will also provide build metrics. See [checks/build.md](checks/build.md) for how adapters integrate with the build check (bundle size, build time, etc.).
+Future adapters will provide build metrics. See [checks/build.md](checks/build.md) for how adapters integrate with the build check (bundle size, build time, etc.).
