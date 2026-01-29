@@ -254,3 +254,147 @@ reconcile_direction = "cursor_to_claude"
 
     check("agents").pwd(temp.path()).passes();
 }
+
+// =============================================================================
+// OUTPUT FORMAT VALIDATION
+// =============================================================================
+
+/// Spec: docs/specs/checks/agents.cursor.md#violation-types
+///
+/// > cursor_missing_in_claude text output format
+#[test]
+fn cursor_missing_in_claude_text_format() {
+    check("agents")
+        .on("agents/cursor-out-of-sync")
+        .exits(1)
+        .stdout_eq(
+            "agents: FAIL
+  .cursor/rules/general.mdc: cursor_missing_in_claude: CLAUDE.md
+    Section \"Testing\" exists in .cursor/rules/general.mdc (alwaysApply) but not in CLAUDE.md. Use --fix to add missing sections.
+FAIL: agents
+",
+        );
+}
+
+/// Spec: docs/specs/checks/agents.cursor.md#violation-types
+///
+/// > cursor_no_agent_file text output format
+#[test]
+fn cursor_no_agent_file_text_format() {
+    check("agents")
+        .on("agents/cursor-no-claude")
+        .exits(1)
+        .stdout_eq(
+            "agents: FAIL
+  .cursor/rules/api.mdc: cursor_no_agent_file: src/api/CLAUDE.md
+    Rule scoped to src/api/ but no CLAUDE.md found there. Use --fix to create src/api/CLAUDE.md from rule content.
+FAIL: agents
+",
+        );
+}
+
+/// Spec: docs/specs/checks/agents.cursor.md#violation-types
+///
+/// > cursor_parse_error text output format
+#[test]
+fn cursor_parse_error_text_format() {
+    check("agents")
+        .on("agents/cursor-mdc-invalid")
+        .exits(1)
+        .stdout_eq(
+            "agents: FAIL
+  .cursor/rules/bad.mdc: cursor_parse_error
+    Malformed .mdc frontmatter: unterminated frontmatter (missing closing ---)
+FAIL: agents
+",
+        );
+}
+
+/// Spec: docs/specs/checks/agents.cursor.md#violation-types
+///
+/// > cursor_missing_in_claude JSON output format
+#[test]
+fn cursor_missing_in_claude_json_format() {
+    let result = check("agents")
+        .on("agents/cursor-out-of-sync")
+        .json()
+        .fails();
+
+    let violation = result.require_violation("cursor_missing_in_claude");
+    assert_eq!(
+        violation.get("file").and_then(|f| f.as_str()),
+        Some(".cursor/rules/general.mdc")
+    );
+    assert_eq!(
+        violation.get("type").and_then(|f| f.as_str()),
+        Some("cursor_missing_in_claude")
+    );
+    assert_eq!(
+        violation.get("target").and_then(|f| f.as_str()),
+        Some("CLAUDE.md")
+    );
+    assert!(
+        violation
+            .get("advice")
+            .and_then(|a| a.as_str())
+            .unwrap()
+            .contains("Section \"Testing\"")
+    );
+}
+
+/// Spec: docs/specs/checks/agents.cursor.md#violation-types
+///
+/// > cursor_no_agent_file JSON output format
+#[test]
+fn cursor_no_agent_file_json_format() {
+    let result = check("agents").on("agents/cursor-no-claude").json().fails();
+
+    let violation = result.require_violation("cursor_no_agent_file");
+    assert_eq!(
+        violation.get("file").and_then(|f| f.as_str()),
+        Some(".cursor/rules/api.mdc")
+    );
+    assert_eq!(
+        violation.get("type").and_then(|f| f.as_str()),
+        Some("cursor_no_agent_file")
+    );
+    assert_eq!(
+        violation.get("target").and_then(|f| f.as_str()),
+        Some("src/api/CLAUDE.md")
+    );
+    assert!(
+        violation
+            .get("advice")
+            .and_then(|a| a.as_str())
+            .unwrap()
+            .contains("src/api/")
+    );
+}
+
+/// Spec: docs/specs/checks/agents.cursor.md#violation-types
+///
+/// > cursor_parse_error JSON output format
+#[test]
+fn cursor_parse_error_json_format() {
+    let result = check("agents")
+        .on("agents/cursor-mdc-invalid")
+        .json()
+        .fails();
+
+    let violation = result.require_violation("cursor_parse_error");
+    assert_eq!(
+        violation.get("file").and_then(|f| f.as_str()),
+        Some(".cursor/rules/bad.mdc")
+    );
+    assert_eq!(
+        violation.get("type").and_then(|f| f.as_str()),
+        Some("cursor_parse_error")
+    );
+    assert!(
+        violation
+            .get("advice")
+            .and_then(|a| a.as_str())
+            .unwrap()
+            .contains("unterminated frontmatter")
+    );
+}

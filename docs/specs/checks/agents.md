@@ -461,3 +461,7 @@ max_tokens = 800
 required = []
 max_tokens = 400
 ```
+
+## Related Specifications
+
+- [Cursor Rule Reconciliation](agents.cursor.md) - Reconciliation between `.cursor/rules/*.mdc` files and CLAUDE.md/AGENTS.md, including `.mdc` frontmatter parsing and scope classification
