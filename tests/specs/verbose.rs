@@ -187,10 +187,7 @@ fn minimal_project_verbose_output_exact() {
     );
     temp.file("src/lib.rs", "fn main() {}");
 
-    let result = cli()
-        .pwd(temp.path())
-        .args(&["--verbose"])
-        .passes();
+    let result = cli().pwd(temp.path()).args(&["--verbose"]).passes();
 
     let stderr = result.stderr();
 
@@ -217,7 +214,10 @@ Ratchet:
 Summary:
   Total wall time: 0."#;
 
-    assert!(stderr.starts_with(expected), "Verbose output format mismatch");
+    assert!(
+        stderr.starts_with(expected),
+        "Verbose output format mismatch"
+    );
 
     // Verify timing line ends correctly
     assert!(stderr.trim().ends_with("s"), "Should end with seconds");
@@ -243,10 +243,7 @@ exclude = ["target", "build"]
     );
     temp.file("lib/code.rs", "fn test() {}");
 
-    let result = cli()
-        .pwd(temp.path())
-        .args(&["--verbose"])
-        .passes();
+    let result = cli().pwd(temp.path()).args(&["--verbose"]).passes();
 
     let stderr = result.stderr();
 
@@ -273,7 +270,10 @@ Ratchet:
 Summary:
   Total wall time: 0."#;
 
-    assert!(stderr.starts_with(expected), "Verbose output format mismatch");
+    assert!(
+        stderr.starts_with(expected),
+        "Verbose output format mismatch"
+    );
 
     // Verify timing line ends correctly
     assert!(stderr.trim().ends_with("s"), "Should end with seconds");
