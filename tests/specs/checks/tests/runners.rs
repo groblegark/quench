@@ -235,3 +235,79 @@ fn go_runner_reports_package_coverage() {
         "Expected at least one package with coverage"
     );
 }
+
+// =============================================================================
+// MULTI-LANGUAGE AUTO-DETECTION
+// =============================================================================
+
+/// Spec: Auto-detection finds and runs ALL test suites in multi-language projects
+///
+
+// =============================================================================
+// MULTI-LANGUAGE AUTO-DETECTION
+// =============================================================================
+
+/// Spec: Auto-detection finds and runs ALL test suites in multi-language projects
+///
+/// In a project with both Rust (Cargo.toml) and JavaScript (package.json),
+/// auto-detection should find and run BOTH test suites, not just the first match.
+///
+/// This verifies the fix for the bug where auto-detection would return early
+/// after finding the first language, missing other test suites.
+#[test]
+fn auto_detection_runs_all_languages_in_polyglot_project() {
+    // Note: vitest will be skipped because it's not actually installed,
+    // but the important part is that BOTH runners are detected and attempted.
+    // The check passes overall because cargo tests pass.
+    let result = check("tests")
+        .on("multi-lang-auto")
+        .args(&["--ci"])
+        .json()
+        .passes(); // Passes because cargo tests pass
+
+    let metrics = result.require("metrics");
+
+    // Should have auto_detected flag
+    assert_eq!(metrics.get("auto_detected"), Some(&serde_json::json!(true)));
+
+    // Should have multiple suites (THIS IS THE KEY FIX)
+    let suites = metrics
+        .get("suites")
+        .and_then(|s| s.as_array())
+        .expect("Expected suites array");
+
+    assert!(
+        suites.len() >= 2,
+        "Expected at least 2 auto-detected suites (Rust + JS), found {}.\n\
+         Before the fix, only the first detected language would run.",
+        suites.len()
+    );
+
+    // Should have both cargo and vitest runners detected
+    let runners: Vec<&str> = suites
+        .iter()
+        .filter_map(|s| s.get("runner").and_then(|r| r.as_str()))
+        .collect();
+
+    assert!(
+        runners.contains(&"cargo"),
+        "Expected cargo runner to be detected, found: {:?}",
+        runners
+    );
+    assert!(
+        runners.contains(&"vitest"),
+        "Expected vitest runner to be detected, found: {:?}",
+        runners
+    );
+
+    // Cargo should pass, vitest may fail (not installed)
+    let cargo_suite = suites
+        .iter()
+        .find(|s| s.get("runner").and_then(|r| r.as_str()) == Some("cargo"))
+        .expect("cargo suite");
+    let cargo_passed = cargo_suite
+        .get("passed")
+        .and_then(|p| p.as_bool())
+        .unwrap_or(false);
+    assert!(cargo_passed, "Cargo suite should pass");
+}

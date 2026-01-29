@@ -32,7 +32,6 @@ use crate::config::TestsCommitConfig;
 
 use self::auto_detect::{
     auto_detect_go_suite, auto_detect_js_suite, auto_detect_py_suite, auto_detect_rust_suite,
-    run_auto_detected_suite,
 };
 use self::correlation::{
     CorrelationConfig, DiffRange, analyze_commit, analyze_correlation, has_inline_test_changes,
@@ -41,7 +40,7 @@ use self::diff::{ChangeType, get_base_changes, get_commits_since, get_staged_cha
 use self::patterns::{Language, candidate_test_paths_for, detect_language};
 use self::placeholder::{has_js_placeholder_test, has_placeholder_test};
 use self::runners::{RunnerContext, filter_suites_for_mode};
-use self::suite::run_suites;
+use self::suite::{SuiteResult, run_single_suite, run_suites};
 use self::thresholds::{check_coverage_thresholds, check_time_thresholds};
 
 /// File extension for Rust source files.
@@ -95,48 +94,32 @@ impl Check for TestsCheck {
 
         // Auto-detect test runners in CI mode only
         if ctx.ci_mode {
+            // Collect all auto-detected suites
+            let mut auto_detected_suites = Vec::new();
+
             // Try JavaScript
             if let Some((suite, source)) = auto_detect_js_suite(ctx.root) {
-                let runner_ctx = RunnerContext {
-                    root: ctx.root,
-                    ci_mode: ctx.ci_mode,
-                    collect_coverage: true,
-                    config: ctx.config,
-                };
-                return run_auto_detected_suite(self.name(), suite, Some(source), &runner_ctx);
+                auto_detected_suites.push((suite, source));
             }
 
             // Try Python
             if let Some((suite, source)) = auto_detect_py_suite(ctx.root) {
-                let runner_ctx = RunnerContext {
-                    root: ctx.root,
-                    ci_mode: ctx.ci_mode,
-                    collect_coverage: true,
-                    config: ctx.config,
-                };
-                return run_auto_detected_suite(self.name(), suite, Some(source), &runner_ctx);
+                auto_detected_suites.push((suite, source));
             }
 
             // Try Rust
             if let Some((suite, source)) = auto_detect_rust_suite(ctx.root) {
-                let runner_ctx = RunnerContext {
-                    root: ctx.root,
-                    ci_mode: ctx.ci_mode,
-                    collect_coverage: true,
-                    config: ctx.config,
-                };
-                return run_auto_detected_suite(self.name(), suite, Some(source), &runner_ctx);
+                auto_detected_suites.push((suite, source));
             }
 
             // Try Go
             if let Some((suite, source)) = auto_detect_go_suite(ctx.root) {
-                let runner_ctx = RunnerContext {
-                    root: ctx.root,
-                    ci_mode: ctx.ci_mode,
-                    collect_coverage: true,
-                    config: ctx.config,
-                };
-                return run_auto_detected_suite(self.name(), suite, Some(source), &runner_ctx);
+                auto_detected_suites.push((suite, source));
+            }
+
+            // If we found any auto-detected suites, run them all
+            if !auto_detected_suites.is_empty() {
+                return self.run_auto_detected_suites(ctx, auto_detected_suites);
             }
         }
 
@@ -329,6 +312,149 @@ impl TestsCheck {
         }
     }
 
+
+    /// Run all auto-detected test suites and aggregate results.
+    fn run_auto_detected_suites(
+        &self,
+        ctx: &CheckContext,
+        auto_detected: Vec<(crate::config::TestSuiteConfig, String)>,
+    ) -> CheckResult {
+        let runner_ctx = RunnerContext {
+            root: ctx.root,
+            ci_mode: ctx.ci_mode,
+            collect_coverage: true,
+            config: ctx.config,
+        };
+
+        // Run all auto-detected suites
+        let suite_results: Vec<(SuiteResult, String)> = auto_detected
+            .into_iter()
+            .map(|(suite, detection_source)| {
+                let result = run_single_suite(&suite, &runner_ctx);
+                (result, detection_source)
+            })
+            .collect();
+
+        // Aggregate results
+        let all_passed = suite_results.iter().all(|(r, _)| r.passed || r.skipped);
+        let test_count: usize = suite_results.iter().map(|(r, _)| r.test_count).sum();
+        let total_ms: u64 = suite_results.iter().map(|(r, _)| r.total_ms).sum();
+
+        // Weighted average across all suites
+        let avg_ms = if test_count > 0 {
+            let weighted_sum: u64 = suite_results
+                .iter()
+                .filter_map(|(r, _)| r.avg_ms.map(|avg| avg * r.test_count as u64))
+                .sum();
+            Some(weighted_sum / test_count as u64)
+        } else {
+            None
+        };
+
+        // Find slowest test across all suites
+        let (max_ms, max_test) = suite_results
+            .iter()
+            .filter_map(|(r, _)| r.max_ms.map(|ms| (ms, r.max_test.clone())))
+            .max_by_key(|(ms, _)| *ms)
+            .map(|(ms, name)| (Some(ms), name))
+            .unwrap_or((None, None));
+
+        // Aggregate coverage by language
+        let mut aggregated_coverage: std::collections::HashMap<String, f64> =
+            std::collections::HashMap::new();
+        for (result, _) in &suite_results {
+            if let Some(ref cov) = result.coverage {
+                for (lang, pct) in cov {
+                    aggregated_coverage
+                        .entry(lang.clone())
+                        .and_modify(|existing| *existing = existing.max(*pct))
+                        .or_insert(*pct);
+                }
+            }
+        }
+
+        // Aggregate per-package coverage
+        let mut packages_coverage: std::collections::HashMap<String, f64> =
+            std::collections::HashMap::new();
+        for (result, _) in &suite_results {
+            if let Some(ref cov) = result.coverage_by_package {
+                for (pkg, pct) in cov {
+                    packages_coverage
+                        .entry(pkg.clone())
+                        .and_modify(|existing| *existing = existing.max(*pct))
+                        .or_insert(*pct);
+                }
+            }
+        }
+
+        // Build metrics JSON
+        let mut metrics = json!({
+            "test_count": test_count,
+            "total_ms": total_ms,
+            "auto_detected": true,
+            "suites": suite_results.iter().map(|(s, source)| {
+                let mut obj = json!({
+                    "name": s.name,
+                    "runner": s.runner,
+                    "passed": s.passed,
+                    "test_count": s.test_count,
+                    "detection_source": source,
+                });
+                if s.total_ms > 0 {
+                    obj["total_ms"] = json!(s.total_ms);
+                }
+                if let Some(avg) = s.avg_ms {
+                    obj["avg_ms"] = json!(avg);
+                }
+                if let Some(max) = s.max_ms {
+                    obj["max_ms"] = json!(max);
+                }
+                if let Some(ref test) = s.max_test {
+                    obj["max_test"] = json!(test);
+                }
+                obj
+            }).collect::<Vec<_>>(),
+        });
+
+        // Add optional aggregated timing metrics
+        if let Some(avg) = avg_ms {
+            metrics["avg_ms"] = json!(avg);
+        }
+        if let Some(max) = max_ms {
+            metrics["max_ms"] = json!(max);
+        }
+        if let Some(ref test) = max_test {
+            metrics["max_test"] = json!(test);
+        }
+
+        // Add coverage if available
+        if !aggregated_coverage.is_empty() {
+            metrics["coverage"] = json!(aggregated_coverage);
+        }
+
+        // Add per-package coverage if available
+        if !packages_coverage.is_empty() {
+            metrics["coverage_by_package"] = json!(packages_coverage);
+        }
+
+        // Build result
+        if all_passed {
+            CheckResult::passed(self.name()).with_metrics(metrics)
+        } else {
+            let violations: Vec<Violation> = suite_results
+                .iter()
+                .filter(|(s, _)| !s.passed && !s.skipped)
+                .map(|(s, _)| {
+                    let advice = s
+                        .error
+                        .clone()
+                        .unwrap_or_else(|| "test suite failed".to_string());
+                    Violation::file_only(format!("<suite:{}>", s.name), "test_suite_failed", advice)
+                })
+                .collect();
+            CheckResult::failed(self.name(), violations).with_metrics(metrics)
+        }
+    }
     /// Run branch-scope checking (aggregate all changes).
     fn run_branch_scope(
         &self,

@@ -28,9 +28,13 @@ fn auto_detects_vitest_from_config_file() {
     let metrics = result.require("metrics");
 
     assert_eq!(metrics.get("auto_detected"), Some(&serde_json::json!(true)));
-    assert_eq!(metrics.get("runner"), Some(&serde_json::json!("vitest")));
+
+    // Check runner and detection_source in suites array
+    let suites = metrics.get("suites").and_then(|s| s.as_array()).expect("suites");
+    assert_eq!(suites.len(), 1);
+    assert_eq!(suites[0].get("runner").and_then(|r| r.as_str()), Some("vitest"));
     assert!(
-        metrics
+        suites[0]
             .get("detection_source")
             .and_then(|v| v.as_str())
             .is_some_and(|s| s.contains("config_file"))
@@ -52,7 +56,11 @@ fn auto_detects_jest_from_config_file() {
     let metrics = result.require("metrics");
 
     assert_eq!(metrics.get("auto_detected"), Some(&serde_json::json!(true)));
-    assert_eq!(metrics.get("runner"), Some(&serde_json::json!("jest")));
+
+    // Check runner in suites array
+    let suites = metrics.get("suites").and_then(|s| s.as_array()).expect("suites");
+    assert_eq!(suites.len(), 1);
+    assert_eq!(suites[0].get("runner").and_then(|r| r.as_str()), Some("jest"));
 }
 
 // =============================================================================
@@ -76,9 +84,13 @@ fn auto_detects_vitest_from_dev_dependencies() {
     let metrics = result.require("metrics");
 
     assert_eq!(metrics.get("auto_detected"), Some(&serde_json::json!(true)));
-    assert_eq!(metrics.get("runner"), Some(&serde_json::json!("vitest")));
+
+    // Check runner and detection_source in suites array
+    let suites = metrics.get("suites").and_then(|s| s.as_array()).expect("suites");
+    assert_eq!(suites.len(), 1);
+    assert_eq!(suites[0].get("runner").and_then(|r| r.as_str()), Some("vitest"));
     assert!(
-        metrics
+        suites[0]
             .get("detection_source")
             .and_then(|v| v.as_str())
             .is_some_and(|s| s.contains("dev_dependency"))
@@ -102,7 +114,11 @@ fn auto_detects_jest_from_dev_dependencies() {
     let metrics = result.require("metrics");
 
     assert_eq!(metrics.get("auto_detected"), Some(&serde_json::json!(true)));
-    assert_eq!(metrics.get("runner"), Some(&serde_json::json!("jest")));
+
+    // Check runner in suites array
+    let suites = metrics.get("suites").and_then(|s| s.as_array()).expect("suites");
+    assert_eq!(suites.len(), 1);
+    assert_eq!(suites[0].get("runner").and_then(|r| r.as_str()), Some("jest"));
 }
 
 // =============================================================================
@@ -126,9 +142,13 @@ fn auto_detects_vitest_from_test_script() {
     let metrics = result.require("metrics");
 
     assert_eq!(metrics.get("auto_detected"), Some(&serde_json::json!(true)));
-    assert_eq!(metrics.get("runner"), Some(&serde_json::json!("vitest")));
+
+    // Check runner and detection_source in suites array
+    let suites = metrics.get("suites").and_then(|s| s.as_array()).expect("suites");
+    assert_eq!(suites.len(), 1);
+    assert_eq!(suites[0].get("runner").and_then(|r| r.as_str()), Some("vitest"));
     assert!(
-        metrics
+        suites[0]
             .get("detection_source")
             .and_then(|v| v.as_str())
             .is_some_and(|s| s.contains("test_script"))
@@ -224,9 +244,12 @@ fn config_file_priority_over_dependencies() {
         .passes();
     let metrics = result.require("metrics");
 
-    assert_eq!(metrics.get("runner"), Some(&serde_json::json!("vitest")));
+    // Check runner and detection_source in suites array
+    let suites = metrics.get("suites").and_then(|s| s.as_array()).expect("suites");
+    assert_eq!(suites.len(), 1);
+    assert_eq!(suites[0].get("runner").and_then(|r| r.as_str()), Some("vitest"));
     assert!(
-        metrics
+        suites[0]
             .get("detection_source")
             .and_then(|v| v.as_str())
             .is_some_and(|s| s.contains("config_file"))
@@ -249,9 +272,13 @@ fn auto_detects_vitest_on_js_simple_fixture() {
     let metrics = result.require("metrics");
 
     assert_eq!(metrics.get("auto_detected"), Some(&serde_json::json!(true)));
-    assert_eq!(metrics.get("runner"), Some(&serde_json::json!("vitest")));
+
+    // Check runner and detection_source in suites array
+    let suites = metrics.get("suites").and_then(|s| s.as_array()).expect("suites");
+    assert_eq!(suites.len(), 1);
+    assert_eq!(suites[0].get("runner").and_then(|r| r.as_str()), Some("vitest"));
     assert!(
-        metrics
+        suites[0]
             .get("detection_source")
             .and_then(|v| v.as_str())
             .is_some_and(|s| s.contains("config_file"))
