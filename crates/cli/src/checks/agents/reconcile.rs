@@ -30,7 +30,7 @@ pub enum ReconcileDirection {
 /// Derive reconciliation direction from sync configuration.
 pub fn derive_direction_from_sync(
     sync_enabled: bool,
-    sync_source: Option<&str>,
+    sync_from: Option<&str>,
     _files: &[String],
 ) -> Option<ReconcileDirection> {
     // If sync is disabled, skip reconciliation
@@ -38,9 +38,9 @@ pub fn derive_direction_from_sync(
         return None;
     }
 
-    // Only use explicit sync_source if provided
-    let Some(source) = sync_source else {
-        // No sync_source specified → bidirectional
+    // Only use explicit sync_from if provided
+    let Some(source) = sync_from else {
+        // No sync_from specified → bidirectional
         return Some(ReconcileDirection::Bidirectional);
     };
 

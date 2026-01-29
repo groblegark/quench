@@ -69,7 +69,7 @@ When using [`quench init --with claude`](../01-cli.md#explicit-profiles) or `--w
 files = ["CLAUDE.md"]
 required = ["CLAUDE.md"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 tables = "forbid"
 max_lines = 500
 max_tokens = 20000
@@ -90,7 +90,7 @@ advice = "Checklist for AI agents before completing work"
 files = [".cursorrules"]
 required = [".cursorrules"]
 sync = true
-sync_source = ".cursorrules"
+sync_from = ".cursorrules"
 tables = "forbid"
 max_lines = 500
 max_tokens = 20000
@@ -114,7 +114,7 @@ files = ["CLAUDE.md", ".cursorrules"]
 required = ["CLAUDE.md"]
 optional = [".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 ```
 
 ### Landing the Plane Auto-Population
@@ -158,7 +158,7 @@ Sync behavior:
 sync = true
 
 # Which file is the source of truth for --fix (default: first in `files` list)
-# sync_source = "CLAUDE.md"
+# sync_from = "CLAUDE.md"
 ```
 
 **Disable sync** if agent files should have different content:
@@ -168,7 +168,7 @@ sync = false
 ```
 
 **Auto-fix behavior**:
-- `sync_source` defaults to first file in the `files` list (e.g., if `files = ["CLAUDE.md", ".cursorrules"]`, then CLAUDE.md is the source)
+- `sync_from` defaults to first file in the `files` list (e.g., if `files = ["CLAUDE.md", ".cursorrules"]`, then CLAUDE.md is the source)
 - `--fix` syncs other files from the source
 - `--fix` is only unavailable if `files` list is empty
 
@@ -337,7 +337,7 @@ agents: FAIL
     Create a CLAUDE.md with project context for AI agents.
 ```
 
-### Fail (files out of sync, sync_source configured)
+### Fail (files out of sync, sync_from configured)
 
 ```
 agents: FAIL
@@ -423,7 +423,7 @@ files = ["CLAUDE.md", ".cursorrules"]
 sync = true
 
 # Source of truth for --fix (default: first file in `files` list)
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 
 # Existence requirements (root scope)
 required = ["CLAUDE.md"]

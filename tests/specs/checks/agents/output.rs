@@ -61,7 +61,7 @@ fn agents_violation_type_is_valid() {
 
 /// Spec: docs/specs/checks/agents.md#sync-behavior
 ///
-/// > Running with --fix syncs files from sync_source.
+/// > Running with --fix syncs files from sync_from.
 #[test]
 fn agents_fix_syncs_files_from_sync_source() {
     let source =
@@ -71,7 +71,7 @@ fn agents_fix_syncs_files_from_sync_source() {
         r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 "#,
     );
     temp.file("CLAUDE.md", source);
@@ -188,7 +188,7 @@ fn agents_fix_shows_fixed_status() {
         r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 "#,
     );
     temp.file("CLAUDE.md", source);
@@ -214,7 +214,7 @@ fn agents_fix_json_includes_fixed_field() {
         r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 "#,
     );
     temp.file("CLAUDE.md", source);

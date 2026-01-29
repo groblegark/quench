@@ -23,7 +23,6 @@ pub mod license;
 pub mod placeholders;
 pub mod stub;
 pub mod testing;
-pub mod tests;
 
 use std::sync::Arc;
 
@@ -44,7 +43,7 @@ pub fn all_checks() -> Vec<Arc<dyn Check>> {
         Arc::new(escapes::EscapesCheck),
         Arc::new(agents::AgentsCheck),
         Arc::new(docs::DocsCheck),
-        tests::TestsCheck::new(),
+        testing::TestsCheck::new(),
         Arc::new(git::GitCheck),
         Arc::new(build::BuildCheck),
         Arc::new(license::LicenseCheck),

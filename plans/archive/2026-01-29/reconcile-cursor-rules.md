@@ -198,7 +198,7 @@ reconcile_direction = "bidirectional"
 2. Which file to expect depends on configuration:
    - If `files` contains `"CLAUDE.md"` → expect `CLAUDE.md` in the directory
    - If `files` contains `"AGENTS.md"` → expect `AGENTS.md`
-   - If both → expect whichever is `sync_source` (or first in list)
+   - If both → expect whichever is `sync_from` (or first in list)
 
 **Violation types:**
 
@@ -228,11 +228,11 @@ reconcile_direction = "bidirectional"
 | `cursor_missing_in_claude` | Append section to CLAUDE.md |
 | `claude_missing_in_cursor` | Create/update `.mdc` file |
 | `cursor_no_agent_file` | Create CLAUDE.md in target directory from `.mdc` body |
-| Content differs | Update target from sync_source direction |
+| Content differs | Update target from sync_from direction |
 
-**sync_source interaction:**
-- If `sync_source = "CLAUDE.md"` → CLAUDE.md is authoritative, update `.mdc` files
-- If `sync_source` is not set or is a `.mdc` file → `.mdc` files are authoritative
+**sync_from interaction:**
+- If `sync_from = "CLAUDE.md"` → CLAUDE.md is authoritative, update `.mdc` files
+- If `sync_from` is not set or is a `.mdc` file → `.mdc` files are authoritative
 
 **Output examples:**
 

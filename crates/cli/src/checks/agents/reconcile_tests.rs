@@ -563,7 +563,7 @@ fn derive_direction_cursorrules_bidirectional() {
 
 #[test]
 fn derive_direction_no_source_is_bidirectional() {
-    // When sync_source is not provided, default to bidirectional
+    // When sync_from is not provided, default to bidirectional
     let dir = derive_direction_from_sync(
         true,
         None,

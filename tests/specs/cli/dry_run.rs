@@ -54,7 +54,7 @@ fn dry_run_shows_files_that_would_be_modified() {
         r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 "#,
     );
     temp.file("CLAUDE.md", SOURCE);
@@ -77,7 +77,7 @@ fn dry_run_shows_diff_of_changes() {
         r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 sections.required = []
 "#,
     );
@@ -107,7 +107,7 @@ fn dry_run_exits_0_when_fixes_needed() {
         r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 "#,
     );
     temp.file("CLAUDE.md", SOURCE);
@@ -134,7 +134,7 @@ fn dry_run_does_not_modify_files() {
         r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 "#,
     );
     temp.file("CLAUDE.md", SOURCE);
@@ -165,7 +165,7 @@ fn dry_run_no_changes_shows_clean() {
         r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 "#,
     );
     // Both files have the same content
@@ -190,7 +190,7 @@ fn dry_run_json_output_includes_previews() {
         r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 sections.required = []
 "#,
     );

@@ -304,9 +304,9 @@ fn check_sync(
         return true;
     }
 
-    // Determine sync source (first in files list, or explicit sync_source)
+    // Determine sync source (first in files list, or explicit sync_from)
     let source_name = config
-        .sync_source
+        .sync_from
         .as_ref()
         .or_else(|| config.files.first())
         .map(|s| s.as_str());
@@ -636,7 +636,7 @@ fn check_cursor_reconciliation(
     // Derive direction from sync configuration
     let Some(direction) = reconcile::derive_direction_from_sync(
         config.sync,
-        config.sync_source.as_deref(),
+        config.sync_from.as_deref(),
         &config.files,
     ) else {
         // Sync disabled, skip reconciliation

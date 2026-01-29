@@ -10,7 +10,7 @@ files = ["CLAUDE.md", ".cursorrules"]
 required = ["CLAUDE.md"]
 optional = [".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 tables = "forbid"
 
 [[check.agents.sections.required]]

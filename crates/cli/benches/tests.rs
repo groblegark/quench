@@ -18,11 +18,11 @@ use std::process::Command;
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 
-use quench::checks::tests::correlation::{
+use quench::checks::testing::correlation::{
     CorrelationConfig, TestIndex, analyze_correlation, candidate_test_paths, changes_in_cfg_test,
     find_test_locations, has_correlated_test,
 };
-use quench::checks::tests::diff::{ChangeType, FileChange};
+use quench::checks::testing::diff::{ChangeType, FileChange};
 
 /// Build a GlobSet from pattern strings for benchmarking.
 fn build_glob_set(patterns: &[String]) -> Result<GlobSet, String> {

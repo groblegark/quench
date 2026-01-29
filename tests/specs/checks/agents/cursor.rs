@@ -173,7 +173,7 @@ max_tokens = false
 
 /// Spec: docs/specs/checks/agents.cursor.md#one-way-reconciliation
 ///
-/// > .mdc sync_source only checks cursor → agent (CursorToClaude)
+/// > .mdc sync_from only checks cursor → agent (CursorToClaude)
 #[test]
 fn mdc_sync_source_only_checks_cursor_to_claude() {
     let temp = Project::empty();
@@ -182,7 +182,7 @@ fn mdc_sync_source_only_checks_cursor_to_claude() {
 required = []
 sync = true
 files = [".cursor/rules/*.mdc", "CLAUDE.md"]
-sync_source = ".cursor/rules/general.mdc"
+sync_from = ".cursor/rules/general.mdc"
 sections.required = []
 max_lines = false
 max_tokens = false
@@ -204,7 +204,7 @@ max_tokens = false
 
 /// Spec: docs/specs/checks/agents.cursor.md#one-way-reconciliation
 ///
-/// > CLAUDE.md sync_source checks agent → cursor (ClaudeToCursor)
+/// > CLAUDE.md sync_from checks agent → cursor (ClaudeToCursor)
 #[test]
 fn claude_sync_source_checks_claude_to_cursor() {
     let temp = Project::empty();
@@ -212,7 +212,7 @@ fn claude_sync_source_checks_claude_to_cursor() {
         r#"[check.agents]
 required = []
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 sections.required = []
 max_lines = false
 max_tokens = false
@@ -269,7 +269,7 @@ fn empty_body_not_reconciled() {
         r#"[check.agents]
 required = []
 sync = true
-sync_source = ".cursor/rules/empty.mdc"
+sync_from = ".cursor/rules/empty.mdc"
 sections.required = []
 max_lines = false
 max_tokens = false

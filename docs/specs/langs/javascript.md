@@ -37,8 +37,7 @@ advice = "Add a // CAST: comment explaining why the type assertion is necessary.
 [[check.escapes.patterns]]
 pattern = "@ts-ignore"
 action = "forbid"
-in_tests = "allow"
-advice = "Use @ts-expect-error instead, which fails if the error is resolved."
+advice = "@ts-ignore is forbidden. Use @ts-expect-error instead, which fails if the error is resolved."
 ```
 
 **Landing the Plane items** (added to agent files when combined with `claude` or `cursor` profile):
@@ -97,15 +96,14 @@ Escape patterns (`as unknown`, `@ts-ignore`) are allowed in test code:
 
 ## Default Escape Patterns
 
-| Pattern | Action | Comment Required |
-|---------|--------|------------------|
-| `as unknown` | comment | `// CAST:` |
-| `@ts-ignore` | forbid | - |
+| Pattern | Action | Comment Required | In Tests |
+|---------|--------|------------------|----------|
+| `as unknown` | comment | `// CAST:` | allow |
+| `@ts-ignore` | forbid | - | allow |
 
-Quench assumes you are already running ESLint/Biome and TypeScript for general linting.
+**`as unknown`** bypasses the type checker; document why casting is safe. Allowed in tests without comments.
 
-- **`as unknown`**: Type escape that bypasses the type checker; document why casting is safe
-- **`@ts-ignore`**: Silences errors without validation; use `@ts-expect-error` instead (which is self-documenting)
+**`@ts-ignore`** silences errors without validation. Use `@ts-expect-error` instead, which fails if the error is resolved. Allowed in tests.
 
 ## Suppress
 

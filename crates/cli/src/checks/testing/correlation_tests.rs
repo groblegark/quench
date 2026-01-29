@@ -368,7 +368,7 @@ fn analyze_correlation_sibling_test_file() {
 // COMMIT ANALYSIS TESTS
 // =============================================================================
 
-use crate::checks::tests::diff::CommitChanges;
+use crate::checks::testing::diff::CommitChanges;
 
 #[test]
 fn analyze_commit_detects_source_without_tests() {

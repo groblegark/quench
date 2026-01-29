@@ -89,7 +89,7 @@ fn agents_forbidden_file_generates_violation() {
 
 /// Spec: docs/specs/checks/agents.md#sync-behavior
 ///
-/// > Files out of sync with sync_source generate a violation.
+/// > Files out of sync with sync_from generate a violation.
 #[test]
 fn agents_out_of_sync_generates_violation() {
     let agents = check("agents").on("agents/out-of-sync").json().fails();

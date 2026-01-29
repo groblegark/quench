@@ -90,7 +90,7 @@ pub struct AgentsConfig {
 
     /// Source file for synchronization (other files should match this).
     #[serde(default)]
-    pub sync_source: Option<String>,
+    pub sync_from: Option<String>,
 
     /// Section validation configuration.
     #[serde(default)]
@@ -144,7 +144,7 @@ impl Default for AgentsConfig {
             optional: Vec::new(),
             forbid: Vec::new(),
             sync: Self::default_sync(),
-            sync_source: None,
+            sync_from: None,
             sections: SectionsConfig::default(),
             tables: ContentRule::default(),
             box_diagrams: ContentRule::allow(),

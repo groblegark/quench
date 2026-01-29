@@ -42,6 +42,30 @@ lint_config = [
 ]
 
 [[check.escapes.patterns]]
+pattern = "breakpoint()"
+action = "forbid"
+in_tests = "forbid"
+advice = "Remove breakpoint() before committing."
+
+[[check.escapes.patterns]]
+pattern = "pdb.set_trace()"
+action = "forbid"
+in_tests = "forbid"
+advice = "Remove pdb.set_trace() before committing."
+
+[[check.escapes.patterns]]
+pattern = "import pdb"
+action = "forbid"
+in_tests = "forbid"
+advice = "Remove import pdb before committing."
+
+[[check.escapes.patterns]]
+pattern = "from pdb import"
+action = "forbid"
+in_tests = "forbid"
+advice = "Remove pdb import before committing."
+
+[[check.escapes.patterns]]
 pattern = "eval("
 action = "comment"
 comment = "# EVAL:"
@@ -60,19 +84,10 @@ comment = "# DYNAMIC:"
 advice = "Add a # DYNAMIC: comment explaining why dynamic import is needed."
 
 [[check.escapes.patterns]]
-pattern = "breakpoint()"
-action = "forbid"
-advice = "Remove debugger statement before committing."
-
-[[check.escapes.patterns]]
-pattern = "pdb.set_trace()"
-action = "forbid"
-advice = "Remove debugger statement before committing."
-
-[[check.escapes.patterns]]
-pattern = "import pdb"
-action = "forbid"
-advice = "Remove debugger import before committing."
+pattern = "compile("
+action = "comment"
+comment = "# DYNAMIC:"
+advice = "Add a # DYNAMIC: comment explaining why compile is necessary for code execution."
 ```
 
 **Landing the Plane items** (added to agent files when combined with `claude` or `cursor` profile):
@@ -114,16 +129,20 @@ setup(name="my-package", ...)
 
 ## Default Escape Patterns
 
-| Pattern | Action | Comment Required |
-|---------|--------|------------------|
-| `eval(` | comment | `# EVAL:` |
-| `exec(` | comment | `# EXEC:` |
-| `__import__(` | comment | `# DYNAMIC:` |
-| `breakpoint()` | forbid | - |
-| `pdb.set_trace()` | forbid | - |
-| `import pdb` | forbid | - |
+| Pattern | Action | Comment Required | In Tests |
+|---------|--------|------------------|----------|
+| `breakpoint()` | forbid | - | forbid |
+| `pdb.set_trace()` | forbid | - | forbid |
+| `import pdb` | forbid | - | forbid |
+| `from pdb import` | forbid | - | forbid |
+| `eval(` | comment | `# EVAL:` | allow |
+| `exec(` | comment | `# EXEC:` | allow |
+| `__import__(` | comment | `# DYNAMIC:` | allow |
+| `compile(` | comment | `# DYNAMIC:` | allow |
 
-Quench does not forbid usage directly, and assumes you are already running a linter like ruff or flake8. Instead it ensures escapes and suppressions are commented.
+**Debugger patterns** are forbidden even in test code to prevent accidental commits that break CI.
+
+**Dynamic execution patterns** (eval, exec, __import__, compile) are allowed in tests without comments but require justification in source code.
 
 ## Suppress
 

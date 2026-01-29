@@ -88,8 +88,8 @@ use crate::config::TestSuiteConfig;
 macro_rules! run_setup_or_fail {
     ($config:expr, $ctx:expr) => {
         if let Some(setup) = &$config.setup {
-            if let Err(e) = $crate::checks::tests::runners::run_setup_command(setup, $ctx.root) {
-                return $crate::checks::tests::runners::TestRunResult::failed(
+            if let Err(e) = $crate::checks::testing::runners::run_setup_command(setup, $ctx.root) {
+                return $crate::checks::testing::runners::TestRunResult::failed(
                     std::time::Duration::ZERO,
                     e,
                 );

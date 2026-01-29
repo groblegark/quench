@@ -91,31 +91,13 @@ The leading `# Header` line in `.mdc` bodies is stripped before comparison, sinc
 
 ## Configuration
 
-```toml
-[check.agents]
-# Enable cursor reconciliation (default: true)
-reconcile_cursor = true
+Cursor reconciliation is automatically enabled when `sync = true` and `.cursor/rules/*.mdc` files are detected.
 
-# Direction: "bidirectional" (default), "cursor_to_claude", "claude_to_cursor"
-reconcile_direction = "bidirectional"
-```
-
-### Disabling Reconciliation
-
-Projects that intentionally maintain different content in cursor rules and agent files can disable reconciliation:
+To disable reconciliation:
 
 ```toml
 [check.agents]
-reconcile_cursor = false
-```
-
-### One-Way Reconciliation
-
-For projects where CLAUDE.md has Claude-specific content not relevant to cursor:
-
-```toml
-[check.agents]
-reconcile_direction = "cursor_to_claude"
+sync = false
 ```
 
 ## Fix Mode
@@ -124,7 +106,7 @@ reconcile_direction = "cursor_to_claude"
 |----------|-----------|
 | `cursor_missing_in_claude` | Append section to CLAUDE.md |
 | `cursor_no_agent_file` | Create CLAUDE.md in target directory from `.mdc` body |
-| Content differs | Update target based on reconcile direction |
+| Content differs | Update target from source based on `sync_from` setting |
 
 ## Content Comparison
 

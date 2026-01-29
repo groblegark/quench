@@ -37,7 +37,7 @@ fn default_config_requires_any_agent_file() {
 fn default_sync_is_enabled() {
     let config = AgentsConfig::default();
     assert!(config.sync);
-    assert!(config.sync_source.is_none());
+    assert!(config.sync_from.is_none());
 }
 
 #[test]

@@ -7,9 +7,9 @@
 
 use crate::prelude::*;
 
-/// Edge case: sync_source file doesn't exist
+/// Edge case: sync_from file doesn't exist
 ///
-/// > When sync_source is configured but the file doesn't exist,
+/// > When sync_from is configured but the file doesn't exist,
 /// > the check should not panic and should skip syncing gracefully.
 #[test]
 fn agents_sync_source_missing_gracefully_handles() {
@@ -18,7 +18,7 @@ fn agents_sync_source_missing_gracefully_handles() {
         r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 sections.required = []
 required = [".cursorrules"]
 "#,
@@ -46,7 +46,7 @@ fn agents_identical_files_reports_in_sync() {
         r#"[check.agents]
 files = ["CLAUDE.md", ".cursorrules"]
 sync = true
-sync_source = "CLAUDE.md"
+sync_from = "CLAUDE.md"
 "#,
     );
     temp.file("CLAUDE.md", content);

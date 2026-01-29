@@ -382,6 +382,13 @@ name = "todo"
 pattern = "TODO|FIXME|XXX"
 action = "count"
 threshold = 10
+
+[[check.escapes.patterns]]
+name = "debugger"
+pattern = "breakpoint\\(\\)"
+action = "forbid"
+in_tests = "forbid"            # Override: also forbid in tests (prevents CI failures)
+advice = "Remove debugger before committing."
 ```
 
 #### [check.agents]
@@ -393,7 +400,7 @@ Agent file validation (CLAUDE.md, .cursorrules). Supports scope hierarchy.
 check = "error"                        # error | warn | off
 files = ["CLAUDE.md", "AGENTS.md", ".cursorrules", ".cursor/rules/*.md"]  # Files to check
 sync = true                            # Enable file synchronization checking
-sync_source = "CLAUDE.md"              # Source file for sync
+sync_from = "CLAUDE.md"              # Source file for sync
 
 # Content rules (global defaults)
 tables = "allow"                       # allow | forbid

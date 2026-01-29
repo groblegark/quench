@@ -3,7 +3,7 @@ version = 1
 [check.agents]
 required = []
 sync = true
-sync_source = ".cursor/rules/api.mdc"
+sync_from = ".cursor/rules/api.mdc"
 sections.required = []
 max_lines = false
 max_tokens = false

@@ -31,19 +31,19 @@ lint_config = [".rubocop.yml", ".rubocop_todo.yml", ".standard.yml"]
 [[check.escapes.patterns]]
 pattern = "binding.pry"
 action = "forbid"
-in_tests = "allow"
+in_tests = "forbid"
 advice = "Remove debugger statement before committing."
 
 [[check.escapes.patterns]]
 pattern = "byebug"
 action = "forbid"
-in_tests = "allow"
+in_tests = "forbid"
 advice = "Remove debugger statement before committing."
 
 [[check.escapes.patterns]]
 pattern = "debugger"
 action = "forbid"
-in_tests = "allow"
+in_tests = "forbid"
 advice = "Remove debugger statement before committing."
 
 [[check.escapes.patterns]]
@@ -119,26 +119,24 @@ end
 
 ### Escapes in Test Code
 
-Escape patterns (debuggers, metaprogramming) follow different rules in test code:
-- **Debuggers**: Forbidden even in tests by default (common source of CI failures)
-- **Metaprogramming**: Allowed in tests without comment
+Escape patterns follow different rules in test code:
+- **Debuggers**: Forbidden in tests (common source of CI failures)
+- **Metaprogramming**: Allowed in tests without comments
 
 ## Default Escape Patterns
 
-| Pattern | Action | Comment Required |
-|---------|--------|------------------|
-| `binding.pry` | forbid | - |
-| `byebug` | forbid | - |
-| `debugger` | forbid | - |
-| `eval(` | comment | `# METAPROGRAMMING:` |
-| `instance_eval` | comment | `# METAPROGRAMMING:` |
-| `class_eval` | comment | `# METAPROGRAMMING:` |
+| Pattern | Action | Comment Required | In Tests |
+|---------|--------|------------------|----------|
+| `binding.pry` | forbid | - | forbid |
+| `byebug` | forbid | - | forbid |
+| `debugger` | forbid | - | forbid |
+| `eval(` | comment | `# METAPROGRAMMING:` | allow |
+| `instance_eval` | comment | `# METAPROGRAMMING:` | allow |
+| `class_eval` | comment | `# METAPROGRAMMING:` | allow |
 
-Quench assumes you are already running RuboCop or Standard for general linting.
+**Debugger statements** are forbidden even in test code to prevent accidental commits that break CI.
 
-- **Debugger statements**: Will cause CI failures and should never be committed
-- **`eval`**: Arbitrary code execution; document why it's necessary
-- **`instance_eval` / `class_eval`**: Powerful metaprogramming; document the DSL or use case
+**Metaprogramming patterns** (eval, instance_eval, class_eval) are allowed in tests without comments but require justification in source code.
 
 ## Suppress
 
