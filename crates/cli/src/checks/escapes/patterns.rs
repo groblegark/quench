@@ -83,10 +83,6 @@ pub(super) fn get_adapter_escape_patterns(root: &Path) -> Vec<ConfigEscapePatter
             let ruby_adapter = RubyAdapter::new();
             patterns.extend(convert_adapter_patterns(ruby_adapter.default_escapes()));
         }
-        ProjectLanguage::Python => {
-            let python_adapter = PythonAdapter::new();
-            patterns.extend(convert_adapter_patterns(python_adapter.default_escapes()));
-        }
         ProjectLanguage::Generic => {
             // No default patterns for generic projects
         }

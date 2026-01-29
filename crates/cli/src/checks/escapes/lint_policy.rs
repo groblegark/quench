@@ -229,44 +229,6 @@ fn check_ruby_lint_policy(ctx: &CheckContext, ruby_config: &RubyConfig) -> Polic
     }
 }
 
-/// Check Python lint policy and generate violations.
-fn check_python_lint_policy(ctx: &CheckContext, python_config: &PythonConfig) -> PolicyCheckResult {
-    let check_level = ctx.config.policy_check_level_for_language("python");
-
-    // If policy check is off, skip entirely
-    if check_level == CheckLevel::Off {
-        return PolicyCheckResult {
-            violations: Vec::new(),
-            check_level,
-        };
-    }
-
-    if python_config.policy.lint_changes != LintChangesPolicy::Standalone {
-        return PolicyCheckResult {
-            violations: Vec::new(),
-            check_level,
-        };
-    }
-    let Some(changed_files) = ctx.changed_files else {
-        return PolicyCheckResult {
-            violations: Vec::new(),
-            check_level,
-        };
-    };
-
-    let adapter = PythonAdapter::new();
-    let file_refs: Vec<&Path> = changed_files.iter().map(|p| p.as_path()).collect();
-    let result = adapter.check_lint_policy(&file_refs, &python_config.policy);
-    PolicyCheckResult {
-        violations: make_policy_violation(
-            result.standalone_violated,
-            &result.changed_lint_config,
-            &result.changed_source,
-        ),
-        check_level,
-    }
-}
-
 /// Check JavaScript lint policy and generate violations.
 fn check_javascript_lint_policy(
     ctx: &CheckContext,
