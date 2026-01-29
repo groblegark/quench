@@ -312,7 +312,6 @@ impl TestsCheck {
         }
     }
 
-
     /// Run all auto-detected test suites and aggregate results.
     fn run_auto_detected_suites(
         &self,
