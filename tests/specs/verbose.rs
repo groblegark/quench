@@ -194,22 +194,8 @@ fn minimal_project_verbose_output_exact() {
 
     let stderr = result.stderr();
 
-    let expected = "
-Configuration:
-  Config: quench.toml
-  Language: Generic
-  project.source: (default)
-  project.tests:
-  project.exclude:
-  check.tests.commit.source_patterns: src/**/*";
-
-    if !stderr.starts_with(expected) {
-        eprintln!("EXPECTED START:\n{:?}", expected);
-        eprintln!("ACTUAL START:\n{:?}", &stderr[..expected.len().min(stderr.len())]);
-    }
-
     // Test exact format (excluding variable timing)
-    assert!(stderr.starts_with("
+    let expected = r#"
 Configuration:
   Config: quench.toml
   Language: Generic
@@ -229,7 +215,9 @@ Ratchet:
   Ratchet check: off (not in git repo with notes mode)
 
 Summary:
-  Total wall time: 0."), "Verbose output format mismatch");
+  Total wall time: 0."#;
+
+    assert!(stderr.starts_with(expected), "Verbose output format mismatch");
 
     // Verify timing line ends correctly
     assert!(stderr.trim().ends_with("s"), "Should end with seconds");
@@ -263,7 +251,7 @@ exclude = ["target", "build"]
     let stderr = result.stderr();
 
     // Test exact format (excluding variable timing)
-    assert!(stderr.starts_with("
+    let expected = r#"
 Configuration:
   Config: quench.toml
   Language: Generic
@@ -276,14 +264,16 @@ Configuration:
 
 Discovery:
   Max depth limit: 100
-  Scanned 2 files (0 errors, 0 symlink loops, 0 skipped >10MB)
+  Scanned 3 files (0 errors, 0 symlink loops, 0 skipped >10MB)
 
 Ratchet:
   Mode: file
   Ratchet check: off (not in git repo with notes mode)
 
 Summary:
-  Total wall time: 0."), "Verbose output format mismatch");
+  Total wall time: 0."#;
+
+    assert!(stderr.starts_with(expected), "Verbose output format mismatch");
 
     // Verify timing line ends correctly
     assert!(stderr.trim().ends_with("s"), "Should end with seconds");

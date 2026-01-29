@@ -271,11 +271,16 @@ pub fn run(_cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
                 config.project.source.join(", ")
             ));
         }
+        let tests_val = config.project.tests.join(", ");
         verbose.log(&format!(
-            "project.tests: {}",
-            config.project.tests.join(", ")
+            "project.tests:{}",
+            if tests_val.is_empty() { String::new() } else { format!(" {}", tests_val) }
         ));
-        verbose.log(&format!("project.exclude: {}", exclude_patterns.join(", ")));
+        let exclude_val = exclude_patterns.join(", ");
+        verbose.log(&format!(
+            "project.exclude:{}",
+            if exclude_val.is_empty() { String::new() } else { format!(" {}", exclude_val) }
+        ));
         if !config.check.tests.commit.source_patterns.is_empty() {
             verbose.log(&format!(
                 "check.tests.commit.source_patterns: {}",
