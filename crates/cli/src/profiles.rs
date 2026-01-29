@@ -8,6 +8,7 @@
 use std::path::Path;
 
 use crate::adapter::javascript::PackageManager;
+use crate::adapter::python::PythonTooling;
 use crate::init::{CursorMarker, DetectedAgent};
 
 // =============================================================================
@@ -395,8 +396,72 @@ advice = "Remove pdb import before committing."
 }
 
 /// Python-specific Landing the Plane checklist items.
+///
+/// Returns default items assuming common tooling (ruff, mypy, pytest).
 pub fn python_landing_items() -> &'static [&'static str] {
     &["ruff check .", "ruff format --check .", "mypy .", "pytest"]
+}
+
+/// Python-specific Landing the Plane checklist items with tooling detection.
+///
+/// Detects the configured tools and returns appropriate commands.
+/// Only includes items for tools that are actually configured.
+pub fn python_landing_items_for(root: &Path) -> Vec<String> {
+    let tooling = PythonTooling::detect(root);
+    let mut items = Vec::new();
+
+    // Helper to prepend run prefix if needed
+    let cmd = |tool: &str| -> String {
+        if let Some(prefix) = tooling.package_manager.run_prefix() {
+            format!("{} {}", prefix.join(" "), tool)
+        } else {
+            tool.to_string()
+        }
+    };
+
+    // Linting: prefer ruff, fall back to flake8/pylint
+    if tooling.has_ruff {
+        items.push(cmd("ruff check ."));
+    } else if tooling.has_flake8 {
+        items.push(cmd("flake8"));
+    }
+    if tooling.has_pylint && !tooling.has_ruff {
+        // Only add pylint if not using ruff (ruff replaces most pylint checks)
+        items.push(cmd("pylint **/*.py"));
+    }
+
+    // Formatting: prefer ruff format, fall back to black
+    if tooling.has_ruff {
+        items.push(cmd("ruff format --check ."));
+    } else if tooling.has_black {
+        items.push(cmd("black --check ."));
+    }
+
+    // Type checking
+    if tooling.has_mypy {
+        items.push(cmd("mypy ."));
+    }
+
+    // Testing
+    if tooling.has_pytest {
+        items.push(cmd("pytest"));
+    }
+
+    // Building (only if build system is configured)
+    if tooling.has_build {
+        items.push(cmd("python -m build"));
+    }
+
+    // If nothing detected, return sensible defaults
+    if items.is_empty() {
+        return vec![
+            cmd("ruff check ."),
+            cmd("ruff format --check ."),
+            cmd("pytest"),
+        ];
+    }
+
+    items
 }
 
 // =============================================================================

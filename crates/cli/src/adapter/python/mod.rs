@@ -11,10 +11,15 @@
 //! - Default escape patterns (debuggers, eval/exec)
 //! - Lint config policy checking
 //! - Suppress directive parsing (noqa, type: ignore, pylint)
+//! - Package manager detection (pip, poetry, uv, pipenv)
 //!
 //! See docs/specs/langs/python.md for specification.
 
 use std::path::Path;
+
+mod package_manager;
+
+pub use package_manager::{PackageManager, PythonTooling};
 
 use globset::GlobSet;
 
