@@ -519,7 +519,7 @@ pub fn run(_cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
     let total_violations = output.total_violations();
 
     // Determine if we should use git notes for baseline
-    let use_notes = config.git.uses_notes() && !args.no_notes && is_git_repo(&root);
+    let use_notes = config.git.uses_notes() && is_git_repo(&root);
 
     // === Verbose: Ratchet ===
     // Ratchet checking (cache baseline for potential --fix reuse)
@@ -753,13 +753,6 @@ pub fn run(_cli: &Cli, args: &CheckArgs) -> anyhow::Result<ExitCode> {
         } else if verbose.is_enabled() {
             verbose.log(&format!("Saved metrics to {}", save_path.display()));
         }
-    }
-
-    // Warn about deprecated --save-notes flag (git notes are now default with --fix)
-    if args.save_notes {
-        eprintln!(
-            "quench: warning: --save-notes is deprecated; git notes are now the default with --fix"
-        );
     }
 
     let output_ms = output_start.elapsed().as_millis() as u64;

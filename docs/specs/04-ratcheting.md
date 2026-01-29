@@ -169,7 +169,7 @@ The baseline file is updated automatically.
 
 ### CI Workflow
 
-Using git notes (default, recommended):
+**With git notes** (default, configured via `baseline = "notes"`):
 
 ```yaml
 - name: Fetch baseline notes
@@ -185,16 +185,16 @@ Using git notes (default, recommended):
     git push origin refs/notes/quench
 ```
 
-Using file-based baseline (alternative):
+**With file-based baseline** (configured via `baseline = ".quench/baseline.json"`):
 
 ```yaml
 - name: Check quality
-  run: quench check --ci --no-notes
+  run: quench check --ci
 
 - name: Update baseline on main
   if: github.ref == 'refs/heads/main'
   run: |
-    quench check --ci --fix --no-notes
+    quench check --ci --fix
     git add .quench/baseline.json
     git commit -m "chore: update quality baseline" || true
     git push

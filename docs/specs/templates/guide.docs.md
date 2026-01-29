@@ -136,6 +136,7 @@ box_diagrams = "allow"
 mermaid = "allow"
 max_lines = 1000
 max_tokens = 20000
+sections.forbid = ["TODO", "Draft*"]
 
 [[check.docs.specs.sections.required]]
 name = "Purpose"
@@ -144,9 +145,6 @@ advice = "What problem this spec addresses"
 [[check.docs.specs.sections.required]]
 name = "Configuration"
 advice = "How to configure this feature"
-
-[check.docs.specs]
-sections.forbid = ["TODO", "Draft*"]
 
 [check.docs.commit]
 check = "error"

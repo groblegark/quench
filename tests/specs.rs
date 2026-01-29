@@ -18,6 +18,9 @@ mod cli_dry_run;
 #[path = "specs/cli/init_tests/mod.rs"]
 mod cli_init;
 
+#[path = "specs/cli/config_tests/mod.rs"]
+mod cli_config;
+
 #[path = "specs/cli/commands.rs"]
 mod cli_commands;
 

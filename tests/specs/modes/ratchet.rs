@@ -803,9 +803,9 @@ threshold = 100
 
 /// Spec: docs/specs/04-ratcheting.md#baseline-storage
 ///
-/// > --no-notes disables git notes entirely
+/// > baseline = ".quench/baseline.json" uses file-based baseline
 #[test]
-fn no_notes_flag_uses_file_only() {
+fn file_baseline_config_uses_file_not_notes() {
     let temp = Project::empty();
     temp.config(
         r#"
@@ -844,11 +844,11 @@ threshold = 100
         r#"{"version":1,"updated":"2026-01-20T00:00:00Z","metrics":{"escapes":{"source":{"unsafe":10}}}}"#,
     );
 
-    // --no-notes should use file baseline, not notes
+    // Config baseline = ".quench/baseline.json" should use file baseline, not notes
     // Use --no-git since CLAUDE.md doesn't have Commits section
     cli()
         .pwd(temp.path())
-        .args(&["--no-notes", "--no-git"])
+        .args(&["--no-git"])
         .passes();
 }
 

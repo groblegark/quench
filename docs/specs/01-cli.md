@@ -82,19 +82,17 @@ quench check --no-cloc --no-escapes  # Skip multiple
 | `--fix` | Auto-fix what can be fixed |
 | `--dry-run` | Show what --fix would change without changing it |
 | `--save <FILE>` | Save metrics to file (CI mode) |
-| `--no-notes` | Disable git notes, use file-based baseline only |
 
 **Violation Limit**: By default, quench shows at most **15 violations** to avoid overwhelming AI agent context windows. Use `--no-limit` to show all violations (e.g., for human review or CI logs). Use `--limit N` to set a custom limit.
 
-**Baseline Storage**: By default, `--fix` saves metrics to git notes (`refs/notes/quench`). Use `--no-notes` to disable git notes and use only file-based baseline. Use `--save <FILE>` to explicitly save to a specific file.
+**Baseline Storage**: Configured via `[git] baseline` in `quench.toml`. Default is `baseline = "notes"` (git notes at `refs/notes/quench`). Set `baseline = ".quench/baseline.json"` for file-based storage. Use `--save <FILE>` to save metrics to a specific file in addition to the configured baseline.
 
 ```bash
 quench check -o json          # JSON output
 quench check --no-limit       # Show all violations
 quench check --limit 50       # Show up to 50
-quench check --fix            # Auto-fix (saves to git notes by default)
+quench check --fix            # Auto-fix and update baseline per config
 quench check --fix --dry-run  # Preview fixes without applying
-quench check --fix --no-notes # Save to file only, no git notes
 quench check --ci --save .quench/metrics.json  # Save metrics to specific file
 ```
 

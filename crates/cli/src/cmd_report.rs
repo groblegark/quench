@@ -36,17 +36,23 @@ pub fn run(_cli: &Cli, args: &ReportArgs) -> anyhow::Result<()> {
     }
 
     // Load baseline from the best available source
-    let baseline: Option<Baseline> = if let Some(ref path) = args.baseline {
-        // Explicit --baseline flag
-        let loaded = Baseline::load(&cwd.join(path))
-            .with_context(|| format!("failed to load baseline from {}", path.display()))?;
-        if loaded.is_none() {
-            eprintln!("warning: baseline not found at {}", path.display());
+    let baseline: Option<Baseline> = if let Some(ref base) = args.base {
+        if base.ends_with(".json") {
+            // Direct file load (e.g., --base baseline.json)
+            let path = std::path::Path::new(base);
+            let loaded = Baseline::load(&cwd.join(path))
+                .with_context(|| format!("failed to load baseline from {}", path.display()))?;
+            if loaded.is_none() {
+                eprintln!("warning: baseline not found at {}", path.display());
+            }
+            loaded
+        } else {
+            // Git ref (e.g., --base main, --base HEAD~1)
+            load_baseline_for_ref(&cwd, &config, base)?
         }
-        loaded
     } else {
-        // Try sources in order (returns None if nothing found)
-        load_latest_or_baseline(&cwd, &config)
+        // No --base specified: use HEAD
+        load_baseline_for_ref(&cwd, &config, "HEAD")?
     };
 
     // Write output using streaming when possible
@@ -72,43 +78,50 @@ pub fn run(_cli: &Cli, args: &ReportArgs) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Load metrics from the best available source.
+/// Load baseline for a git reference using configured baseline source.
 ///
-/// Tries sources in order:
-/// 1. .quench/latest.json (local cache)
-/// 2. Git notes for HEAD
-/// 3. Configured baseline file
+/// Strategy:
+/// 1. If git notes configured: load from git notes for the ref
+/// 2. If file-based baseline: load from configured file
+/// 3. For HEAD only: fall back to .quench/latest.json cache
 ///
-/// Returns None if no metrics are found.
-fn load_latest_or_baseline(root: &Path, config: &Config) -> Option<Baseline> {
-    // Try latest.json first
-    let latest_path = root.join(".quench/latest.json");
-    if let Ok(Some(latest)) = LatestMetrics::load(&latest_path) {
-        // Convert LatestMetrics to Baseline for report
-        return Some(Baseline {
-            version: quench::baseline::BASELINE_VERSION,
-            updated: latest.updated,
-            commit: latest.commit,
-            metrics: extract_baseline_metrics(&latest.output),
-        });
+/// Returns None if no baseline is found.
+fn load_baseline_for_ref(root: &Path, config: &Config, git_ref: &str) -> anyhow::Result<Option<Baseline>> {
+    // For HEAD, try latest.json cache first (fast path)
+    if git_ref == "HEAD" {
+        let latest_path = root.join(".quench/latest.json");
+        if let Ok(Some(latest)) = LatestMetrics::load(&latest_path) {
+            return Ok(Some(Baseline {
+                version: quench::baseline::BASELINE_VERSION,
+                updated: latest.updated,
+                commit: latest.commit,
+                metrics: extract_baseline_metrics(&latest.output),
+            }));
+        }
     }
 
-    // Try git notes
-    if config.git.uses_notes()
-        && is_git_repo(root)
-        && let Ok(Some(baseline)) = Baseline::load_from_notes(root, "HEAD")
-    {
-        return Some(baseline);
+    // Use configured baseline source
+    if config.git.uses_notes() && is_git_repo(root) {
+        // Git notes mode
+        match Baseline::load_from_notes(root, git_ref) {
+            Ok(baseline) => Ok(baseline),
+            Err(e) => {
+                eprintln!("warning: failed to load baseline from git notes for {}: {}", git_ref, e);
+                Ok(None)
+            }
+        }
+    } else if let Some(path) = config.git.baseline_path() {
+        // File-based baseline (ref is ignored)
+        match Baseline::load(&root.join(path)) {
+            Ok(baseline) => Ok(baseline),
+            Err(e) => {
+                eprintln!("warning: failed to load baseline from {}: {}", path, e);
+                Ok(None)
+            }
+        }
+    } else {
+        Ok(None)
     }
-
-    // Try baseline file
-    if let Some(path) = config.git.baseline_path()
-        && let Ok(Some(baseline)) = Baseline::load(&root.join(path))
-    {
-        return Some(baseline);
-    }
-
-    None
 }
 
 /// Extract baseline metrics from CheckOutput.

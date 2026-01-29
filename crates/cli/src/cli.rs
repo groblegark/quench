@@ -98,14 +98,6 @@ pub struct CheckArgs {
     #[arg(long, value_name = "FILE")]
     pub save: Option<std::path::PathBuf>,
 
-    /// Disable git notes; use file-based baseline only.
-    #[arg(long)]
-    pub no_notes: bool,
-
-    /// [DEPRECATED] Git notes are now the default. This flag is ignored.
-    #[arg(long, hide = true)]
-    pub save_notes: bool,
-
     // Check enable flags (run only these checks)
     /// Run only the cloc check
     #[arg(long)]
@@ -245,9 +237,9 @@ impl CheckFilter for CheckArgs {
 
 #[derive(clap::Args, Default)]
 pub struct ReportArgs {
-    /// Path to baseline file (default: .quench/baseline.json)
-    #[arg(long, short = 'b')]
-    pub baseline: Option<PathBuf>,
+    /// Compare against a git ref or JSON file (e.g., main, HEAD~1, baseline.json)
+    #[arg(long)]
+    pub base: Option<String>,
 
     /// Output format or file path (e.g., text, json, html, report.html)
     #[arg(short, long, default_value = "text")]
