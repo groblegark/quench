@@ -3,4 +3,5 @@
 
 //! Behavioral specs for `quench config` command.
 
+mod command;
 mod templates;

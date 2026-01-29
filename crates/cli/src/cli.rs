@@ -36,6 +36,8 @@ pub enum Command {
     Report(ReportArgs),
     /// Initialize quench configuration
     Init(InitArgs),
+    /// Show configuration examples
+    Config(ConfigArgs),
     /// Generate shell completions
     Completions(CompletionsArgs),
 }
@@ -380,6 +382,13 @@ pub struct InitArgs {
     /// Profile(s) to include (e.g., rust, shell, claude)
     #[arg(long = "with", value_delimiter = ',')]
     pub with_profiles: Vec<String>,
+}
+
+#[derive(clap::Args)]
+pub struct ConfigArgs {
+    /// Feature to show configuration for (e.g., rust, tests, cloc)
+    #[arg(value_name = "FEATURE")]
+    pub feature: String,
 }
 
 #[derive(clap::Args)]

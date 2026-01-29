@@ -14,6 +14,7 @@ use quench::error::ExitCode;
 use quench::help::format_help;
 
 mod cmd_check;
+mod cmd_config;
 mod cmd_report;
 
 fn init_logging() {
@@ -80,6 +81,7 @@ fn run() -> anyhow::Result<ExitCode> {
             Ok(ExitCode::Success)
         }
         Some(Command::Init(args)) => quench::cmd_init::run(args),
+        Some(Command::Config(args)) => cmd_config::run(args),
         Some(Command::Completions(args)) => {
             let mut cmd = Cli::command();
             generate(args.shell, &mut cmd, "quench", &mut io::stdout());
@@ -111,6 +113,11 @@ fn print_custom_help(args: &[String]) {
                 print!("{}", format_help(subcmd));
             }
         }
+        Some("config") => {
+            if let Some(subcmd) = cmd.find_subcommand_mut("config") {
+                print!("{}", format_help(subcmd));
+            }
+        }
         Some("completions") => {
             if let Some(subcmd) = cmd.find_subcommand_mut("completions") {
                 print!("{}", format_help(subcmd));
@@ -132,6 +139,11 @@ fn print_custom_help(args: &[String]) {
                 }
                 Some("init") => {
                     if let Some(subcmd) = cmd.find_subcommand_mut("init") {
+                        print!("{}", format_help(subcmd));
+                    }
+                }
+                Some("config") => {
+                    if let Some(subcmd) = cmd.find_subcommand_mut("config") {
                         print!("{}", format_help(subcmd));
                     }
                 }
