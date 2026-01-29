@@ -2,23 +2,9 @@
 
 Features discussed but not yet fully specified. To be designed in later phases.
 
-## Report Command
+## Report Command Enhancements
 
-The `quench report` command generates human-readable reports from stored metrics.
-
-### Formats
-
-- **Markdown** (default): Summary tables, metric values, trend indicators
-- **JSON**: Machine-readable for external tools
-- **HTML**: Static dashboard page
-
-### Data Sources
-
-Reports read from:
-- `.quench/baseline.json` (committed file)
-- Git notes (`git notes --ref=quench`)
-
-History is derived from git notes history or git log/blame (for committed baseline).
+The `quench report` command is fully implemented with text, markdown, JSON, and HTML output formats.
 
 ### Weekly Summary (Future)
 
@@ -26,6 +12,7 @@ Generate trending reports over configurable period:
 - Summary table with deltas from previous period
 - Pass/fail status per metric
 - Trend direction indicators (↑ ↓ →)
+- Historical trend visualization
 
 ## GitHub Pages Dashboard
 
@@ -56,26 +43,6 @@ Auto-publish metrics to GitHub Pages. Based on pattern from wok project.
 - Color coding (green/yellow/red based on thresholds)
 - Links to CI runs
 - Responsive design
-
-## Future Adapters
-
-| Adapter | Detection | Notes |
-|---------|-----------|-------|
-| `typescript` | `tsconfig.json` | `as unknown`, `@ts-ignore`, `any` escapes |
-| `python` | `pyproject.toml` | `# type: ignore`, `# noqa` escapes |
-| `go` | `go.mod` | `unsafe.Pointer`, `//nolint` escapes |
-
-### TypeScript/JavaScript Build Support
-
-The `typescript` adapter will include build/bundle metrics:
-
-- **Bundler detection**: Auto-detect from `vite.config.ts`, `webpack.config.js`, `esbuild.config.js`, `rollup.config.js`
-- **Bundle size tracking**: Raw and gzipped sizes, chunk breakdown
-- **Build time**: Cold and cached builds
-- **Bundle analysis**: Large dependency warnings, forbidden imports (e.g., `moment` → suggest `date-fns`)
-- **Source map handling**: Exclude from size calculations
-
-See [checks/build.md](checks/build.md) for the build check specification.
 
 ## Doc Code Style
 

@@ -23,10 +23,15 @@ The runner determines how tests are executed and how output is parsed. Coverage 
 | `cargo` | Yes | Rust (llvm-cov) |
 | `go` | Yes | Go (built-in) |
 | `pytest` | Yes | Python (coverage.py) |
+| `unittest` | Yes | Python (coverage.py) |
 | `vitest` | Yes | JS/TS (built-in) |
 | `bun` | Yes | JS/TS (built-in) |
 | `jest` | Yes | JS/TS (built-in) |
-| `bats` | Yes | None (use `targets`) |
+| `rspec` | Yes | Ruby (SimpleCov) |
+| `minitest` | Yes | Ruby (SimpleCov) |
+| `bats` | Yes | Via `targets` (kcov, llvm-cov) |
+| `cucumber` | No | Via `targets` (instrumented) |
+| `custom` | No | None |
 
 ## Suite Configuration
 
@@ -208,6 +213,48 @@ go test -json ./...
 ```
 
 Parses Go's JSON test output. Built-in coverage support.
+
+### unittest
+
+```bash
+python -m unittest discover
+```
+
+Parses Python's unittest output for per-test results. Coverage via `coverage.py`.
+
+### rspec
+
+```bash
+rspec --format json
+```
+
+Parses RSpec's JSON reporter output for Ruby tests. Coverage via `SimpleCov`.
+
+### minitest
+
+```bash
+ruby -Ilib:test -e "require 'minitest/autorun'"
+```
+
+Parses Minitest output for Ruby tests. Coverage via `SimpleCov`.
+
+### cucumber
+
+```bash
+cucumber --format=json
+```
+
+Parses Cucumber JSON output. Provides total duration only (no per-test timing). Coverage via instrumentation for specified targets.
+
+### custom
+
+```toml
+[[check.tests.suite]]
+name = "custom"
+command = "./scripts/run-tests.sh"
+```
+
+Executes user-defined shell command. Reports exit code and total time only. No per-test timing or coverage collection.
 
 ## Aggregation
 
