@@ -24,12 +24,7 @@ exclude = ["tests/fixtures/**"]
 
 [check.cloc]
 check = "error"
-# TODO: refactor cmd_check.rs to be under 750 lines
-exclude = ["tests/fixtures/**", "crates/cli/src/cmd_check.rs"]
-advice_test = """
-Can tests be parameterized using `yare` to be more concise?
-If not, split large test files into a {module}_tests/ folder.
-"""
+exclude = ["tests/fixtures/**"]
 max_lines_test = 1100  # TODO: refactor to 1000
 
 [check.tests]
