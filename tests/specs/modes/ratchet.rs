@@ -393,48 +393,187 @@ fn ratchet_disabled_with_check_off() {
 // Coverage Ratcheting Specs
 // =============================================================================
 
+const COVERAGE_RATCHET_CONFIG: &str = r#"
+version = 1
+
+[git]
+baseline = ".quench/baseline.json"
+
+[ratchet]
+check = "error"
+coverage = true
+
+[[check.tests.suite]]
+runner = "cargo"
+"#;
+
 /// Spec: docs/specs/04-ratcheting.md#coverage
 ///
 /// > Coverage can't drop below baseline minus tolerance.
 #[test]
-#[ignore = "TODO: Phase 1202 - Coverage ratcheting requires tests check with coverage metrics"]
 fn coverage_regression_fails() {
-    // This spec requires the tests check to produce coverage metrics, which
-    // depends on the language adapter supporting coverage. Once implemented,
-    // the spec should verify:
-    // - Baseline has coverage: 80%
-    // - Current has coverage: 75%
-    // - Output shows: coverage.total: 75.0% (min: 80.0% from baseline)
+    let temp = Project::cargo("cov_test");
+    temp.config(COVERAGE_RATCHET_CONFIG);
+    temp.file("CLAUDE.md", CLAUDE_MD);
+
+    // Two functions, one tested = ~50% coverage
+    temp.file(
+        "src/lib.rs",
+        r#"
+pub fn covered() -> i32 { 42 }
+pub fn uncovered() -> i32 { 0 }
+"#,
+    );
+    temp.file(
+        "tests/basic.rs",
+        r#"
+#[test]
+fn test_covered() { assert_eq!(cov_test::covered(), 42); }
+"#,
+    );
+
+    // Baseline claims 95% coverage — actual coverage will be ~50%
+    // Coverage is stored as a percentage (0-100) in the tests check metrics
+    fs::create_dir_all(temp.path().join(".quench")).unwrap();
+    fs::write(
+        temp.path().join(".quench/baseline.json"),
+        r#"{
+  "version": 1,
+  "updated": "2026-01-20T00:00:00Z",
+  "metrics": {
+    "coverage": { "total": 95.0 }
+  }
+}"#,
+    )
+    .unwrap();
+
+    cli()
+        .pwd(temp.path())
+        .args(&["--ci"])
+        .fails()
+        .stdout_has("coverage.total:")
+        .stdout_has("(min:")
+        .stdout_has("from baseline)");
 }
+
+const COVERAGE_TOLERANCE_CONFIG: &str = r#"
+version = 1
+
+[git]
+baseline = ".quench/baseline.json"
+
+[ratchet]
+check = "error"
+coverage = true
+coverage_tolerance = 50.0
+
+[[check.tests.suite]]
+runner = "cargo"
+"#;
 
 /// Spec: docs/specs/04-ratcheting.md#tolerance
 ///
 /// > Coverage within tolerance passes.
 #[test]
-#[ignore = "TODO: Phase 1202 - Coverage ratcheting requires tests check with coverage metrics"]
 fn coverage_within_tolerance_passes() {
-    // This spec requires:
-    // - Config with coverage_tolerance = 0.05 (5%)
-    // - Baseline has coverage: 80%
-    // - Current has coverage: 76% (within 5% tolerance)
-    // - Check should pass
+    let temp = Project::cargo("cov_tol");
+    temp.config(COVERAGE_TOLERANCE_CONFIG);
+    temp.file("CLAUDE.md", CLAUDE_MD);
+
+    // Two functions, one tested = ~50% coverage
+    temp.file(
+        "src/lib.rs",
+        r#"
+pub fn covered() -> i32 { 42 }
+pub fn uncovered() -> i32 { 0 }
+"#,
+    );
+    temp.file(
+        "tests/basic.rs",
+        r#"
+#[test]
+fn test_covered() { assert_eq!(cov_tol::covered(), 42); }
+"#,
+    );
+
+    // Baseline claims 95% — actual is ~50%, but tolerance of 50
+    // percentage points allows coverage to drop from 95 to 45
+    fs::create_dir_all(temp.path().join(".quench")).unwrap();
+    fs::write(
+        temp.path().join(".quench/baseline.json"),
+        r#"{
+  "version": 1,
+  "updated": "2026-01-20T00:00:00Z",
+  "metrics": {
+    "coverage": { "total": 95.0 }
+  }
+}"#,
+    )
+    .unwrap();
+
+    cli().pwd(temp.path()).args(&["--ci"]).passes();
 }
 
 // =============================================================================
 // Binary Size Ratcheting Specs
 // =============================================================================
 
+const BINARY_SIZE_RATCHET_CONFIG: &str = r#"
+version = 1
+
+[git]
+baseline = ".quench/baseline.json"
+
+[ratchet]
+check = "error"
+binary_size = true
+
+[check.build]
+targets = ["binsize_test"]
+"#;
+
 /// Spec: docs/specs/04-ratcheting.md#binary-size
 ///
 /// > Binary size can't exceed baseline plus tolerance.
 #[test]
-#[ignore = "TODO: Phase 1215 - Binary size ratcheting requires build check with size metrics"]
 fn binary_size_regression_fails() {
-    // This spec requires the build check to produce binary size metrics.
-    // Once implemented, the spec should verify:
-    // - Baseline has binary_size: 1MB
-    // - Current has binary_size: 1.5MB
-    // - Output shows: binary_size.target: 1.5MB (max: 1MB from baseline)
+    let temp = Project::empty();
+    temp.config(BINARY_SIZE_RATCHET_CONFIG);
+    temp.file("CLAUDE.md", CLAUDE_MD);
+    temp.file(
+        "Cargo.toml",
+        "[package]\nname = \"binsize_test\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    );
+    temp.file("src/main.rs", "fn main() { println!(\"hello\"); }");
+
+    // Pre-build the release binary so the build check can measure its size
+    std::process::Command::new("cargo")
+        .args(["build", "--release"])
+        .current_dir(temp.path())
+        .output()
+        .expect("cargo build should succeed");
+
+    // Baseline claims binary is 1 byte — real binary will be much larger
+    fs::create_dir_all(temp.path().join(".quench")).unwrap();
+    fs::write(
+        temp.path().join(".quench/baseline.json"),
+        r#"{
+  "version": 1,
+  "updated": "2026-01-20T00:00:00Z",
+  "metrics": {
+    "binary_size": { "binsize_test": 1 }
+  }
+}"#,
+    )
+    .unwrap();
+
+    cli()
+        .pwd(temp.path())
+        .args(&["--ci", "--build"])
+        .fails()
+        .stdout_has("binary_size.binsize_test:")
+        .stdout_has("(max:")
+        .stdout_has("from baseline)");
 }
 
 // =============================================================================

@@ -24,9 +24,21 @@ use crate::prelude::*;
 ///
 /// > CI mode (`--ci`) enables slow checks (build, license).
 #[test]
-#[ignore = "TODO: Requires fixture with build artifacts; currently both produce stub"]
 fn ci_mode_enables_build_check() {
     let temp = default_project();
+    // Add a binary target so build check has something to measure
+    temp.file(
+        "Cargo.toml",
+        "[package]\nname = \"citest\"\nversion = \"0.1.0\"\nedition = \"2021\"\n",
+    );
+    temp.file("src/main.rs", "fn main() {}");
+
+    // Pre-build the release binary so the build check can measure its size
+    std::process::Command::new("cargo")
+        .args(["build", "--release"])
+        .current_dir(temp.path())
+        .output()
+        .expect("cargo build should succeed");
 
     // Without --ci, build check should return a stub
     let result = cli().pwd(temp.path()).args(&["--build"]).json().passes();
