@@ -10,6 +10,7 @@
 //! - Package name extraction from pyproject.toml and setup.py
 //! - Default escape patterns (debuggers, eval/exec)
 //! - Lint config policy checking
+//! - Suppress directive parsing (noqa, type: ignore, pylint)
 //!
 //! See docs/specs/langs/python.md for specification.
 
@@ -18,8 +19,10 @@ use std::path::Path;
 use globset::GlobSet;
 
 mod policy;
+mod suppress;
 
 pub use policy::{PolicyCheckResult, check_lint_policy};
+pub use suppress::{PythonSuppress, PythonSuppressKind, parse_python_suppresses};
 
 use super::glob::build_glob_set;
 use super::{Adapter, EscapeAction, EscapePattern, FileKind};
