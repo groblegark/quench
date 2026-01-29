@@ -418,7 +418,6 @@ test('covered function', () => { expect(covered()).toBe(42); });
 ///
 /// > Bun runner provides implicit JavaScript/TypeScript coverage.
 #[test]
-#[ignore = "TODO: Phase 4981 - Requires bun install"]
 fn bun_runner_collects_javascript_coverage() {
     let temp = Project::empty();
     temp.config(
@@ -433,11 +432,20 @@ runner = "bun"
   "name": "test-project"
 }"#,
     );
+    // Multi-line functions required for Bun to track uncovered code paths.
+    // Single-line functions are marked as "loaded" on module import.
     temp.file(
         "src/lib.ts",
         r#"
-export function covered(): number { return 42; }
-export function uncovered(): number { return 0; }
+export function covered(): number {
+  const x = 21;
+  return x * 2;
+}
+
+export function uncovered(): number {
+  const y = 99;
+  return y + 1;
+}
 "#,
     );
     temp.file(
@@ -463,10 +471,11 @@ test('covered function', () => { expect(covered()).toBe(42); });
 
     let js_coverage = coverage.unwrap().get("javascript").and_then(|v| v.as_f64());
     assert!(js_coverage.is_some());
+    // Coverage should be ~60% (3 lines covered out of 5: function lines + body of covered)
     let pct = js_coverage.unwrap();
     assert!(
-        pct > 40.0 && pct < 60.0,
-        "Expected ~50% coverage, got {}",
+        pct > 50.0 && pct < 70.0,
+        "Expected ~60% coverage, got {}",
         pct
     );
 }
