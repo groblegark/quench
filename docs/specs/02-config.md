@@ -29,6 +29,8 @@ version = 1      # Config format version (required)
 [rust]           # Rust language config (optional, has defaults)
 [golang]         # Go language config (optional, has defaults)
 [javascript]     # JavaScript/TypeScript config (optional, has defaults)
+[python]         # Python language config (optional, has defaults)
+[ruby]           # Ruby language config (optional, has defaults)
 [shell]          # Shell language config (optional, has defaults)
 [check.*]        # Check-specific configuration
 [ratchet]        # Regression prevention
@@ -274,6 +276,66 @@ advice = "Custom advice for JS/TS files."
 check = "error"                        # error | warn | off (default: error)
 lint_changes = "standalone"
 lint_config = [".eslintrc", ".eslintrc.js", ".eslintrc.json", "eslint.config.js", "tsconfig.json", "biome.json"]
+```
+
+### [python]
+
+Python language configuration. Auto-detected when `pyproject.toml`, `setup.py`, `setup.cfg`, or `requirements.txt` exists.
+
+```toml
+[python]
+# Source/test patterns
+# source = ["**/*.py"]
+# tests = ["tests/**/*.py", "test_*.py", "*_test.py", "conftest.py"]
+# exclude = [".venv/", "__pycache__/", ".mypy_cache/", ".pytest_cache/", "dist/", "build/", "*.egg-info/"]  # Walker-level: prevents I/O on subtrees
+
+# Lint suppression (# noqa, # type: ignore, # pylint: disable=)
+[python.suppress]
+check = "comment"                      # forbid | comment | allow
+
+[python.suppress.test]
+check = "allow"
+
+# Per-language cloc settings (overrides [check.cloc])
+[python.cloc]
+check = "error"                        # error | warn | off (inherits from [check.cloc].check)
+advice = "Custom advice for Python files."
+
+# Policy
+[python.policy]
+check = "error"                        # error | warn | off (default: error)
+lint_changes = "standalone"
+lint_config = ["pyproject.toml", "ruff.toml", ".ruff.toml", ".flake8", ".pylintrc", "pylintrc", "mypy.ini", ".mypy.ini", "setup.cfg"]
+```
+
+### [ruby]
+
+Ruby language configuration. Auto-detected when `Gemfile`, `*.gemspec`, `config.ru`, or `config/application.rb` exists.
+
+```toml
+[ruby]
+# Source/test patterns
+# source = ["**/*.rb", "**/*.rake", "Rakefile", "Gemfile", "*.gemspec"]
+# tests = ["spec/**/*_spec.rb", "test/**/*_test.rb", "features/**/*.rb"]
+# exclude = ["vendor/"]  # Walker-level: prevents I/O on subtrees
+
+# Lint suppression (# rubocop:disable, # standard:disable)
+[ruby.suppress]
+check = "comment"                      # forbid | comment | allow
+
+[ruby.suppress.test]
+check = "allow"
+
+# Per-language cloc settings (overrides [check.cloc])
+[ruby.cloc]
+check = "error"                        # error | warn | off (inherits from [check.cloc].check)
+advice = "Custom advice for Ruby files."
+
+# Policy
+[ruby.policy]
+check = "error"                        # error | warn | off (default: error)
+lint_changes = "standalone"
+lint_config = [".rubocop.yml", ".rubocop_todo.yml", ".standard.yml"]
 ```
 
 ### [check.*]

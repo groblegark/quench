@@ -14,9 +14,12 @@ curl -fsSL https://github.com/alfredjeanlab/quench/releases/latest/download/inst
 
 ## Supported Languages
 
-- **Rust** - `.rs` files, `#[allow]` suppression tracking
-- **Go** - `.go` files, `//nolint` suppression tracking
-- **Shell** - `.sh`/`.bash` files, shellcheck directive tracking
+- **Rust** - `.rs` files, `#[allow]` suppression tracking, cargo integration
+- **Go** - `.go` files, `//nolint` suppression tracking, go test integration
+- **JavaScript/TypeScript** - `.js`/`.ts` files, eslint suppression tracking, vitest/jest/bun
+- **Python** - `.py` files, `# noqa`/`# type: ignore` suppression, pytest integration
+- **Ruby** - `.rb` files, rubocop suppression tracking, RSpec/Minitest integration
+- **Shell** - `.sh`/`.bash` files, shellcheck directive tracking, bats integration
 - **Other** - Basic cloc checks work on any text file
 
 ## Quick Start
@@ -62,9 +65,13 @@ advice = "Document expected errors and recovery strategies"
 | Check | What it does |
 |-------|--------------|
 | `cloc` | Enforces file size limits (lines, tokens) |
-| `escapes` | Flags escape hatches (`.unwrap()`, `unsafe`, `set +e`) |
-| `suppress` | Requires justification for lint suppressions (`#[allow]`, `//nolint`) |
+| `escapes` | Flags escape hatches (`.unwrap()`, `unsafe`, `set +e`) and validates lint suppressions (`#[allow]`, `//nolint`) |
 | `agents` | Validates AI context files (CLAUDE.md, .cursorrules) |
+| `docs` | Validates documentation structure, TOC entries, and markdown links |
+| `tests` | Ensures test coverage for source changes, collects test metrics |
+| `git` | Validates commit message format (disabled by default) |
+| `build` | Tracks binary/bundle size and build time (CI mode only) |
+| `license` | Validates license headers in source files (CI mode only) |
 
 ## License
 
