@@ -7,7 +7,29 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+use std::process::{Command, Stdio};
+
 use crate::prelude::*;
+
+/// Check if kcov is available for shell coverage tests.
+fn kcov_available() -> bool {
+    Command::new("kcov")
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success())
+}
+
+/// Check if llvm-profdata is available for instrumented binary coverage.
+fn llvm_profdata_available() -> bool {
+    Command::new("llvm-profdata")
+        .arg("--version")
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .is_ok_and(|s| s.success())
+}
 
 // =============================================================================
 // RUST COVERAGE (llvm-cov)
@@ -64,8 +86,12 @@ fn test_covered() { assert_eq!(test_project::covered(), 42); }
 ///
 /// > Shell scripts via kcov: targets = ["scripts/*.sh"]
 #[test]
-#[ignore = "TODO: Phase 940 - Requires runner integration"]
 fn bats_runner_collects_shell_coverage_via_kcov() {
+    if !kcov_available() {
+        eprintln!("Skipping test: kcov not available");
+        return;
+    }
+
     let temp = Project::empty();
     temp.config(
         r#"
@@ -113,8 +139,12 @@ setup() { source scripts/helper.sh; }
 ///
 /// > targets = ["myapp"] - Instrument Rust binary for coverage
 #[test]
-#[ignore = "TODO: Phase 940 - Requires runner integration"]
 fn bats_runner_collects_rust_binary_coverage() {
+    if !llvm_profdata_available() {
+        eprintln!("Skipping test: llvm-profdata not available");
+        return;
+    }
+
     let temp = Project::empty();
     temp.config(
         r#"
@@ -180,8 +210,12 @@ fn main() {
 ///
 /// > Coverage: Merged across suites covering the same language
 #[test]
-#[ignore = "TODO: Phase 940 - Requires runner integration"]
 fn multiple_suite_coverages_merged() {
+    if !llvm_profdata_available() {
+        eprintln!("Skipping test: llvm-profdata not available");
+        return;
+    }
+
     let temp = Project::empty();
     temp.config(
         r#"
@@ -264,7 +298,6 @@ fn test_other() { assert_eq!(myapp::other(), 0); }
 ///
 /// > For suites that only contribute timing: targets = []
 #[test]
-#[ignore = "TODO: Phase 940 - Requires runner integration"]
 fn suite_with_empty_targets_skips_coverage() {
     let temp = Project::empty();
     temp.config(

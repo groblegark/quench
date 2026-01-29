@@ -96,6 +96,7 @@ impl Check for TestsCheck {
                 root: ctx.root,
                 ci_mode: ctx.ci_mode,
                 collect_coverage: ctx.ci_mode,
+                config: ctx.config,
             };
             return run_auto_detected_suite(self.name(), suite, Some(source), &runner_ctx);
         }
@@ -106,6 +107,7 @@ impl Check for TestsCheck {
                 root: ctx.root,
                 ci_mode: ctx.ci_mode,
                 collect_coverage: ctx.ci_mode,
+                config: ctx.config,
             };
             return run_auto_detected_suite(self.name(), suite, Some(source), &runner_ctx);
         }
