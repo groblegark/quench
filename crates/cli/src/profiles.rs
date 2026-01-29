@@ -38,37 +38,14 @@ required = [".cursorrules"]
 /// JavaScript profile configuration for quench init.
 pub fn javascript_profile_defaults() -> String {
     r#"[javascript]
-source = ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx", "**/*.mjs", "**/*.mts"]
-tests = ["**/*.test.*", "**/*.spec.*", "**/test/**", "**/tests/**", "**/__tests__/**"]
+# source = ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx", "**/*.mjs", "**/*.mts"]
+# tests = ["**/*.test.*", "**/*.spec.*", "**/test/**", "**/tests/**", "**/__tests__/**"]
 
 [javascript.suppress]
 check = "comment"
 
-[javascript.suppress.test]
-check = "allow"
-
 [javascript.policy]
 lint_changes = "standalone"
-lint_config = [".eslintrc", ".eslintrc.json", ".eslintrc.js", "eslint.config.js", ".prettierrc", ".prettierrc.json"]
-
-[[check.escapes.patterns]]
-name = "any_type"
-pattern = ": any\\b"
-action = "comment"
-comment = "// ANY:"
-advice = "Add a // ANY: comment explaining why any is needed."
-
-[[check.escapes.patterns]]
-name = "ts_ignore"
-pattern = "@ts-ignore"
-action = "forbid"
-advice = "Use @ts-expect-error with an explanation instead."
-
-[[check.escapes.patterns]]
-name = "eslint_disable"
-pattern = "eslint-disable"
-action = "comment"
-advice = "Add a comment explaining why this rule is disabled."
 "#
     .to_string()
 }
@@ -110,52 +87,19 @@ pub fn javascript_landing_items_for(root: &Path) -> Vec<String> {
 }
 
 /// Default Rust profile configuration for quench init.
-///
-/// Note: The transmute pattern uses concat to avoid self-matching.
 pub fn rust_profile_defaults() -> String {
-    // SAFETY: String concatenation to avoid pattern self-match in escapes check.
-    let transmute_pattern = format!("mem{}transmute", "::");
-    format!(
-        r#"[rust]
-cfg_test_split = true
+    r#"[rust]
+# source = ["**/*.rs"]
+# tests = ["**/tests/**/*.rs", "**/*_test.rs", "**/*_tests.rs"]
+cfg_test_split = "count"  # recommended: "require"
 
 [rust.suppress]
 check = "comment"
 
-[rust.suppress.test]
-check = "allow"
-
 [rust.policy]
 lint_changes = "standalone"
-lint_config = ["rustfmt.toml", ".rustfmt.toml", "clippy.toml", ".clippy.toml"]
-
-[[check.escapes.patterns]]
-name = "unsafe"
-pattern = "unsafe\\s*\\{{"
-action = "comment"
-comment = "// SAFETY:"
-advice = "Add a // SAFETY: comment explaining the invariants."
-
-[[check.escapes.patterns]]
-name = "unwrap"
-pattern = "\\.unwrap\\(\\)"
-action = "forbid"
-advice = "Use ? operator or handle the error explicitly."
-
-[[check.escapes.patterns]]
-name = "expect"
-pattern = "\\.expect\\("
-action = "forbid"
-advice = "Use ? operator or handle the error explicitly."
-
-[[check.escapes.patterns]]
-name = "transmute"
-pattern = "{transmute_pattern}"
-action = "comment"
-comment = "// SAFETY:"
-advice = "Add a // SAFETY: comment explaining type compatibility."
 "#
-    )
+    .to_string()
 }
 
 /// Rust-specific Landing the Plane checklist items.
@@ -170,42 +114,16 @@ pub fn rust_landing_items() -> &'static [&'static str] {
 
 /// Default Shell profile configuration for quench init.
 pub fn shell_profile_defaults() -> String {
-    r##"[shell]
-source = ["**/*.sh", "**/*.bash"]
-tests = ["tests/**/*.bats", "test/**/*.bats", "*_test.sh", "**/*_test.sh"]
+    r#"[shell]
+# source = ["**/*.sh", "**/*.bash"]
+# tests = ["tests/**/*.bats", "test/**/*.bats", "*_test.sh", "**/*_test.sh"]
 
 [shell.suppress]
 check = "comment"
-comment = "# OK:"
-
-[shell.suppress.test]
-check = "allow"
 
 [shell.policy]
 lint_changes = "standalone"
-lint_config = [".shellcheckrc"]
-
-[[check.escapes.patterns]]
-name = "set_plus_e"
-pattern = "set \\+e"
-action = "comment"
-comment = "# OK:"
-advice = "Add a # OK: comment explaining why error checking is disabled."
-
-[[check.escapes.patterns]]
-name = "eval"
-pattern = "\\beval\\s"
-action = "comment"
-comment = "# OK:"
-advice = "Add a # OK: comment explaining why eval is safe here."
-
-[[check.escapes.patterns]]
-name = "rm_rf"
-pattern = "rm\\s+-rf"
-action = "comment"
-comment = "# OK:"
-advice = "Add a # OK: comment explaining the rm -rf is safe."
-"##
+"#
     .to_string()
 }
 
@@ -217,39 +135,14 @@ pub fn shell_landing_items() -> &'static [&'static str] {
 /// Default Go profile configuration for quench init.
 pub fn golang_profile_defaults() -> String {
     r#"[golang]
-binary_size = true
-build_time = true
+# source = ["**/*.go"]
+# tests = ["**/*_test.go"]
 
 [golang.suppress]
 check = "comment"
 
-[golang.suppress.test]
-check = "allow"
-
 [golang.policy]
-lint_changes = "standalone"
-lint_config = [".golangci.yml", ".golangci.yaml", ".golangci.toml"]
-
-[[check.escapes.patterns]]
-name = "unsafe_pointer"
-pattern = "unsafe\\.Pointer"
-action = "comment"
-comment = "// SAFETY:"
-advice = "Add a // SAFETY: comment explaining pointer validity."
-
-[[check.escapes.patterns]]
-name = "go_linkname"
-pattern = "//go:linkname"
-action = "comment"
-comment = "// LINKNAME:"
-advice = "Add a // LINKNAME: comment explaining the external symbol dependency."
-
-[[check.escapes.patterns]]
-name = "go_noescape"
-pattern = "//go:noescape"
-action = "comment"
-comment = "// NOESCAPE:"
-advice = "Add a // NOESCAPE: comment explaining why escape analysis should be bypassed."
+check = "standalone"
 "#
     .to_string()
 }
@@ -267,61 +160,16 @@ pub fn golang_landing_items() -> &'static [&'static str] {
 
 /// Ruby profile configuration for quench init.
 pub fn ruby_profile_defaults() -> String {
-    r##"[ruby]
-# No build metrics for interpreted language
+    r#"[ruby]
+# source = ["**/*.rb"]
+# tests = ["**/test/**/*.rb", "**/spec/**/*.rb", "**/*_test.rb", "**/*_spec.rb"]
 
 [ruby.suppress]
 check = "comment"
 
-[ruby.suppress.test]
-check = "allow"
-
 [ruby.policy]
 lint_changes = "standalone"
-lint_config = [".rubocop.yml", ".rubocop_todo.yml", ".standard.yml"]
-
-[[check.escapes.patterns]]
-name = "binding_pry"
-pattern = "binding\\.pry"
-action = "forbid"
-in_tests = "allow"
-advice = "Remove debugger statement before committing."
-
-[[check.escapes.patterns]]
-name = "byebug"
-pattern = "byebug"
-action = "forbid"
-in_tests = "allow"
-advice = "Remove debugger statement before committing."
-
-[[check.escapes.patterns]]
-name = "debugger"
-pattern = "debugger"
-action = "forbid"
-in_tests = "allow"
-advice = "Remove debugger statement before committing."
-
-[[check.escapes.patterns]]
-name = "eval"
-pattern = "eval\\("
-action = "comment"
-comment = "# METAPROGRAMMING:"
-advice = "Add a # METAPROGRAMMING: comment explaining why eval is necessary."
-
-[[check.escapes.patterns]]
-name = "instance_eval"
-pattern = "instance_eval"
-action = "comment"
-comment = "# METAPROGRAMMING:"
-advice = "Add a # METAPROGRAMMING: comment explaining the DSL or metaprogramming use case."
-
-[[check.escapes.patterns]]
-name = "class_eval"
-pattern = "class_eval"
-action = "comment"
-comment = "# METAPROGRAMMING:"
-advice = "Add a # METAPROGRAMMING: comment explaining the metaprogramming use case."
-"##
+"#
     .to_string()
 }
 
@@ -336,62 +184,16 @@ pub fn ruby_landing_items() -> &'static [&'static str] {
 
 /// Python profile configuration for quench init.
 pub fn python_profile_defaults() -> String {
-    r##"[python]
-source = ["**/*.py"]
-tests = ["tests/**/*.py", "test/**/*.py", "test_*.py", "*_test.py", "conftest.py"]
+    r#"[python]
+# source = ["**/*.py"]
+# tests = ["tests/**/*.py", "test/**/*.py", "test_*.py", "*_test.py", "conftest.py"]
 
 [python.suppress]
 check = "comment"
 
-[python.suppress.test]
-check = "allow"
-
 [python.policy]
 lint_changes = "standalone"
-lint_config = ["pyproject.toml", "ruff.toml", ".ruff.toml", ".flake8", ".pylintrc", "pylintrc", "mypy.ini", ".mypy.ini", "setup.cfg"]
-
-[[check.escapes.patterns]]
-name = "eval"
-pattern = "\\beval\\("
-action = "comment"
-comment = "# EVAL:"
-advice = "Add a # EVAL: comment explaining why eval is necessary."
-
-[[check.escapes.patterns]]
-name = "exec"
-pattern = "\\bexec\\("
-action = "comment"
-comment = "# EXEC:"
-advice = "Add a # EXEC: comment explaining why exec is necessary."
-
-[[check.escapes.patterns]]
-name = "dynamic_import"
-pattern = "__import__\\("
-action = "comment"
-comment = "# DYNAMIC:"
-advice = "Add a # DYNAMIC: comment explaining the dynamic import."
-
-[[check.escapes.patterns]]
-name = "breakpoint"
-pattern = "\\bbreakpoint\\("
-action = "forbid"
-in_tests = "allow"
-advice = "Remove breakpoint() before committing."
-
-[[check.escapes.patterns]]
-name = "pdb_trace"
-pattern = "pdb\\.set_trace\\("
-action = "forbid"
-in_tests = "allow"
-advice = "Remove pdb.set_trace() before committing."
-
-[[check.escapes.patterns]]
-name = "import_pdb"
-pattern = "^import pdb$"
-action = "forbid"
-in_tests = "allow"
-advice = "Remove pdb import before committing."
-"##
+"#
     .to_string()
 }
 
@@ -644,6 +446,21 @@ pub fn default_template_base() -> &'static str {
 # https://github.com/alfredjeanlab/quench
 version = 1
 
+# Baseline source for ratcheting (default: git notes)
+# Use "notes" for per-commit history, or a file path for committed baseline
+[git]
+baseline = "notes"    # e.g.  ".quench/baseline.json"
+
+# Validates conventional commit format: type(scope): description
+# See: https://github.com/alfredjeanlab/quench/blob/main/docs/specs/checks/git.md
+[git.commit]
+check = "error"
+
+[ratchet]
+check = "error"       # error | warn | off
+coverage = true       # Coverage can't drop
+escapes = true        # Escape counts can't increase
+
 [check.cloc]
 check = "error"
 
@@ -659,26 +476,15 @@ pub fn default_template_suffix() -> &'static str {
 [check.docs]
 check = "error"
 
+# Verify source changes have corresponding test changes, tracks test coverage and timing for ratcheting
+# See: https://github.com/alfredjeanlab/quench/blob/main/docs/specs/checks/tests.md
 [check.tests]
-check = "off"  # stub in quench v0.3.0
+check = "off"
 
+# Validate SPDX license headers and copyright
+# See: https://github.com/alfredjeanlab/quench/blob/main/docs/specs/checks/license-headers.md
 [check.license]
-check = "off"  # stub in quench v0.3.0
-
-[git]
-# baseline = "notes" | "path/to/baseline.json"  # default: notes
-
-[git.commit]
-check = "off"  # stub in quench v0.3.0
-
-[ratchet]
-check = "error"       # error | warn | off
-coverage = true       # Coverage can't drop
-escapes = true        # Escape counts can't increase
-# binary_size = false # Opt-in: binaries can't grow
-# build_time_cold = false
-# build_time_hot = false
-# test_time_total = false
+check = "off"
 
 # Supported Languages:
 # [rust], [golang], [javascript], [shell]

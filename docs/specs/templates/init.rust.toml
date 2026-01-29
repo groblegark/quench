@@ -1,0 +1,10 @@
+[rust]
+# source = ["**/*.rs"]
+# tests = ["**/tests/**/*.rs", "**/*_test.rs", "**/*_tests.rs"]
+cfg_test_split = "count"  # recommended: "require"
+
+[rust.suppress]
+check = "comment"
+
+[rust.policy]
+lint_changes = "standalone"

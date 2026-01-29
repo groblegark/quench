@@ -11,8 +11,8 @@ pub mod size {
     /// Default max lines for source files (750).
     pub const MAX_LINES: usize = 750;
 
-    /// Default max lines for test files (1100).
-    pub const MAX_LINES_TEST: usize = 1100;
+    /// Default max lines for test files (1000).
+    pub const MAX_LINES_TEST: usize = 1000;
 
     /// Default max tokens (~5k words, suitable for LLM context).
     pub const MAX_TOKENS: usize = 20000;

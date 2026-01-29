@@ -250,17 +250,6 @@ fn normalize_path(path: &str, root: &Path) -> String {
         .unwrap_or_else(|| path_str.to_string())
 }
 
-/// Clean up kcov output directory.
-///
-/// Available for explicit cleanup after coverage collection if needed.
-#[allow(dead_code)] // Utility for manual cleanup
-pub(crate) fn cleanup_kcov_output(root: &Path) {
-    let output_dir = root.join("target").join("kcov");
-    if output_dir.exists() {
-        let _ = std::fs::remove_dir_all(output_dir);
-    }
-}
-
 #[cfg(test)]
 #[path = "kcov_tests.rs"]
 mod tests;

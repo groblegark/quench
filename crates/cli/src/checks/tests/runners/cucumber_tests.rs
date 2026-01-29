@@ -307,7 +307,6 @@ fn scenario_status_from_steps(
     let cucumber_steps: Vec<CucumberStep> = steps
         .into_iter()
         .map(|(status, duration)| CucumberStep {
-            name: "step".to_string(),
             result: Some(CucumberStepResult {
                 status: status.to_string(),
                 duration,

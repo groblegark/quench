@@ -63,8 +63,6 @@ struct SimpleCovResultset {
 #[derive(Debug, Deserialize)]
 struct SimpleCovSuite {
     coverage: HashMap<String, SimpleCovFile>,
-    #[allow(dead_code)]
-    timestamp: Option<u64>,
 }
 
 /// Coverage data for a single file.

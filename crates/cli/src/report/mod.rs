@@ -17,10 +17,10 @@ use crate::baseline::{
 };
 use crate::cli::{CheckFilter, OutputFormat};
 
-pub use html::HtmlFormatter;
-pub use json::JsonFormatter;
-pub use markdown::MarkdownFormatter;
-pub use text::TextFormatter;
+use html::HtmlFormatter;
+use json::JsonFormatter;
+use markdown::MarkdownFormatter;
+use text::TextFormatter;
 
 /// Helper for accessing filtered metrics.
 ///

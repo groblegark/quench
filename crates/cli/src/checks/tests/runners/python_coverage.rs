@@ -262,50 +262,25 @@ fn run_coverage_py(
 /// coverage.json top-level structure.
 #[derive(Debug, Deserialize)]
 struct CoverageJson {
-    #[allow(dead_code)]
-    meta: CoverageMeta,
     files: HashMap<String, FileData>,
     totals: TotalsData,
-}
-
-/// Metadata from coverage.json.
-#[derive(Debug, Deserialize)]
-struct CoverageMeta {
-    #[allow(dead_code)]
-    version: Option<String>,
-    #[allow(dead_code)]
-    branch_coverage: Option<bool>,
 }
 
 /// Per-file coverage data from coverage.json.
 #[derive(Debug, Deserialize)]
 struct FileData {
-    #[allow(dead_code)]
-    executed_lines: Vec<u32>,
-    #[allow(dead_code)]
-    missing_lines: Vec<u32>,
-    #[allow(dead_code)]
-    excluded_lines: Option<Vec<u32>>,
     summary: FileSummary,
 }
 
 /// File-level summary from coverage.json.
 #[derive(Debug, Deserialize)]
 struct FileSummary {
-    #[allow(dead_code)]
-    covered_lines: u64,
-    #[allow(dead_code)]
-    num_statements: u64,
     percent_covered: f64,
 }
 
 /// Total summary from coverage.json.
 #[derive(Debug, Deserialize)]
 struct TotalsData {
-    #[allow(dead_code)]
-    covered_lines: u64,
-    #[allow(dead_code)]
-    num_statements: u64,
     percent_covered: f64,
 }
 

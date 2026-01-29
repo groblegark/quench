@@ -183,9 +183,9 @@ Per-file limits (enabled by default):
 
 ```toml
 [check.cloc]
-# Max lines per file (default: 750 source, 1100 test)
+# Max lines per file (default: 750 source, 1000 test)
 max_lines = 750
-max_lines_test = 1100
+max_lines_test = 1000
 
 # Max tokens per file (default: 20000, use false to disable)
 max_tokens = 20000
@@ -215,7 +215,7 @@ check = "error"
 
 # File size limits (defaults shown)
 max_lines = 750
-max_lines_test = 1100
+max_lines_test = 1000
 max_tokens = 20000               # use false to disable
 
 # Exclude from size limits

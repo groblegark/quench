@@ -1,22 +1,29 @@
 version = 1
 
 [rust]
-cfg_test_split = "require"
+# source = ["**/*.rs"]
+tests = ["**/tests/**/*.rs", "**/*_test.rs", "**/*_tests.rs"]
+cfg_test_split = "count"  # recommended: "require"
+
+[rust.suppress]
+check = "comment"
+
+[rust.policy]
+lint_changes = "standalone"
+
 
 [check.cloc]
+max_lines_test = 1100  # TODO: refactor to 1000
 advice_test = """
 Can tests be parameterized using `yare` to be more concise?
 If not, split large test files into a {module}_tests/ folder.
 """
+
+# ONLY for intentionally large fixture/test data
+# NEVER for tests or source files
 exclude = [
-    # ONLY for intentionally large fixture/test data
-    # NEVER for tests or source files
     "tests/fixtures/cloc/**",
     "tests/fixtures/bench-*/**",
-    # TODO: Split config/mod.rs into submodules (776 lines vs 750 limit)
-    "crates/cli/src/config/mod.rs",
-    # TODO: Split tests/mod.rs into submodules (1119 lines vs 1100 limit)
-    "crates/cli/src/checks/tests/mod.rs",
 ]
 
 [check.agents]

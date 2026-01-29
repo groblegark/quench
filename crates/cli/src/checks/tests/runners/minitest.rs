@@ -120,15 +120,7 @@ pub(crate) struct MinitestTest {
 /// Summary from Minitest JSON.
 #[derive(Debug, Deserialize)]
 pub(crate) struct MinitestSummary {
-    #[allow(dead_code)]
-    pub total: u32,
-    #[allow(dead_code)]
-    pub passed: u32,
     pub failed: u32,
-    #[allow(dead_code)]
-    pub skipped: u32,
-    #[allow(dead_code)]
-    pub time: f64,
 }
 
 /// Try to parse JSON output from minitest-reporters.

@@ -310,16 +310,6 @@ fn normalize_path(path: &str) -> String {
         .unwrap_or_else(|| path.to_string())
 }
 
-/// Clean up coverage profiles after report generation.
-///
-/// Available for explicit cleanup after coverage collection if needed.
-#[allow(dead_code)] // Utility for manual cleanup
-pub(crate) fn cleanup_coverage_profiles(profile_dir: &Path) {
-    if profile_dir.exists() {
-        let _ = std::fs::remove_dir_all(profile_dir);
-    }
-}
-
 /// Truncate text to first N lines.
 fn truncate_lines(text: &str, max_lines: usize) -> String {
     text.lines().take(max_lines).collect::<Vec<_>>().join("\n")

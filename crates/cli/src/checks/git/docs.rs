@@ -30,9 +30,6 @@ pub enum DocsResult {
     /// Documentation found in the specified file.
     ///
     /// The contained `String` is the filename where documentation was found.
-    /// Field is accessed via pattern matching in tests (docs_tests.rs).
-    // NOTE(lifetime): Variant is matched in tests, not directly constructed
-    #[allow(dead_code)]
     Found(String),
     /// No documentation found; lists checked files.
     NotFound(Vec<String>),

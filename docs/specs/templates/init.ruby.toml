@@ -1,0 +1,9 @@
+[ruby]
+# source = ["**/*.rb"]
+# tests = ["**/test/**/*.rb", "**/spec/**/*.rb", "**/*_test.rb", "**/*_spec.rb"]
+
+[ruby.suppress]
+check = "comment"
+
+[ruby.policy]
+lint_changes = "standalone"

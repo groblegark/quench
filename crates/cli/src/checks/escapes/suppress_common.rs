@@ -377,7 +377,10 @@ fn format_suppression_fallback(patterns: &[String]) -> String {
             .map(|p| format!("  {} ...", p))
             .collect::<Vec<_>>()
             .join("\n");
-        format!("Only if fixing is not feasible, add one of:\n{}", formatted_patterns)
+        format!(
+            "Only if fixing is not feasible, add one of:\n{}",
+            formatted_patterns
+        )
     }
 }
 
@@ -427,8 +430,12 @@ pub fn build_suppress_missing_comment_advice(
         let msg = match language {
             "rust" => "Only if the lint is a false positive, add a comment above the attribute.",
             "shell" => "Only if the lint is a false positive, add a comment above the directive.",
-            "go" => "Only if the lint is a false positive, add a comment above the directive or inline (//nolint:code // reason).",
-            "javascript" => "Only if the lint is a false positive, add a comment above the directive or use inline reason (-- reason).",
+            "go" => {
+                "Only if the lint is a false positive, add a comment above the directive or inline (//nolint:code // reason)."
+            }
+            "javascript" => {
+                "Only if the lint is a false positive, add a comment above the directive or use inline reason (-- reason)."
+            }
             _ => "Only if the lint is a false positive, add a comment above the directive.",
         };
         parts.push(msg.to_string());

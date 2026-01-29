@@ -1,0 +1,9 @@
+[python]
+# source = ["**/*.py"]
+# tests = ["tests/**/*.py", "test/**/*.py", "test_*.py", "*_test.py", "conftest.py"]
+
+[python.suppress]
+check = "comment"
+
+[python.policy]
+lint_changes = "standalone"

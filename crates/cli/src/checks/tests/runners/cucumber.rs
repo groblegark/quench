@@ -94,9 +94,6 @@ pub(crate) type CucumberOutput = Vec<CucumberFeature>;
 /// A single feature file from Cucumber.
 #[derive(Debug, Deserialize)]
 pub(crate) struct CucumberFeature {
-    #[allow(dead_code)]
-    pub uri: String,
-    #[allow(dead_code)]
     pub name: String,
     #[serde(default)]
     pub elements: Vec<CucumberElement>,
@@ -115,8 +112,6 @@ pub(crate) struct CucumberElement {
 /// A single step in a Cucumber scenario.
 #[derive(Debug, Deserialize)]
 pub(crate) struct CucumberStep {
-    #[allow(dead_code)]
-    pub name: String,
     #[serde(default)]
     pub result: Option<CucumberStepResult>,
 }

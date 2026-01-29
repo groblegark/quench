@@ -22,28 +22,27 @@ use std::path::Path;
 
 use serde::Deserialize;
 
-pub use checks::{
-    CheckLevel, ClocConfig, DocsAreaConfig, DocsCommitConfig, DocsConfig, EscapeAction,
-    EscapePattern, EscapesConfig, LangClocConfig, LineMetric, LinksConfig, SpecsConfig,
-    SpecsSectionsConfig, TocConfig,
-};
-pub use go::{GoConfig, GoPolicyConfig, GoSuppressConfig};
-pub use javascript::{JavaScriptConfig, JavaScriptPolicyConfig};
-pub use python::{PythonConfig, PythonPolicyConfig, PythonSuppressConfig};
-pub use ratchet::{RatchetConfig, RatchetPackageConfig};
-pub use ruby::{RubyConfig, RubyPolicyConfig, RubySuppressConfig};
-pub use shell::{ShellConfig, ShellPolicyConfig, ShellSuppressConfig};
-pub use suppress::{SuppressConfig, SuppressLevel, SuppressScopeConfig};
-pub use test_config::{
-    TestSuiteConfig, TestsCommitConfig, TestsConfig, TestsCoverageConfig,
-    TestsPackageCoverageConfig, TestsTimeConfig,
-};
+pub use checks::CheckLevel;
 
 use crate::error::{Error, Result};
 
-pub use crate::checks::agents::config::{
-    AgentsConfig, AgentsScopeConfig, ContentRule, RequiredSection, SectionsConfig,
-    deserialize_optional_usize,
+pub(crate) use checks::{
+    ClocConfig, DocsAreaConfig, DocsCommitConfig, DocsConfig, EscapeAction, EscapePattern,
+    EscapesConfig, LangClocConfig, LineMetric, SpecsConfig, SpecsSectionsConfig,
+};
+pub(crate) use go::{GoConfig, GoPolicyConfig, GoSuppressConfig};
+pub(crate) use javascript::{JavaScriptConfig, JavaScriptPolicyConfig};
+pub(crate) use python::{PythonConfig, PythonPolicyConfig};
+pub(crate) use ratchet::RatchetConfig;
+#[cfg(test)]
+pub(crate) use ratchet::RatchetPackageConfig;
+pub(crate) use ruby::{RubyConfig, RubyPolicyConfig, RubySuppressConfig};
+pub(crate) use shell::{ShellConfig, ShellPolicyConfig, ShellSuppressConfig};
+pub(crate) use suppress::{SuppressConfig, SuppressLevel, SuppressScopeConfig};
+pub(crate) use test_config::{TestSuiteConfig, TestsCommitConfig, TestsConfig};
+
+pub(crate) use crate::checks::agents::config::{
+    AgentsConfig, ContentRule, RequiredSection, SectionsConfig, deserialize_optional_usize,
 };
 
 /// Minimum config structure for version checking.

@@ -48,7 +48,7 @@ When configuration is needed, it's hierarchical (monorepo-friendly) and minimal.
 
 | Check | Fast | CI | Description |
 |-------|------|-----|-------------|
-| `cloc` | ✓ | ✓ | Lines of code, file size limits (750 source, 1100 test) |
+| `cloc` | ✓ | ✓ | Lines of code, file size limits (750 source, 1000 test) |
 | `escapes` | ✓ | ✓ | Pattern detection with count/comment/forbid actions |
 | `agents` | ✓ | ✓ | Agent file validation (CLAUDE.md, .cursorrules, sync) |
 | `docs` | ✓ | ✓ | File refs, specs validation + doc correlation (CI) |

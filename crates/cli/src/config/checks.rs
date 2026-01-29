@@ -372,7 +372,7 @@ pub struct ClocConfig {
     #[serde(default = "ClocConfig::default_max_lines")]
     pub max_lines: usize,
 
-    /// Maximum lines per test file (default: 1100).
+    /// Maximum lines per test file (default: 1000).
     #[serde(default = "ClocConfig::default_max_lines_test")]
     pub max_lines_test: usize,
 

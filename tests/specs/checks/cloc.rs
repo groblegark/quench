@@ -178,7 +178,7 @@ fn cloc_fails_on_source_file_over_max_lines() {
 
 /// Spec: docs/specs/checks/cloc.md#file-size-limits
 ///
-/// > max_lines_test = 1100 (default for test files)
+/// > max_lines_test = 1000 (default for test files)
 #[test]
 fn cloc_fails_on_test_file_over_max_lines_test() {
     let cloc = check("cloc").on("cloc/oversized-test").json().fails();

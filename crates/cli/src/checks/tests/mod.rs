@@ -5,44 +5,41 @@
 //!
 //! Reference: docs/specs/checks/tests.md
 
+pub mod auto_detect;
 pub mod correlation;
 pub mod diff;
 pub mod patterns;
 pub mod placeholder;
 pub mod runners;
+pub mod suite;
+pub mod thresholds;
 
 #[cfg(test)]
 #[path = "mod_tests.rs"]
 mod unit_tests;
 
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use rayon::prelude::*;
 use serde_json::json;
 
 use crate::adapter::{Adapter, FileKind, GenericAdapter};
 use crate::check::{Check, CheckContext, CheckResult, Violation};
-
-/// Check if debug logging is enabled via QUENCH_DEBUG env var.
-fn debug_logging() -> bool {
-    std::env::var("QUENCH_DEBUG").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-}
 use crate::checks::placeholders::{
     PlaceholderMetrics, collect_placeholder_metrics, default_js_patterns, default_rust_patterns,
 };
-use crate::config::{TestSuiteConfig, TestsCommitConfig};
+use crate::config::TestsCommitConfig;
 
+use self::auto_detect::{auto_detect_js_suite, auto_detect_py_suite, run_auto_detected_suite};
 use self::correlation::{
     CorrelationConfig, DiffRange, analyze_commit, analyze_correlation, has_inline_test_changes,
 };
 use self::diff::{ChangeType, get_base_changes, get_commits_since, get_staged_changes};
 use self::patterns::{Language, candidate_test_paths_for, detect_language};
 use self::placeholder::{has_js_placeholder_test, has_placeholder_test};
-use self::runners::{
-    RunnerContext, detect_js_runner, detect_py_runner, filter_suites_for_mode, get_runner,
-    run_setup_command,
-};
-use std::path::{Path, PathBuf};
+use self::runners::{RunnerContext, filter_suites_for_mode};
+use self::suite::run_suites;
+use self::thresholds::{check_coverage_thresholds, check_time_thresholds};
 
 /// File extension for Rust source files.
 const RUST_EXT: &str = "rs";
@@ -94,13 +91,23 @@ impl Check for TestsCheck {
         }
 
         // Auto-detect JavaScript test runner if package.json exists
-        if let Some((suite, source)) = self.auto_detect_js_suite(ctx) {
-            return self.run_auto_detected_suite(ctx, suite, Some(source));
+        if let Some((suite, source)) = auto_detect_js_suite(ctx.root) {
+            let runner_ctx = RunnerContext {
+                root: ctx.root,
+                ci_mode: ctx.ci_mode,
+                collect_coverage: ctx.ci_mode,
+            };
+            return run_auto_detected_suite(self.name(), suite, Some(source), &runner_ctx);
         }
 
         // Auto-detect Python test runner if Python project markers exist
-        if let Some((suite, source)) = self.auto_detect_py_suite(ctx) {
-            return self.run_auto_detected_suite(ctx, suite, Some(source));
+        if let Some((suite, source)) = auto_detect_py_suite(ctx.root) {
+            let runner_ctx = RunnerContext {
+                root: ctx.root,
+                ci_mode: ctx.ci_mode,
+                collect_coverage: ctx.ci_mode,
+            };
+            return run_auto_detected_suite(self.name(), suite, Some(source), &runner_ctx);
         }
 
         let config = &ctx.config.check.tests.commit;
@@ -135,7 +142,7 @@ impl Check for TestsCheck {
 impl TestsCheck {
     /// Run configured test suites and return results.
     fn run_test_suites(&self, ctx: &CheckContext) -> CheckResult {
-        let suite_results = match self.run_suites(ctx) {
+        let suite_results = match run_suites(ctx) {
             Some(r) => r,
             None => return CheckResult::passed(self.name()),
         };
@@ -234,14 +241,21 @@ impl TestsCheck {
         }
 
         // Collect coverage threshold violations
-        let coverage_violations =
-            self.check_coverage_thresholds(ctx, &aggregated_coverage, &packages_coverage);
+        let coverage_violations = check_coverage_thresholds(
+            &ctx.config.check.tests,
+            &aggregated_coverage,
+            &packages_coverage,
+        );
 
         // Collect time threshold violations from each suite
         let mut time_violations = Vec::new();
         let active_suites = filter_suites_for_mode(&ctx.config.check.tests.suite, ctx.ci_mode);
         for (suite, result) in active_suites.iter().zip(suite_results.suites.iter()) {
-            time_violations.extend(self.check_time_thresholds(ctx, suite, result));
+            time_violations.extend(check_time_thresholds(
+                &ctx.config.check.tests,
+                suite,
+                result,
+            ));
         }
 
         // Combine all threshold violations
@@ -589,531 +603,4 @@ fn has_placeholder_for_source(source_path: &Path, root: &Path) -> bool {
             _ => false,
         }
     })
-}
-
-// =============================================================================
-// Threshold Checking
-// =============================================================================
-
-impl TestsCheck {
-    /// Check coverage against configured thresholds.
-    fn check_coverage_thresholds(
-        &self,
-        ctx: &CheckContext,
-        coverage: &std::collections::HashMap<String, f64>,
-        packages: &std::collections::HashMap<String, f64>,
-    ) -> Vec<(Violation, bool)> {
-        let config = &ctx.config.check.tests.coverage;
-        if config.check == "off" {
-            return Vec::new();
-        }
-
-        let is_error = config.check == "error";
-        let mut violations = Vec::new();
-
-        // Check global minimum
-        if let Some(min) = config.min {
-            for (lang, &actual) in coverage {
-                if actual < min {
-                    let advice = format!("Coverage {:.1}% below minimum {:.1}%", actual, min);
-                    let v = Violation::file_only(
-                        format!("<coverage:{}>", lang),
-                        "coverage_below_min",
-                        advice,
-                    )
-                    .with_threshold(actual as i64, min as i64);
-                    violations.push((v, is_error));
-                }
-            }
-        }
-
-        // Check per-package thresholds
-        for (pkg, pkg_config) in &config.package {
-            if let Some(&actual) = packages.get(pkg)
-                && actual < pkg_config.min
-            {
-                let advice = format!(
-                    "Package '{}' coverage {:.1}% below minimum {:.1}%",
-                    pkg, actual, pkg_config.min
-                );
-                let v = Violation::file_only(
-                    format!("<coverage:{}>", pkg),
-                    "coverage_below_min",
-                    advice,
-                )
-                .with_threshold(actual as i64, pkg_config.min as i64);
-                violations.push((v, is_error));
-            }
-        }
-
-        violations
-    }
-
-    /// Check time thresholds for a suite.
-    fn check_time_thresholds(
-        &self,
-        ctx: &CheckContext,
-        suite: &TestSuiteConfig,
-        result: &SuiteResult,
-    ) -> Vec<(Violation, bool)> {
-        let config = &ctx.config.check.tests.time;
-        if config.check == "off" {
-            return Vec::new();
-        }
-
-        let is_error = config.check == "error";
-        let mut violations = Vec::new();
-        let suite_name = &result.name;
-
-        // Check max_total
-        if let Some(max_total) = suite.max_total {
-            let max_ms = max_total.as_millis() as u64;
-            if result.total_ms > max_ms {
-                let advice = format!(
-                    "Suite '{}' took {}ms, exceeds max_total {}ms",
-                    suite_name, result.total_ms, max_ms
-                );
-                let v = Violation::file_only(
-                    format!("<suite:{}>", suite_name),
-                    "time_total_exceeded",
-                    advice,
-                )
-                .with_threshold(result.total_ms as i64, max_ms as i64);
-                violations.push((v, is_error));
-            }
-        }
-
-        // Check max_avg
-        if let Some(max_avg) = suite.max_avg
-            && let Some(avg_ms) = result.avg_ms
-        {
-            let max_ms = max_avg.as_millis() as u64;
-            if avg_ms > max_ms {
-                let advice = format!(
-                    "Suite '{}' average {}ms/test, exceeds max_avg {}ms",
-                    suite_name, avg_ms, max_ms
-                );
-                let v = Violation::file_only(
-                    format!("<suite:{}>", suite_name),
-                    "time_avg_exceeded",
-                    advice,
-                )
-                .with_threshold(avg_ms as i64, max_ms as i64);
-                violations.push((v, is_error));
-            }
-        }
-
-        // Check max_test
-        if let Some(max_test) = suite.max_test
-            && let Some(max_ms) = result.max_ms
-        {
-            let threshold_ms = max_test.as_millis() as u64;
-            if max_ms > threshold_ms {
-                let test_name = result.max_test.as_deref().unwrap_or("unknown");
-                let advice = format!(
-                    "Test '{}' took {}ms, exceeds max_test {}ms",
-                    test_name, max_ms, threshold_ms
-                );
-                let v = Violation::file_only(
-                    format!("<test:{}>", test_name),
-                    "time_test_exceeded",
-                    advice,
-                )
-                .with_threshold(max_ms as i64, threshold_ms as i64);
-                violations.push((v, is_error));
-            }
-        }
-
-        violations
-    }
-}
-
-// =============================================================================
-// Auto-Detection
-// =============================================================================
-
-impl TestsCheck {
-    /// Auto-detect JavaScript test runner.
-    ///
-    /// Returns None if no runner can be detected.
-    fn auto_detect_js_suite(&self, ctx: &CheckContext) -> Option<(TestSuiteConfig, String)> {
-        // Only auto-detect if package.json exists
-        if !ctx.root.join("package.json").exists() {
-            return None;
-        }
-
-        let detection = detect_js_runner(ctx.root)?;
-
-        let suite = TestSuiteConfig {
-            runner: detection.runner.name().to_string(),
-            name: Some(format!("{} (auto-detected)", detection.runner.name())),
-            path: None,
-            setup: None,
-            command: None,
-            targets: vec![],
-            ci: false,
-            max_total: None,
-            max_avg: None,
-            max_test: None,
-            timeout: None,
-        };
-
-        Some((suite, detection.source.to_metric_string()))
-    }
-
-    /// Run an auto-detected test suite with optional detection source.
-    fn run_auto_detected_suite(
-        &self,
-        ctx: &CheckContext,
-        suite: TestSuiteConfig,
-        detection_source: Option<String>,
-    ) -> CheckResult {
-        let runner_ctx = RunnerContext {
-            root: ctx.root,
-            ci_mode: ctx.ci_mode,
-            collect_coverage: ctx.ci_mode,
-        };
-
-        let result = Self::run_single_suite(&suite, &runner_ctx);
-
-        // Build metrics with auto_detected flag
-        let mut metrics = json!({
-            "test_count": result.test_count,
-            "total_ms": result.total_ms,
-            "auto_detected": true,
-            "runner": suite.runner,
-            "suites": [{
-                "name": result.name,
-                "runner": result.runner,
-                "passed": result.passed,
-                "test_count": result.test_count,
-            }]
-        });
-
-        // Add optional timing metrics
-        if let Some(avg) = result.avg_ms {
-            metrics["avg_ms"] = json!(avg);
-        }
-        if let Some(max) = result.max_ms {
-            metrics["max_ms"] = json!(max);
-        }
-        if let Some(ref test) = result.max_test {
-            metrics["max_test"] = json!(test);
-        }
-
-        // Add detection source if provided
-        if let Some(source) = detection_source {
-            metrics["detection_source"] = json!(source);
-        }
-
-        if result.passed || result.skipped {
-            CheckResult::passed(self.name()).with_metrics(metrics)
-        } else {
-            let violation = Violation::file_only(
-                format!("<suite:{}>", result.name),
-                "test_suite_failed",
-                result
-                    .error
-                    .unwrap_or_else(|| "test suite failed".to_string()),
-            );
-            CheckResult::failed(self.name(), vec![violation]).with_metrics(metrics)
-        }
-    }
-
-    /// Auto-detect Python test runner.
-    ///
-    /// Returns None if no runner can be detected.
-    fn auto_detect_py_suite(&self, ctx: &CheckContext) -> Option<(TestSuiteConfig, String)> {
-        let detection = detect_py_runner(ctx.root)?;
-
-        let suite = TestSuiteConfig {
-            runner: detection.runner.name().to_string(),
-            name: Some(format!("{} (auto-detected)", detection.runner.name())),
-            path: None,
-            setup: None,
-            command: None,
-            targets: vec![],
-            ci: false,
-            max_total: None,
-            max_avg: None,
-            max_test: None,
-            timeout: None,
-        };
-
-        Some((suite, detection.source.to_metric_string()))
-    }
-}
-
-// =============================================================================
-// Test Suite Execution
-// =============================================================================
-
-impl TestsCheck {
-    /// Run configured test suites.
-    ///
-    /// Returns None if no suites are configured.
-    ///
-    /// Execution strategy:
-    /// - CI mode with 2+ suites: Parallel execution via rayon
-    /// - Fast mode: Sequential with early termination on failure
-    fn run_suites(&self, ctx: &CheckContext) -> Option<SuiteResults> {
-        let suites = &ctx.config.check.tests.suite;
-        if suites.is_empty() {
-            return None;
-        }
-
-        let runner_ctx = RunnerContext {
-            root: ctx.root,
-            ci_mode: ctx.ci_mode,
-            collect_coverage: ctx.ci_mode, // Coverage only in CI
-        };
-
-        // Filter suites for current mode
-        let active_suites = filter_suites_for_mode(suites, ctx.ci_mode);
-        if active_suites.is_empty() {
-            return None;
-        }
-
-        let mut results = Vec::with_capacity(active_suites.len());
-        let mut all_passed = true;
-
-        // Parallel execution in CI mode when multiple suites
-        if ctx.ci_mode && active_suites.len() > 1 {
-            results = active_suites
-                .par_iter()
-                .map(|suite| Self::run_single_suite(suite, &runner_ctx))
-                .collect();
-            all_passed = results.iter().all(|r| r.passed || r.skipped);
-        } else {
-            // Sequential with early termination for fast mode
-            for suite in active_suites {
-                let result = Self::run_single_suite(suite, &runner_ctx);
-                let failed = !result.passed && !result.skipped;
-                results.push(result);
-
-                // Early termination in fast mode on first failure
-                if failed && !ctx.ci_mode {
-                    all_passed = false;
-                    break;
-                }
-                if failed {
-                    all_passed = false;
-                }
-            }
-        }
-
-        Some(SuiteResults {
-            passed: all_passed,
-            suites: results,
-        })
-    }
-
-    /// Execute a single test suite and return its result.
-    fn run_single_suite(suite: &TestSuiteConfig, runner_ctx: &RunnerContext) -> SuiteResult {
-        let suite_name = suite.name.clone().unwrap_or_else(|| suite.runner.clone());
-
-        // Verbose: show which suite is starting
-        if debug_logging() {
-            eprintln!("  Running suite: {} ({})", suite_name, suite.runner);
-        }
-
-        // Run setup command if configured
-        if let Some(ref setup) = suite.setup
-            && let Err(e) = run_setup_command(setup, runner_ctx.root)
-        {
-            // Setup failure skips the suite
-            if debug_logging() {
-                eprintln!("  SKIP {} (setup failed)", suite_name);
-            }
-            return SuiteResult {
-                name: suite_name,
-                runner: suite.runner.clone(),
-                skipped: true,
-                error: Some(e),
-                ..Default::default()
-            };
-        }
-
-        // Get runner for this suite
-        let runner = match get_runner(&suite.runner) {
-            Some(r) => r,
-            None => {
-                if debug_logging() {
-                    eprintln!("  SKIP {} (unknown runner)", suite_name);
-                }
-                return SuiteResult {
-                    name: suite_name,
-                    runner: suite.runner.clone(),
-                    skipped: true,
-                    error: Some(format!("unknown runner: {}", suite.runner)),
-                    ..Default::default()
-                };
-            }
-        };
-
-        // Check runner availability
-        if !runner.available(runner_ctx) {
-            if debug_logging() {
-                eprintln!("  SKIP {} (runner not available)", suite_name);
-            }
-            return SuiteResult {
-                name: suite_name,
-                runner: suite.runner.clone(),
-                skipped: true,
-                error: Some(format!("{} not available", suite.runner)),
-                ..Default::default()
-            };
-        }
-
-        // Execute the runner
-        let run_result = runner.run(suite, runner_ctx);
-
-        // Collect metrics before moving error
-        let test_count = run_result.test_count();
-        let skipped_count = run_result.skipped_count();
-        let total_ms = run_result.total_time.as_millis() as u64;
-        let avg_ms = run_result.avg_duration().map(|d| d.as_millis() as u64);
-        let max_ms = run_result
-            .slowest_test()
-            .map(|t| t.duration.as_millis() as u64);
-        let max_test = run_result.slowest_test().map(|t| t.name.clone());
-        let p50_ms = run_result
-            .percentile_duration(50.0)
-            .map(|d| d.as_millis() as u64);
-        let p90_ms = run_result
-            .percentile_duration(90.0)
-            .map(|d| d.as_millis() as u64);
-        let p99_ms = run_result
-            .percentile_duration(99.0)
-            .map(|d| d.as_millis() as u64);
-        let coverage = run_result.coverage.clone();
-        let coverage_by_package = run_result.coverage_by_package.clone();
-
-        // Verbose: show suite completion
-        if debug_logging() {
-            let status = if run_result.passed { "PASS" } else { "FAIL" };
-            eprintln!(
-                "  {} {} ({} tests, {}ms)",
-                status, suite_name, test_count, total_ms,
-            );
-        }
-
-        SuiteResult {
-            name: suite_name,
-            runner: suite.runner.clone(),
-            passed: run_result.passed,
-            skipped: run_result.skipped,
-            error: run_result.error,
-            test_count,
-            skipped_count,
-            total_ms,
-            avg_ms,
-            max_ms,
-            max_test,
-            p50_ms,
-            p90_ms,
-            p99_ms,
-            coverage,
-            coverage_by_package,
-        }
-    }
-}
-
-/// Aggregated results from all test suites.
-#[derive(Debug, Default)]
-struct SuiteResults {
-    /// Whether all suites passed.
-    passed: bool,
-    /// Individual suite results.
-    suites: Vec<SuiteResult>,
-}
-
-/// Top-level aggregated metrics across all suites.
-#[derive(Debug)]
-struct AggregatedMetrics {
-    /// Total tests across all suites.
-    test_count: usize,
-    /// Total execution time in milliseconds.
-    total_ms: u64,
-    /// Weighted average time per test in milliseconds.
-    avg_ms: Option<u64>,
-    /// Maximum test time in milliseconds (across all suites).
-    max_ms: Option<u64>,
-    /// Name of the slowest test (across all suites).
-    max_test: Option<String>,
-}
-
-impl SuiteResults {
-    /// Calculate aggregated timing metrics across all suites.
-    fn aggregated_metrics(&self) -> AggregatedMetrics {
-        let test_count: usize = self.suites.iter().map(|s| s.test_count).sum();
-
-        let total_ms: u64 = self.suites.iter().map(|s| s.total_ms).sum();
-
-        // Weighted average: sum of (suite_avg * suite_count) / total_count
-        let avg_ms = if test_count > 0 {
-            let weighted_sum: u64 = self
-                .suites
-                .iter()
-                .filter_map(|s| s.avg_ms.map(|avg| avg * s.test_count as u64))
-                .sum();
-            Some(weighted_sum / test_count as u64)
-        } else {
-            None
-        };
-
-        // Find slowest test across all suites
-        let (max_ms, max_test) = self
-            .suites
-            .iter()
-            .filter_map(|s| s.max_ms.map(|ms| (ms, s.max_test.clone())))
-            .max_by_key(|(ms, _)| *ms)
-            .map(|(ms, name)| (Some(ms), name))
-            .unwrap_or((None, None));
-
-        AggregatedMetrics {
-            test_count,
-            total_ms,
-            avg_ms,
-            max_ms,
-            max_test,
-        }
-    }
-}
-
-/// Result from a single test suite.
-#[derive(Debug, Default)]
-struct SuiteResult {
-    /// Suite name (from config or defaults to runner).
-    name: String,
-    /// Runner used.
-    runner: String,
-    /// Whether all tests passed.
-    passed: bool,
-    /// Whether the suite was skipped.
-    skipped: bool,
-    /// Error message if skipped or failed.
-    error: Option<String>,
-    /// Number of tests run.
-    test_count: usize,
-    /// Number of skipped/ignored tests.
-    skipped_count: usize,
-    /// Total time in milliseconds.
-    total_ms: u64,
-    /// Average time per test in milliseconds.
-    avg_ms: Option<u64>,
-    /// Maximum test time in milliseconds.
-    max_ms: Option<u64>,
-    /// Name of the slowest test.
-    max_test: Option<String>,
-    /// 50th percentile duration in milliseconds.
-    p50_ms: Option<u64>,
-    /// 90th percentile duration in milliseconds.
-    p90_ms: Option<u64>,
-    /// 99th percentile duration in milliseconds.
-    p99_ms: Option<u64>,
-    /// Coverage data (language -> percentage).
-    coverage: Option<std::collections::HashMap<String, f64>>,
-    /// Per-package coverage data (package name -> percentage).
-    coverage_by_package: Option<std::collections::HashMap<String, f64>>,
 }

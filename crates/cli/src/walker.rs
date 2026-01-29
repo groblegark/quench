@@ -61,7 +61,7 @@ pub const DEFAULT_MAX_DEPTH: usize = 100;
 /// Directories to skip entirely during walking.
 /// These are filtered during traversal, not after discovery.
 /// Skipping at the walker level prevents any I/O on these subtrees.
-pub const SKIP_DIRECTORIES: &[&str] = &["node_modules", ".git"];
+pub(crate) const SKIP_DIRECTORIES: &[&str] = &["node_modules", ".git"];
 
 /// Walker configuration.
 #[derive(Debug, Clone)]

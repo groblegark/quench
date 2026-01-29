@@ -12,7 +12,7 @@ mod prelude;
 #[path = "specs/cli/dry_run.rs"]
 mod cli_dry_run;
 
-#[path = "specs/cli/init.rs"]
+#[path = "specs/cli/init_tests/mod.rs"]
 mod cli_init;
 
 #[path = "specs/cli/commands.rs"]

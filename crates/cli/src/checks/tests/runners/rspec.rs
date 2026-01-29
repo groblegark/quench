@@ -106,13 +106,7 @@ pub(crate) struct RspecExample {
 /// Summary statistics from RSpec.
 #[derive(Debug, Deserialize)]
 pub(crate) struct RspecSummary {
-    #[allow(dead_code)]
-    pub duration: f64,
-    #[allow(dead_code)]
-    pub example_count: u32,
     pub failure_count: u32,
-    #[allow(dead_code)]
-    pub pending_count: u32,
 }
 
 /// Parse JSON output from RSpec.

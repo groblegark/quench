@@ -116,8 +116,6 @@ struct VitestOutput {
 /// A test file result from vitest.
 #[derive(Debug, Deserialize)]
 struct VitestTestFile {
-    #[allow(dead_code)] // Deserialized from JSON but not directly used
-    name: String,
     #[serde(rename = "assertionResults", default)]
     assertion_results: Vec<VitestAssertion>,
 }

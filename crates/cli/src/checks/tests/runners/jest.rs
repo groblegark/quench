@@ -114,8 +114,6 @@ pub(crate) struct JestOutput {
 /// A test file result from jest.
 #[derive(Debug, Deserialize)]
 pub(crate) struct JestTestFile {
-    #[allow(dead_code)] // Deserialized from JSON but not directly used
-    pub name: String,
     #[serde(rename = "assertionResults", default)]
     pub assertion_results: Vec<JestAssertion>,
 }

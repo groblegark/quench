@@ -1,0 +1,9 @@
+[golang]
+# source = ["**/*.go"]
+# tests = ["**/*_test.go"]
+
+[golang.suppress]
+check = "comment"
+
+[golang.policy]
+check = "standalone"

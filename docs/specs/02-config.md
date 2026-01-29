@@ -293,7 +293,7 @@ Lines of code and file size limits.
 [check.cloc]
 check = "error"                        # error | warn | off
 max_lines = 750                        # Source file limit
-max_lines_test = 1100                  # Test file limit
+max_lines_test = 1000                  # Test file limit
 max_tokens = 20000                     # Use false to disable
 exclude = ["**/generated/**"]
 

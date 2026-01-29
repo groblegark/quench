@@ -28,16 +28,9 @@ pub mod timing;
 pub mod tolerance;
 pub mod walker;
 
-pub use baseline::{Baseline, BaselineError, BaselineMetrics};
-pub use cache::{CacheStats, FileCache};
-pub use check::{Check, CheckContext, CheckOutput, CheckResult, Violation};
-pub use cli::{CheckArgs, CheckFilter, Cli, Command, InitArgs, OutputFormat, ReportArgs};
-pub use color::{context, examples, header, literal, resolve_color, should_colorize};
-pub use config::IgnoreConfig;
-pub use error::{Error, ExitCode, Result};
-pub use latest::LatestMetrics;
-pub use ratchet::{CurrentMetrics, RatchetResult};
-pub use walker::{FileWalker, WalkStats, WalkedFile, WalkerConfig};
+pub use baseline::Baseline;
+pub use cli::{Cli, Command};
+pub use error::{Error, ExitCode};
 
 #[cfg(test)]
 pub mod test_utils;

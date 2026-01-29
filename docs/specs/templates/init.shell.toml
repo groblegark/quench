@@ -1,0 +1,9 @@
+[shell]
+# source = ["**/*.sh", "**/*.bash"]
+# tests = ["tests/**/*.bats", "test/**/*.bats", "*_test.sh", "**/*_test.sh"]
+
+[shell.suppress]
+check = "comment"
+
+[shell.policy]
+lint_changes = "standalone"

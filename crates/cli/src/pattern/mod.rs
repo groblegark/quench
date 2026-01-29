@@ -10,7 +10,9 @@
 
 pub mod matcher;
 
-pub use matcher::{CompiledPattern, LineMatch, PatternError, PatternMatch, byte_offset_to_line};
+pub(crate) use matcher::{CompiledPattern, PatternError};
+#[cfg(test)]
+pub(crate) use matcher::{LineMatch, byte_offset_to_line};
 
 #[cfg(test)]
 #[path = "mod_tests.rs"]

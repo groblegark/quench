@@ -29,7 +29,7 @@ check = "error"
 [check.docs]
 check = "error"
 
-# Verify source changes have corresponding test changes, tracks test coverage and timing for ratcheting 
+# Verify source changes have corresponding test changes, tracks test coverage and timing for ratcheting
 # See: https://github.com/alfredjeanlab/quench/blob/main/docs/specs/checks/tests.md
 [check.tests]
 check = "off"
