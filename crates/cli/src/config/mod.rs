@@ -29,7 +29,7 @@ pub use checks::{
 };
 pub use go::{GoConfig, GoPolicyConfig, GoSuppressConfig};
 pub use javascript::{JavaScriptConfig, JavaScriptPolicyConfig};
-pub use python::PythonConfig;
+pub use python::{PythonConfig, PythonPolicyConfig, PythonSuppressConfig};
 pub use ratchet::{RatchetConfig, RatchetPackageConfig};
 pub use ruby::{RubyConfig, RubyPolicyConfig, RubySuppressConfig};
 pub use shell::{ShellConfig, ShellPolicyConfig, ShellSuppressConfig};
@@ -304,6 +304,7 @@ impl Config {
             "go" | "golang" => self.golang.policy.check,
             "javascript" | "js" => self.javascript.policy.check,
             "ruby" | "rb" => self.ruby.policy.check,
+            "python" | "py" => self.python.policy.check,
             "shell" | "sh" => self.shell.policy.check,
             _ => None,
         };

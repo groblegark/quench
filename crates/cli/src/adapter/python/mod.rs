@@ -8,6 +8,8 @@
 //! - Default patterns for Python files
 //! - Project layout detection (src-layout vs flat-layout)
 //! - Package name extraction from pyproject.toml and setup.py
+//! - Default escape patterns (debuggers, eval/exec)
+//! - Lint config policy checking
 //!
 //! See docs/specs/langs/python.md for specification.
 
@@ -15,8 +17,67 @@ use std::path::Path;
 
 use globset::GlobSet;
 
+mod policy;
+
+pub use policy::{PolicyCheckResult, check_lint_policy};
+
 use super::glob::build_glob_set;
-use super::{Adapter, EscapePattern, FileKind};
+use super::{Adapter, EscapeAction, EscapePattern, FileKind};
+use crate::config::PythonPolicyConfig;
+
+/// Default escape patterns for Python.
+const PYTHON_ESCAPE_PATTERNS: &[EscapePattern] = &[
+    // Debugger patterns - forbidden even in tests
+    EscapePattern {
+        name: "breakpoint",
+        pattern: r"\bbreakpoint\s*\(",
+        action: EscapeAction::Forbid,
+        comment: None,
+        advice: "Remove debugger statement before committing.",
+        in_tests: Some("forbid"),
+    },
+    EscapePattern {
+        name: "pdb_set_trace",
+        pattern: r"pdb\.set_trace\s*\(",
+        action: EscapeAction::Forbid,
+        comment: None,
+        advice: "Remove debugger statement before committing.",
+        in_tests: Some("forbid"),
+    },
+    EscapePattern {
+        name: "import_pdb",
+        pattern: r"\bimport\s+pdb\b",
+        action: EscapeAction::Forbid,
+        comment: None,
+        advice: "Remove pdb import before committing.",
+        in_tests: Some("forbid"),
+    },
+    // Dynamic code execution patterns - allowed in tests by default
+    EscapePattern {
+        name: "eval",
+        pattern: r"\beval\s*\(",
+        action: EscapeAction::Comment,
+        comment: Some("# EVAL:"),
+        advice: "Add a # EVAL: comment explaining why eval is necessary.",
+        in_tests: None,
+    },
+    EscapePattern {
+        name: "exec",
+        pattern: r"\bexec\s*\(",
+        action: EscapeAction::Comment,
+        comment: Some("# EXEC:"),
+        advice: "Add a # EXEC: comment explaining why exec is necessary.",
+        in_tests: None,
+    },
+    EscapePattern {
+        name: "dynamic_import",
+        pattern: r"\b__import__\s*\(",
+        action: EscapeAction::Comment,
+        comment: Some("# DYNAMIC:"),
+        advice: "Add a # DYNAMIC: comment explaining why __import__ is necessary.",
+        in_tests: None,
+    },
+];
 
 /// Python language adapter.
 pub struct PythonAdapter {
@@ -42,6 +103,7 @@ impl PythonAdapter {
                 "__pycache__/**".to_string(),
                 ".mypy_cache/**".to_string(),
                 ".pytest_cache/**".to_string(),
+                ".ruff_cache/**".to_string(),
                 "dist/**".to_string(),
                 "build/**".to_string(),
                 "*.egg-info/**".to_string(),
@@ -94,12 +156,16 @@ impl PythonAdapter {
                 || first == "__pycache__"
                 || first == ".mypy_cache"
                 || first == ".pytest_cache"
+                || first == ".ruff_cache"
                 || first == "dist"
                 || first == "build"
                 || first == ".tox"
                 || first == ".nox"
-                || first.ends_with(".egg-info")
             {
+                return true;
+            }
+            // Check for *.egg-info directories
+            if first.ends_with(".egg-info") {
                 return true;
             }
         }
@@ -148,7 +214,20 @@ impl Adapter for PythonAdapter {
     }
 
     fn default_escapes(&self) -> &'static [EscapePattern] {
-        &[] // Phase 445 will add escape patterns
+        PYTHON_ESCAPE_PATTERNS
+    }
+}
+
+impl PythonAdapter {
+    /// Check lint policy against changed files.
+    ///
+    /// Returns policy check result with violation details.
+    pub fn check_lint_policy(
+        &self,
+        changed_files: &[&Path],
+        policy: &PythonPolicyConfig,
+    ) -> PolicyCheckResult {
+        policy::check_lint_policy(changed_files, policy, |p| self.classify(p))
     }
 }
 

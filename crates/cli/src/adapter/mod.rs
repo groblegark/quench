@@ -184,8 +184,8 @@ pub enum ProjectLanguage {
     Rust,
     Go,
     JavaScript,
-    Ruby,
     Python,
+    Ruby,
     Shell,
     Generic,
 }
@@ -208,14 +208,14 @@ pub fn detect_language(root: &Path) -> ProjectLanguage {
         return ProjectLanguage::JavaScript;
     }
 
+    // Python detection (before Ruby and Shell check)
+    if has_python_markers(root) {
+        return ProjectLanguage::Python;
+    }
+
     // Ruby detection (before Shell check)
     if has_ruby_markers(root) {
         return ProjectLanguage::Ruby;
-    }
-
-    // Python detection (before Shell check)
-    if has_python_markers(root) {
-        return ProjectLanguage::Python;
     }
 
     // Check for Shell project markers: *.sh in root, bin/, or scripts/
@@ -224,6 +224,15 @@ pub fn detect_language(root: &Path) -> ProjectLanguage {
     }
 
     ProjectLanguage::Generic
+}
+
+/// Check if project has Python markers.
+/// Detection: pyproject.toml, setup.py, setup.cfg, or requirements.txt
+fn has_python_markers(root: &Path) -> bool {
+    root.join("pyproject.toml").exists()
+        || root.join("setup.py").exists()
+        || root.join("setup.cfg").exists()
+        || root.join("requirements.txt").exists()
 }
 
 /// Check if project has Ruby markers.
@@ -246,15 +255,6 @@ fn has_gemspec(root: &Path) -> bool {
             })
         })
         .unwrap_or(false)
-}
-
-/// Check if project has Python markers.
-/// Detection: pyproject.toml, setup.py, setup.cfg, or requirements.txt
-fn has_python_markers(root: &Path) -> bool {
-    root.join("pyproject.toml").exists()
-        || root.join("setup.py").exists()
-        || root.join("setup.cfg").exists()
-        || root.join("requirements.txt").exists()
 }
 
 /// Check if project has Shell markers.
@@ -311,11 +311,11 @@ impl AdapterRegistry {
             ProjectLanguage::JavaScript => {
                 registry.register(Arc::new(JavaScriptAdapter::new()));
             }
-            ProjectLanguage::Ruby => {
-                registry.register(Arc::new(RubyAdapter::new()));
-            }
             ProjectLanguage::Python => {
                 registry.register(Arc::new(PythonAdapter::new()));
+            }
+            ProjectLanguage::Ruby => {
+                registry.register(Arc::new(RubyAdapter::new()));
             }
             ProjectLanguage::Shell => {
                 registry.register(Arc::new(ShellAdapter::new()));
@@ -364,13 +364,13 @@ impl AdapterRegistry {
                 let patterns = resolve_javascript_patterns(config, &fallback_test_patterns);
                 registry.register(Arc::new(JavaScriptAdapter::with_patterns(patterns)));
             }
-            ProjectLanguage::Ruby => {
-                let patterns = resolve_ruby_patterns(config, &fallback_test_patterns);
-                registry.register(Arc::new(RubyAdapter::with_patterns(patterns)));
-            }
             ProjectLanguage::Python => {
                 let patterns = resolve_python_patterns(config, &fallback_test_patterns);
                 registry.register(Arc::new(PythonAdapter::with_patterns(patterns)));
+            }
+            ProjectLanguage::Ruby => {
+                let patterns = resolve_ruby_patterns(config, &fallback_test_patterns);
+                registry.register(Arc::new(RubyAdapter::with_patterns(patterns)));
             }
             ProjectLanguage::Shell => {
                 let patterns = resolve_shell_patterns(config, &fallback_test_patterns);
@@ -427,6 +427,19 @@ fn resolve_javascript_patterns(
     )
 }
 
+/// Resolve Python patterns from config.
+fn resolve_python_patterns(
+    config: &crate::config::Config,
+    fallback_test: &[String],
+) -> ResolvedPatterns {
+    patterns::resolve_patterns::<crate::config::PythonConfig>(
+        &config.python.source,
+        &config.python.tests,
+        &config.python.ignore,
+        fallback_test,
+    )
+}
+
 /// Resolve Ruby patterns from config.
 fn resolve_ruby_patterns(
     config: &crate::config::Config,
@@ -450,19 +463,6 @@ fn resolve_shell_patterns(
         &config.shell.source,
         &config.shell.tests,
         &[],
-        fallback_test,
-    )
-}
-
-/// Resolve Python patterns from config.
-fn resolve_python_patterns(
-    config: &crate::config::Config,
-    fallback_test: &[String],
-) -> ResolvedPatterns {
-    patterns::resolve_patterns::<crate::config::PythonConfig>(
-        &config.python.source,
-        &config.python.tests,
-        &config.python.ignore,
         fallback_test,
     )
 }
