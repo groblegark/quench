@@ -358,6 +358,9 @@ fn jest_runner_collects_javascript_coverage() {
 /// Spec: docs/specs/11-test-runners.md#implicit-coverage
 ///
 /// > Vitest runner provides implicit JavaScript/TypeScript coverage.
+///
+/// Note: Uses temp project which requires npm install - not currently supported.
+/// See vitest_coverage_on_fixture() for fixture-based test.
 #[test]
 fn vitest_runner_collects_javascript_coverage() {
     let result = check("tests")
@@ -378,6 +381,39 @@ fn vitest_runner_collects_javascript_coverage() {
     assert!(
         pct > 40.0 && pct < 60.0,
         "Expected ~50% coverage, got {}",
+        pct
+    );
+}
+
+/// Spec: docs/specs/11-test-runners.md#implicit-coverage
+///
+/// > Vitest runner collects coverage on js-simple fixture.
+///
+/// Requires npm install on fixture: ./scripts/fixtures/setup-js-fixtures.sh
+#[test]
+fn vitest_coverage_on_fixture() {
+    let result = check("tests")
+        .on("js-simple")
+        .args(&["--ci"])
+        .json()
+        .passes();
+    let metrics = result.require("metrics");
+
+    // Should report JavaScript coverage
+    let coverage = metrics.get("coverage").and_then(|v| v.as_object());
+    assert!(coverage.is_some(), "Expected coverage metrics");
+
+    let js_coverage = coverage.unwrap().get("javascript").and_then(|v| v.as_f64());
+    assert!(
+        js_coverage.is_some(),
+        "Expected javascript coverage percentage"
+    );
+
+    // js-simple fixture has good test coverage (near 100%)
+    let pct = js_coverage.unwrap();
+    assert!(
+        pct > 80.0,
+        "Expected >80% coverage on js-simple fixture, got {}",
         pct
     );
 }
