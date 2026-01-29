@@ -12,27 +12,98 @@ use quench::error::ExitCode;
 
 /// Template files are embedded at compile time
 const TEMPLATES: &[(&str, &str)] = &[
-    ("agents", include_str!("../../../docs/specs/templates/guide.agents.md")),
-    ("build", include_str!("../../../docs/specs/templates/guide.build.md")),
-    ("cloc", include_str!("../../../docs/specs/templates/guide.cloc.md")),
-    ("docs", include_str!("../../../docs/specs/templates/guide.docs.md")),
-    ("escapes", include_str!("../../../docs/specs/templates/guide.escapes.md")),
-    ("git", include_str!("../../../docs/specs/templates/guide.git.md")),
-    ("golang", include_str!("../../../docs/specs/templates/guide.golang.md")),
-    ("go", include_str!("../../../docs/specs/templates/guide.golang.md")),
-    ("javascript", include_str!("../../../docs/specs/templates/guide.javascript.md")),
-    ("js", include_str!("../../../docs/specs/templates/guide.javascript.md")),
-    ("license", include_str!("../../../docs/specs/templates/guide.license.md")),
-    ("python", include_str!("../../../docs/specs/templates/guide.python.md")),
-    ("py", include_str!("../../../docs/specs/templates/guide.python.md")),
-    ("ruby", include_str!("../../../docs/specs/templates/guide.ruby.md")),
-    ("rb", include_str!("../../../docs/specs/templates/guide.ruby.md")),
-    ("rust", include_str!("../../../docs/specs/templates/guide.rust.md")),
-    ("rs", include_str!("../../../docs/specs/templates/guide.rust.md")),
-    ("shell", include_str!("../../../docs/specs/templates/guide.shell.md")),
-    ("sh", include_str!("../../../docs/specs/templates/guide.shell.md")),
-    ("bash", include_str!("../../../docs/specs/templates/guide.shell.md")),
-    ("tests", include_str!("../../../docs/specs/templates/guide.tests.md")),
+    (
+        "agents",
+        include_str!("../../../docs/specs/templates/guide.agents.md"),
+    ),
+    (
+        "build",
+        include_str!("../../../docs/specs/templates/guide.build.md"),
+    ),
+    (
+        "cloc",
+        include_str!("../../../docs/specs/templates/guide.cloc.md"),
+    ),
+    (
+        "docs",
+        include_str!("../../../docs/specs/templates/guide.docs.md"),
+    ),
+    (
+        "escapes",
+        include_str!("../../../docs/specs/templates/guide.escapes.md"),
+    ),
+    (
+        "git",
+        include_str!("../../../docs/specs/templates/guide.git.md"),
+    ),
+    (
+        "golang",
+        include_str!("../../../docs/specs/templates/guide.golang.md"),
+    ),
+    (
+        "go",
+        include_str!("../../../docs/specs/templates/guide.golang.md"),
+    ),
+    (
+        "javascript",
+        include_str!("../../../docs/specs/templates/guide.javascript.md"),
+    ),
+    (
+        "js",
+        include_str!("../../../docs/specs/templates/guide.javascript.md"),
+    ),
+    (
+        "typescript",
+        include_str!("../../../docs/specs/templates/guide.javascript.md"),
+    ),
+    (
+        "ts",
+        include_str!("../../../docs/specs/templates/guide.javascript.md"),
+    ),
+    (
+        "license",
+        include_str!("../../../docs/specs/templates/guide.license.md"),
+    ),
+    (
+        "python",
+        include_str!("../../../docs/specs/templates/guide.python.md"),
+    ),
+    (
+        "py",
+        include_str!("../../../docs/specs/templates/guide.python.md"),
+    ),
+    (
+        "ruby",
+        include_str!("../../../docs/specs/templates/guide.ruby.md"),
+    ),
+    (
+        "rb",
+        include_str!("../../../docs/specs/templates/guide.ruby.md"),
+    ),
+    (
+        "rust",
+        include_str!("../../../docs/specs/templates/guide.rust.md"),
+    ),
+    (
+        "rs",
+        include_str!("../../../docs/specs/templates/guide.rust.md"),
+    ),
+    (
+        "shell",
+        include_str!("../../../docs/specs/templates/guide.shell.md"),
+    ),
+    (
+        "sh",
+        include_str!("../../../docs/specs/templates/guide.shell.md"),
+    ),
+    (
+        "bash",
+        include_str!("../../../docs/specs/templates/guide.shell.md"),
+    ),
+    (
+        "tests",
+        include_str!("../../../docs/specs/templates/guide.tests.md"),
+    ),
 ];
 
 pub fn run(args: &ConfigArgs) -> Result<ExitCode> {
@@ -48,7 +119,8 @@ pub fn run(args: &ConfigArgs) -> Result<ExitCode> {
         Some(content) => {
             let stdout = std::io::stdout();
             let mut handle = stdout.lock();
-            handle.write_all(content.as_bytes())
+            handle
+                .write_all(content.as_bytes())
                 .context("Failed to write template to stdout")?;
             Ok(ExitCode::Success)
         }
@@ -57,7 +129,7 @@ pub fn run(args: &ConfigArgs) -> Result<ExitCode> {
                 "Unknown feature '{}'\n\n\
                 Available features:\n\
                   Checks:  agents, build, cloc, docs, escapes, git, license, tests\n\
-                  Languages: golang (go), javascript (js), python (py), ruby (rb), rust (rs), shell (sh/bash)",
+                  Languages: golang (go), javascript (js/ts/typescript), python (py), ruby (rb), rust (rs), shell (sh/bash)",
                 args.feature
             );
         }

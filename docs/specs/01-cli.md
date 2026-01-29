@@ -253,7 +253,7 @@ Available features with their configuration guides:
 **Languages:**
 - `rust` (alias: `rs`) - Rust-specific configuration
 - `golang` (alias: `go`) - Go-specific configuration
-- `javascript` (alias: `js`) - JavaScript/TypeScript configuration
+- `javascript` (alias: `js`, `typescript`, `ts`) - JavaScript/TypeScript configuration
 - `python` (alias: `py`) - Python-specific configuration
 - `ruby` (alias: `rb`) - Ruby-specific configuration
 - `shell` (alias: `sh`, `bash`) - Shell script configuration

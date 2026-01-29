@@ -15,10 +15,7 @@ use crate::prelude::*;
 /// > to see the reference guide for that check or language.
 #[test]
 fn outputs_guide_template_for_feature() {
-    let output = quench_cmd()
-        .args(&["config", "rust"])
-        .assert()
-        .success();
+    let output = quench_cmd().args(&["config", "rust"]).assert().success();
 
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
     assert!(
@@ -88,6 +85,23 @@ fn supports_language_aliases() {
         stdout.contains("# Shell Configuration Guide"),
         "bash alias should show Shell guide"
     );
+
+    let output = quench_cmd().args(&["config", "ts"]).assert().success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    assert!(
+        stdout.contains("# JavaScript/TypeScript Configuration Guide"),
+        "ts alias should show JavaScript/TypeScript guide"
+    );
+
+    let output = quench_cmd()
+        .args(&["config", "typescript"])
+        .assert()
+        .success();
+    let stdout = String::from_utf8_lossy(&output.get_output().stdout);
+    assert!(
+        stdout.contains("# JavaScript/TypeScript Configuration Guide"),
+        "typescript alias should show JavaScript/TypeScript guide"
+    );
 }
 
 /// Spec: Check names are supported
@@ -95,7 +109,9 @@ fn supports_language_aliases() {
 /// > All check names should have corresponding guides.
 #[test]
 fn supports_check_names() {
-    for check in &["agents", "build", "cloc", "docs", "escapes", "git", "license", "tests"] {
+    for check in &[
+        "agents", "build", "cloc", "docs", "escapes", "git", "license", "tests",
+    ] {
         let output = quench_cmd().args(&["config", check]).assert().success();
         let stdout = String::from_utf8_lossy(&output.get_output().stdout);
         assert!(
@@ -122,12 +138,9 @@ fn unknown_feature_shows_helpful_error() {
         stderr.contains("Available features:"),
         "Should list available features"
     );
+    assert!(stderr.contains("agents, build, cloc"), "Should list checks");
     assert!(
-        stderr.contains("agents, build, cloc"),
-        "Should list checks"
-    );
-    assert!(
-        stderr.contains("golang (go), javascript (js)"),
+        stderr.contains("golang (go), javascript (js/ts/typescript)"),
         "Should list languages with aliases"
     );
 }
@@ -167,10 +180,7 @@ fn help_shows_usage() {
         stdout.contains("Show configuration examples"),
         "Should show command description"
     );
-    assert!(
-        stdout.contains("<FEATURE>"),
-        "Should show feature argument"
-    );
+    assert!(stdout.contains("<FEATURE>"), "Should show feature argument");
     assert!(
         stdout.contains("Feature to show configuration for"),
         "Should show feature description"
@@ -183,10 +193,7 @@ fn listed_in_main_help() {
     let output = quench_cmd().args(&["--help"]).assert().success();
     let stdout = String::from_utf8_lossy(&output.get_output().stdout);
 
-    assert!(
-        stdout.contains("config"),
-        "Should list config command"
-    );
+    assert!(stdout.contains("config"), "Should list config command");
     assert!(
         stdout.contains("Show configuration examples"),
         "Should show config description"
