@@ -28,6 +28,7 @@ mod suppress;
 pub use crate::adapter::common::policy::PolicyCheckResult;
 pub use suppress::{PythonSuppress, PythonSuppressKind, parse_python_suppresses};
 
+use super::common::patterns::normalize_ignore_patterns;
 use super::glob::build_glob_set;
 use super::{Adapter, EscapeAction, EscapePattern, FileKind};
 use crate::config::PythonPolicyConfig;
@@ -149,20 +150,7 @@ impl PythonAdapter {
 
     /// Create a Python adapter with resolved patterns from config.
     pub fn with_patterns(patterns: super::ResolvedPatterns) -> Self {
-        // Convert ignore patterns to glob patterns (add ** if needed)
-        let ignore_globs: Vec<String> = patterns
-            .ignore
-            .iter()
-            .map(|p| {
-                if p.ends_with('/') {
-                    format!("{}**", p)
-                } else if !p.contains('*') {
-                    format!("{}/**", p.trim_end_matches('/'))
-                } else {
-                    p.clone()
-                }
-            })
-            .collect();
+        let ignore_globs = normalize_ignore_patterns(&patterns.ignore);
 
         Self {
             source_patterns: build_glob_set(&patterns.source),
