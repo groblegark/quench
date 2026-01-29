@@ -323,6 +323,7 @@ impl TestsCheck {
             ci_mode: ctx.ci_mode,
             collect_coverage: true,
             config: ctx.config,
+            verbose: ctx.verbose,
         };
 
         // Run all auto-detected suites
