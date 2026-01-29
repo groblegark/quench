@@ -65,9 +65,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      # Setup JS test fixtures (install npm modules)
-      - name: Setup JS fixtures
-        run: ./scripts/fixtures/setup-js-fixtures.sh
       - run: cargo test --all
 
   build:

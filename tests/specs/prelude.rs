@@ -10,9 +10,11 @@
 pub use assert_cmd::prelude::*;
 pub use predicates;
 pub use predicates::prelude::{Predicate, PredicateBooleanExt};
+use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::path::Path;
 use std::process::Command;
+use std::sync::Mutex;
 
 /// Trait for converting into a string predicate.
 /// Allows passing `&str` (as contains) or any `Predicate<str>`.
@@ -651,6 +653,82 @@ pub fn fixture(name: &str) -> std::path::PathBuf {
         .join("tests")
         .join("fixtures")
         .join(name)
+}
+
+// Global lock map for fixture setup to prevent concurrent npm installs
+static FIXTURE_LOCKS: Mutex<Option<HashMap<String, ()>>> = Mutex::new(None);
+
+/// Ensure JavaScript fixture dependencies are installed.
+///
+/// This function checks if node_modules exists for the given fixture,
+/// and runs npm install if needed. Uses a lock to prevent concurrent
+/// installs of the same fixture.
+///
+/// # Example
+/// ```ignore
+/// setup_js_fixture("javascript/jest-coverage");
+/// let result = check("tests").on("javascript/jest-coverage").json().passes();
+/// ```
+pub fn setup_js_fixture(fixture_name: &str) {
+    let fixture_path = fixture(fixture_name);
+    let node_modules = fixture_path.join("node_modules");
+
+    // Fast path: dependencies already installed
+    if node_modules.exists() {
+        return;
+    }
+
+    // Check if package.json exists
+    let package_json = fixture_path.join("package.json");
+    if !package_json.exists() {
+        return;
+    }
+
+    // Acquire lock for this specific fixture
+    let mut locks = FIXTURE_LOCKS.lock().unwrap();
+    let lock_map = locks.get_or_insert_with(HashMap::new);
+
+    // Check again after acquiring lock (another thread might have installed)
+    if node_modules.exists() {
+        return;
+    }
+
+    // Mark this fixture as being set up
+    if lock_map.contains_key(fixture_name) {
+        // Another thread is currently installing, wait and return
+        drop(locks);
+        // Busy wait with backoff
+        let mut attempts = 0;
+        while !node_modules.exists() && attempts < 300 {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            attempts += 1;
+        }
+        return;
+    }
+
+    lock_map.insert(fixture_name.to_string(), ());
+    drop(locks);
+
+    // Run npm install
+    eprintln!("Installing dependencies in {}...", fixture_name);
+    let status = std::process::Command::new("npm")
+        .arg("install")
+        .arg("--silent")
+        .current_dir(&fixture_path)
+        .status()
+        .expect("npm should be available");
+
+    assert!(
+        status.success(),
+        "npm install failed for fixture: {}",
+        fixture_name
+    );
+
+    // Remove lock after successful installation
+    let mut locks = FIXTURE_LOCKS.lock().unwrap();
+    if let Some(lock_map) = locks.as_mut() {
+        lock_map.remove(fixture_name);
+    }
 }
 
 /// Creates a temp directory with quench.toml and minimal CLAUDE.md

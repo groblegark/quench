@@ -238,12 +238,14 @@ fn config_file_priority_over_dependencies() {
 // =============================================================================
 
 /// Spec: Auto-detection works on js-simple fixture
-///
-/// This test requires npm install to have been run on the fixture.
-/// Run: ./scripts/fixtures/setup-js-fixtures.sh
 #[test]
 fn auto_detects_vitest_on_js_simple_fixture() {
-    let result = check("tests").on("js-simple").json().passes();
+    setup_js_fixture("js-simple");
+    let result = check("tests")
+        .on("js-simple")
+        .args(&["--ci"])
+        .json()
+        .passes();
     let metrics = result.require("metrics");
 
     assert_eq!(metrics.get("auto_detected"), Some(&serde_json::json!(true)));

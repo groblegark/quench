@@ -332,6 +332,7 @@ targets = []  # Explicit: timing only
 /// > Jest runner provides implicit JavaScript coverage via --coverage.
 #[test]
 fn jest_runner_collects_javascript_coverage() {
+    setup_js_fixture("javascript/jest-coverage");
     let result = check("tests")
         .on("javascript/jest-coverage")
         .args(&["--ci"])
@@ -363,6 +364,7 @@ fn jest_runner_collects_javascript_coverage() {
 /// See vitest_coverage_on_fixture() for fixture-based test.
 #[test]
 fn vitest_runner_collects_javascript_coverage() {
+    setup_js_fixture("javascript/vitest-coverage");
     let result = check("tests")
         .on("javascript/vitest-coverage")
         .args(&["--ci"])
@@ -388,10 +390,9 @@ fn vitest_runner_collects_javascript_coverage() {
 /// Spec: docs/specs/11-test-runners.md#implicit-coverage
 ///
 /// > Vitest runner collects coverage on js-simple fixture.
-///
-/// Requires npm install on fixture: ./scripts/fixtures/setup-js-fixtures.sh
 #[test]
 fn vitest_coverage_on_fixture() {
+    setup_js_fixture("js-simple");
     let result = check("tests")
         .on("js-simple")
         .args(&["--ci"])
@@ -489,6 +490,7 @@ test('covered function', () => { expect(covered()).toBe(42); });
 /// > JavaScript coverage is merged across suites.
 #[test]
 fn multiple_js_suite_coverages_merged() {
+    setup_js_fixture("javascript/jest-merged-coverage");
     let result = check("tests")
         .on("javascript/jest-merged-coverage")
         .args(&["--ci"])
