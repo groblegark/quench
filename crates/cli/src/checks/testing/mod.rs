@@ -366,12 +366,21 @@ impl TestsCheck {
         }
     }
     /// Run branch-scope checking (aggregate all changes).
-    fn run_branch_scope(&self, ctx: &CheckContext, correlation_config: &CorrelationConfig) -> CheckResult {
+    fn run_branch_scope(
+        &self,
+        ctx: &CheckContext,
+        correlation_config: &CorrelationConfig,
+    ) -> CheckResult {
         correlation::check_branch_scope(self.name(), ctx, correlation_config)
     }
 
     /// Run commit-scope checking (each commit independently).
-    fn run_commit_scope(&self, ctx: &CheckContext, base: &str, correlation_config: &CorrelationConfig) -> CheckResult {
+    fn run_commit_scope(
+        &self,
+        ctx: &CheckContext,
+        base: &str,
+        correlation_config: &CorrelationConfig,
+    ) -> CheckResult {
         correlation::check_commit_scope(self.name(), ctx, base, correlation_config)
     }
 }
@@ -423,4 +432,3 @@ fn build_suite_violations(suites: &[&SuiteResult]) -> Vec<Violation> {
         })
         .collect()
 }
-

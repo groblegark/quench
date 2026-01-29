@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Source/test file correlation logic.
+//! Core correlation analysis logic.
 
 use std::borrow::Cow;
 use std::collections::HashSet;
@@ -10,17 +10,13 @@ use std::sync::OnceLock;
 
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use rayon::prelude::*;
-use serde_json::json;
 
-use crate::adapter::{Adapter, FileKind, GenericAdapter};
-use crate::check::{CheckContext, CheckResult, Violation};
-use crate::checks::placeholders::{
-    PlaceholderMetrics, collect_placeholder_metrics, default_js_patterns, default_rust_patterns,
-};
+use super::super::diff::{ChangeType, CommitChanges, FileChange};
+use super::super::patterns;
 
-use super::diff::{ChangeType, CommitChanges, FileChange, get_base_changes, get_commits_since, get_staged_changes};
-use super::patterns::{self, Language, detect_language, candidate_test_paths_for};
-use super::placeholder::{has_js_placeholder_test, has_placeholder_test};
+#[cfg(test)]
+#[path = "analysis_tests.rs"]
+mod tests;
 
 /// Configuration for correlation detection.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -34,26 +30,12 @@ pub struct CorrelationConfig {
 }
 
 impl Default for CorrelationConfig {
+    #[rustfmt::skip]
     fn default() -> Self {
         Self {
-            test_patterns: vec![
-                "tests/**/*".to_string(),
-                "test/**/*".to_string(),
-                "spec/**/*".to_string(),
-                "**/__tests__/**".to_string(),
-                "**/*_test.*".to_string(),
-                "**/*_tests.*".to_string(),
-                "**/*.test.*".to_string(),
-                "**/*.spec.*".to_string(),
-                "**/test_*.*".to_string(),
-            ],
+            test_patterns: vec!["tests/**/*".to_string(), "test/**/*".to_string(), "spec/**/*".to_string(), "**/__tests__/**".to_string(), "**/*_test.*".to_string(), "**/*_tests.*".to_string(), "**/*.test.*".to_string(), "**/*.spec.*".to_string(), "**/test_*.*".to_string()],
             source_patterns: vec!["src/**/*".to_string()],
-            exclude_patterns: vec![
-                "**/mod.rs".to_string(),
-                "**/lib.rs".to_string(),
-                "**/main.rs".to_string(),
-                "**/generated/**".to_string(),
-            ],
+            exclude_patterns: vec!["**/mod.rs".to_string(), "**/lib.rs".to_string(), "**/main.rs".to_string(), "**/generated/**".to_string()],
         }
     }
 }
@@ -471,7 +453,7 @@ fn analyze_single_source(
 }
 
 /// Extract the base name for correlation (e.g., "parser" from "src/parser.rs").
-fn correlation_base_name(path: &Path) -> Option<&str> {
+pub(super) fn correlation_base_name(path: &Path) -> Option<&str> {
     path.file_stem()?.to_str()
 }
 
@@ -479,7 +461,7 @@ fn correlation_base_name(path: &Path) -> Option<&str> {
 ///
 /// A test is test-only if its base name doesn't match any source file's base name,
 /// even when accounting for common test suffixes/prefixes.
-fn is_test_only(test_base: &str, source_base_names: &HashSet<String>) -> bool {
+pub(super) fn is_test_only(test_base: &str, source_base_names: &HashSet<String>) -> bool {
     !source_base_names
         .iter()
         .any(|source_base| patterns::matches_base_name(test_base, source_base))
@@ -507,14 +489,12 @@ pub fn candidate_js_test_paths(base_name: &str) -> Vec<String> {
 
 /// Get candidate test file locations for a source file.
 pub fn find_test_locations(source_path: &Path) -> Vec<PathBuf> {
-    let b = match source_path.file_stem().and_then(|s| s.to_str()) {
-        Some(n) => n,
-        None => return vec![],
+    let Some(b) = source_path.file_stem().and_then(|s| s.to_str()) else {
+        return vec![];
     };
     let p = source_path.parent().unwrap_or(Path::new(""));
-    let dirs = ["tests", "test"];
     let mut paths = Vec::with_capacity(11);
-    for d in &dirs {
+    for d in ["tests", "test"] {
         paths.push(PathBuf::from(format!("{d}/{b}.rs")));
         paths.push(PathBuf::from(format!("{d}/{b}_test.rs")));
         paths.push(PathBuf::from(format!("{d}/{b}_tests.rs")));
@@ -574,7 +554,7 @@ fn file_base_name(path: &Path) -> Option<&str> {
 /// Extract base name from a test file, stripping test suffixes.
 ///
 /// This is a convenience wrapper that returns an owned String.
-fn extract_base_name(path: &Path) -> Option<String> {
+pub(super) fn extract_base_name(path: &Path) -> Option<String> {
     file_base_name(path).map(|s| s.to_string())
 }
 
@@ -600,7 +580,7 @@ fn strip_test_affixes(stem: &str) -> &str {
 }
 
 /// Build a GlobSet from pattern strings.
-fn build_glob_set(patterns: &[String]) -> Result<GlobSet, String> {
+pub(super) fn build_glob_set(patterns: &[String]) -> Result<GlobSet, String> {
     let mut builder = GlobSetBuilder::new();
     for pattern in patterns {
         let glob = Glob::new(pattern).map_err(|e| e.to_string())?;
@@ -608,269 +588,3 @@ fn build_glob_set(patterns: &[String]) -> Result<GlobSet, String> {
     }
     builder.build().map_err(|e| e.to_string())
 }
-
-/// Specifies the git diff range for inline test detection.
-#[derive(Debug, Clone, Copy)]
-pub enum DiffRange<'a> {
-    /// Staged changes (--cached)
-    Staged,
-    /// Branch changes (base..HEAD)
-    Branch(&'a str),
-    /// Single commit (hash^..hash)
-    Commit(&'a str),
-}
-
-/// Check if a Rust source file has inline test changes (#[cfg(test)] blocks).
-///
-/// Returns true if the file's diff contains changes within a #[cfg(test)] module.
-pub fn has_inline_test_changes(file_path: &Path, root: &Path, range: DiffRange<'_>) -> bool {
-    let diff_content = match get_file_diff(file_path, root, range) {
-        Ok(content) => content,
-        Err(_) => return false,
-    };
-
-    changes_in_cfg_test(&diff_content)
-}
-
-/// Get the diff for a specific file.
-fn get_file_diff(file_path: &Path, root: &Path, range: DiffRange<'_>) -> Result<String, String> {
-    use std::process::Command;
-
-    let rel_path = file_path.strip_prefix(root).unwrap_or(file_path);
-    let rel_path_str = rel_path
-        .to_str()
-        .ok_or_else(|| "invalid path".to_string())?;
-
-    let range_str = match range {
-        DiffRange::Staged => String::new(),
-        DiffRange::Branch(base) => format!("{}..HEAD", base),
-        DiffRange::Commit(hash) => format!("{}^..{}", hash, hash),
-    };
-
-    let args: Vec<&str> = if range_str.is_empty() {
-        vec!["diff", "--cached", "--", rel_path_str]
-    } else {
-        vec!["diff", &range_str, "--", rel_path_str]
-    };
-
-    let output = Command::new("git")
-        .args(&args)
-        .current_dir(root)
-        .output()
-        .map_err(|e| format!("failed to run git: {}", e))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("git diff failed: {}", stderr.trim()));
-    }
-
-    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
-}
-
-/// Parse diff content to detect if changes are within #[cfg(test)] blocks.
-///
-/// Tracks state machine:
-/// - Looking for `#[cfg(test)]` marker
-/// - Once found, track brace depth to identify block extent
-/// - Check if any `+` lines are within the block
-pub fn changes_in_cfg_test(diff_content: &str) -> bool {
-    let mut in_cfg_test = false;
-    let mut brace_depth = 0;
-    let mut found_changes_in_test = false;
-
-    for line in diff_content.lines() {
-        // Skip diff metadata lines
-        if line.starts_with("diff ")
-            || line.starts_with("index ")
-            || line.starts_with("--- ")
-            || line.starts_with("+++ ")
-            || line.starts_with("@@ ")
-        {
-            continue;
-        }
-
-        // Get the actual content (strip +/- prefix for analysis)
-        let content = line
-            .strip_prefix('+')
-            .or_else(|| line.strip_prefix('-'))
-            .or_else(|| line.strip_prefix(' '))
-            .unwrap_or(line);
-
-        let trimmed = content.trim();
-
-        // Detect #[cfg(test)] marker
-        if trimmed.contains("#[cfg(test)]") {
-            in_cfg_test = true;
-            brace_depth = 0;
-            continue;
-        }
-
-        // Track brace depth when inside cfg(test)
-        if in_cfg_test {
-            // Count braces in content
-            for ch in content.chars() {
-                match ch {
-                    '{' => brace_depth += 1,
-                    '}' => {
-                        brace_depth -= 1;
-                        if brace_depth <= 0 {
-                            in_cfg_test = false;
-                        }
-                    }
-                    _ => {}
-                }
-            }
-
-            // Check if this is an added line within the test block
-            if line.starts_with('+') && brace_depth > 0 {
-                found_changes_in_test = true;
-            }
-        }
-    }
-
-    found_changes_in_test
-}
-
-// =============================================================================
-// Public Correlation Checking API
-// =============================================================================
-
-const RUST_EXT: &str = "rs";
-const SHORT_HASH_LEN: usize = 7;
-
-fn truncate_hash(hash: &str) -> &str {
-    if hash.len() >= SHORT_HASH_LEN { &hash[..SHORT_HASH_LEN] } else { hash }
-}
-
-pub(super) fn missing_tests_advice(file_stem: &str, lang: Language) -> String {
-    match lang {
-        Language::Rust => format!("Add tests in tests/{}_tests.rs or update inline #[cfg(test)] block", file_stem),
-        Language::Go => format!("Add tests in {}_test.go", file_stem),
-        Language::JavaScript => format!("Add tests in {}.test.ts or __tests__/{}.test.ts", file_stem, file_stem),
-        Language::Python => format!("Add tests in test_{}.py or tests/test_{}.py", file_stem, file_stem),
-        Language::Unknown => format!("Add tests for {}", file_stem),
-    }
-}
-
-fn should_skip_path(path: &Path, allow_placeholders: bool, diff_range: DiffRange, root: &Path) -> bool {
-    (path.extension().is_some_and(|e| e == RUST_EXT) && has_inline_test_changes(path, root, diff_range))
-        || (allow_placeholders && has_placeholder_for_source(path, root))
-}
-
-fn has_placeholder_for_source(source_path: &Path, root: &Path) -> bool {
-    let Some(base_name) = source_path.file_stem().and_then(|s| s.to_str()) else { return false };
-    let lang = detect_language(source_path);
-    candidate_test_paths_for(source_path).iter().any(|test_path| {
-        let test_file = Path::new(test_path);
-        root.join(test_file).exists() && match lang {
-            Language::JavaScript => has_js_placeholder_test(test_file, base_name, root).unwrap_or(false),
-            Language::Rust => has_placeholder_test(test_file, base_name, root).unwrap_or(false),
-            _ => false,
-        }
-    })
-}
-
-fn get_diff_range<'a>(ctx: &'a CheckContext) -> DiffRange<'a> {
-    if ctx.staged { DiffRange::Staged } else { ctx.base_branch.map(DiffRange::Branch).unwrap_or(DiffRange::Staged) }
-}
-
-fn build_violations(paths: &[PathBuf], changes: &[FileChange], ctx: &CheckContext, commit_hash: Option<&str>) -> Vec<Violation> {
-    let mut violations = Vec::new();
-    for path in paths {
-        let change = changes.iter().find(|c| c.path.strip_prefix(ctx.root).unwrap_or(&c.path) == path);
-        let file_stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("file");
-        let lang = detect_language(path);
-        let test_advice = missing_tests_advice(file_stem, lang);
-        let advice = commit_hash.map_or(test_advice.clone(), |hash| {
-            format!("Commit {} modifies {} without test changes. {}", hash, path.display(), test_advice)
-        });
-        let mut v = Violation::file_only(path, "missing_tests", advice);
-        if let Some(c) = change {
-            let ct = match c.change_type {
-                ChangeType::Added => "added",
-                ChangeType::Modified => "modified",
-                ChangeType::Deleted => "deleted",
-            };
-            v = v.with_change_info(ct, c.lines_changed() as i64);
-        }
-        violations.push(v);
-        if ctx.limit.is_some_and(|l| violations.len() >= l) { break; }
-    }
-    violations
-}
-
-fn collect_test_file_placeholder_metrics(ctx: &CheckContext) -> PlaceholderMetrics {
-    let test_patterns = if ctx.config.project.tests.is_empty() {
-        vec!["**/tests/**".to_string(), "**/test/**".to_string(), "**/*_test.*".to_string(), "**/*_tests.*".to_string(), "**/*.test.*".to_string(), "**/*.spec.*".to_string()]
-    } else {
-        ctx.config.project.tests.clone()
-    };
-    let file_adapter = GenericAdapter::new(&[], &test_patterns);
-    let test_files: Vec<PathBuf> = ctx.files.iter()
-        .filter(|f| file_adapter.classify(f.path.strip_prefix(ctx.root).unwrap_or(&f.path)) == FileKind::Test)
-        .map(|f| f.path.clone()).collect();
-    collect_placeholder_metrics(&test_files, &default_rust_patterns(), &default_js_patterns())
-}
-
-fn finalize_with_placeholders(violations: Vec<Violation>, ctx: &CheckContext, mut metrics: serde_json::Value, check_name: &str) -> CheckResult {
-    metrics["placeholders"] = json!(collect_test_file_placeholder_metrics(ctx).to_json());
-    let config_check = &ctx.config.check.tests.commit.check;
-    if violations.is_empty() {
-        CheckResult::passed(check_name).with_metrics(metrics)
-    } else if config_check == "warn" {
-        CheckResult::passed_with_warnings(check_name, violations).with_metrics(metrics)
-    } else {
-        CheckResult::failed(check_name, violations).with_metrics(metrics)
-    }
-}
-
-pub fn check_branch_scope(check_name: &str, ctx: &CheckContext, correlation_config: &CorrelationConfig) -> CheckResult {
-    let config = &ctx.config.check.tests.commit;
-    let changes = if ctx.staged {
-        match get_staged_changes(ctx.root) { Ok(c) => c, Err(e) => return CheckResult::skipped(check_name, e) }
-    } else if let Some(base) = ctx.base_branch {
-        match get_base_changes(ctx.root, base) { Ok(c) => c, Err(e) => return CheckResult::skipped(check_name, e) }
-    } else {
-        return finalize_with_placeholders(vec![], ctx, json!({}), check_name);
-    };
-
-    let mut result = analyze_correlation(&changes, correlation_config, ctx.root);
-    result.without_tests.retain(|path| !should_skip_path(path, config.placeholders == "allow", get_diff_range(ctx), ctx.root));
-    let violations = build_violations(&result.without_tests, &changes, ctx, None);
-    let metrics = json!({
-        "source_files_changed": result.with_tests.len() + result.without_tests.len(),
-        "with_test_changes": result.with_tests.len(),
-        "without_test_changes": result.without_tests.len(),
-        "scope": "branch",
-    });
-    finalize_with_placeholders(violations, ctx, metrics, check_name)
-}
-
-pub fn check_commit_scope(check_name: &str, ctx: &CheckContext, base: &str, correlation_config: &CorrelationConfig) -> CheckResult {
-    let config = &ctx.config.check.tests.commit;
-    let commits = match get_commits_since(ctx.root, base) { Ok(c) => c, Err(e) => return CheckResult::skipped(check_name, e) };
-    let mut violations = Vec::new();
-    let mut failing_commits = Vec::new();
-
-    for commit in &commits {
-        let analysis = analyze_commit(commit, correlation_config, ctx.root);
-        if analysis.is_test_only { continue; }
-        let paths: Vec<PathBuf> = analysis.source_without_tests.iter()
-            .filter(|p| !should_skip_path(p, config.placeholders == "allow", DiffRange::Commit(&commit.hash), ctx.root))
-            .cloned().collect();
-        if !paths.is_empty() {
-            failing_commits.push(analysis.hash.clone());
-            violations.extend(build_violations(&paths, &commit.changes, ctx, Some(truncate_hash(&analysis.hash))));
-        }
-        if ctx.limit.is_some_and(|l| violations.len() >= l) { break; }
-    }
-
-    failing_commits.sort();
-    failing_commits.dedup();
-    let metrics = json!({ "commits_checked": commits.len(), "commits_failing": failing_commits.len(), "scope": "commit" });
-    finalize_with_placeholders(violations, ctx, metrics, check_name)
-}
-
-#[cfg(test)]
-#[path = "correlation_tests.rs"]
-mod tests;

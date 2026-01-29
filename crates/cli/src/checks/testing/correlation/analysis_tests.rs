@@ -1,10 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Alfred Jean LLC
 
-//! Unit tests for source/test correlation.
+//! Unit tests for core correlation analysis.
+
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+
+use crate::checks::testing::diff::{ChangeType, CommitChanges, FileChange};
 
 use super::*;
-use std::path::Path;
 
 fn make_change(path: &str, change_type: ChangeType) -> FileChange {
     FileChange {
@@ -14,6 +18,10 @@ fn make_change(path: &str, change_type: ChangeType) -> FileChange {
         lines_deleted: 5,
     }
 }
+
+// =============================================================================
+// BASE NAME & GLOB SET TESTS
+// =============================================================================
 
 #[test]
 fn correlation_base_name_extracts_stem() {
@@ -46,6 +54,24 @@ fn extract_base_name_strips_test_suffix() {
         Some("parser".to_string())
     );
 }
+
+#[test]
+fn build_glob_set_valid_patterns() {
+    let patterns = vec!["**/*.rs".to_string(), "src/**/*".to_string()];
+    let result = build_glob_set(&patterns);
+    assert!(result.is_ok());
+}
+
+#[test]
+fn build_glob_set_invalid_pattern() {
+    let patterns = vec!["[invalid".to_string()];
+    let result = build_glob_set(&patterns);
+    assert!(result.is_err());
+}
+
+// =============================================================================
+// CORRELATION ANALYSIS TESTS
+// =============================================================================
 
 #[test]
 fn analyze_correlation_source_with_test() {
@@ -164,112 +190,23 @@ fn analyze_correlation_matches_test_in_test_dir() {
 }
 
 #[test]
-fn build_glob_set_valid_patterns() {
-    let patterns = vec!["**/*.rs".to_string(), "src/**/*".to_string()];
-    let result = build_glob_set(&patterns);
-    assert!(result.is_ok());
-}
+fn analyze_correlation_sibling_test_file() {
+    let root = Path::new("/project");
+    let changes = vec![
+        make_change("/project/src/parser.rs", ChangeType::Modified),
+        make_change("/project/src/parser_tests.rs", ChangeType::Modified),
+    ];
 
-#[test]
-fn build_glob_set_invalid_pattern() {
-    let patterns = vec!["[invalid".to_string()];
-    let result = build_glob_set(&patterns);
-    assert!(result.is_err());
-}
+    let config = CorrelationConfig::default();
+    let result = analyze_correlation(&changes, &config, root);
 
-// =============================================================================
-// INLINE TEST DETECTION TESTS
-// =============================================================================
-
-#[test]
-fn changes_in_cfg_test_detects_test_additions() {
-    let diff = r#"diff --git a/src/parser.rs b/src/parser.rs
-index abc123..def456 100644
---- a/src/parser.rs
-+++ b/src/parser.rs
-@@ -1,3 +1,15 @@
- pub fn parse() -> bool {
-     true
- }
-+
-+#[cfg(test)]
-+mod tests {
-+    use super::*;
-+
-+    #[test]
-+    fn test_parse() {
-+        assert!(parse());
-+    }
-+}
-"#;
-
-    assert!(changes_in_cfg_test(diff));
-}
-
-#[test]
-fn changes_in_cfg_test_false_for_non_test_changes() {
-    let diff = r#"diff --git a/src/parser.rs b/src/parser.rs
-index abc123..def456 100644
---- a/src/parser.rs
-+++ b/src/parser.rs
-@@ -1,3 +1,4 @@
- pub fn parse() -> bool {
--    true
-+    // Updated implementation
-+    false
- }
-"#;
-
-    assert!(!changes_in_cfg_test(diff));
-}
-
-#[test]
-fn changes_in_cfg_test_tracks_brace_depth() {
-    let diff = r#"diff --git a/src/parser.rs b/src/parser.rs
---- a/src/parser.rs
-+++ b/src/parser.rs
-@@ -1,5 +1,12 @@
- pub fn parse() -> bool { true }
-
- #[cfg(test)]
- mod tests {
-+    use super::*;
-+
-+    #[test]
-+    fn nested() {
-+        assert!(true);
-+    }
- }
-"#;
-
-    assert!(changes_in_cfg_test(diff));
-}
-
-#[test]
-fn changes_in_cfg_test_empty_diff() {
-    assert!(!changes_in_cfg_test(""));
-}
-
-#[test]
-fn changes_in_cfg_test_context_only() {
-    // Context lines (prefixed with space) shouldn't count as changes
-    let diff = r#"diff --git a/src/parser.rs b/src/parser.rs
---- a/src/parser.rs
-+++ b/src/parser.rs
-@@ -1,5 +1,5 @@
- pub fn parse() -> bool { true }
-
- #[cfg(test)]
- mod tests {
-     fn test_parse() { }
- }
-"#;
-
-    assert!(!changes_in_cfg_test(diff));
+    // Sibling test file should satisfy the requirement
+    assert_eq!(result.with_tests.len(), 1);
+    assert_eq!(result.without_tests.len(), 0);
 }
 
 // =============================================================================
-// ENHANCED TEST LOCATION TESTS
+// TEST LOCATION TESTS
 // =============================================================================
 
 #[test]
@@ -348,27 +285,9 @@ fn has_correlated_test_no_match() {
     ));
 }
 
-#[test]
-fn analyze_correlation_sibling_test_file() {
-    let root = Path::new("/project");
-    let changes = vec![
-        make_change("/project/src/parser.rs", ChangeType::Modified),
-        make_change("/project/src/parser_tests.rs", ChangeType::Modified),
-    ];
-
-    let config = CorrelationConfig::default();
-    let result = analyze_correlation(&changes, &config, root);
-
-    // Sibling test file should satisfy the requirement
-    assert_eq!(result.with_tests.len(), 1);
-    assert_eq!(result.without_tests.len(), 0);
-}
-
 // =============================================================================
 // COMMIT ANALYSIS TESTS
 // =============================================================================
-
-use crate::checks::testing::diff::CommitChanges;
 
 #[test]
 fn analyze_commit_detects_source_without_tests() {
@@ -427,7 +346,7 @@ fn analyze_commit_source_with_tests_passes() {
 }
 
 // =============================================================================
-// PERFORMANCE OPTIMIZATION TESTS (Phase 1-4)
+// PERFORMANCE OPTIMIZATION TESTS
 // =============================================================================
 
 #[test]
@@ -462,7 +381,6 @@ fn analyze_correlation_single_source_fast_path() {
 #[test]
 fn analyze_correlation_source_only_no_tests_fast_path() {
     let root = Path::new("/project");
-    // Only source changes, no test changes
     let changes = vec![
         make_change("/project/src/parser.rs", ChangeType::Modified),
         make_change("/project/src/lexer.rs", ChangeType::Modified),
@@ -479,7 +397,6 @@ fn analyze_correlation_source_only_no_tests_fast_path() {
 #[test]
 fn analyze_correlation_test_only_fast_path() {
     let root = Path::new("/project");
-    // Only test changes, no source changes
     let changes = vec![
         make_change("/project/tests/parser_tests.rs", ChangeType::Modified),
         make_change("/project/tests/lexer_tests.rs", ChangeType::Modified),
@@ -494,6 +411,37 @@ fn analyze_correlation_test_only_fast_path() {
 }
 
 #[test]
+fn analyze_correlation_many_sources_uses_index() {
+    let root = Path::new("/project");
+
+    let mut changes: Vec<FileChange> = (0..20)
+        .map(|i| {
+            make_change(
+                &format!("/project/src/module{}.rs", i),
+                ChangeType::Modified,
+            )
+        })
+        .collect();
+
+    for i in 0..10 {
+        changes.push(make_change(
+            &format!("/project/tests/module{}_tests.rs", i),
+            ChangeType::Modified,
+        ));
+    }
+
+    let config = CorrelationConfig::default();
+    let result = analyze_correlation(&changes, &config, root);
+
+    assert_eq!(result.with_tests.len(), 10);
+    assert_eq!(result.without_tests.len(), 10);
+}
+
+// =============================================================================
+// TEST INDEX TESTS
+// =============================================================================
+
+#[test]
 fn test_index_has_test_for_direct_match() {
     let test_changes = vec![
         PathBuf::from("tests/parser_tests.rs"),
@@ -501,7 +449,6 @@ fn test_index_has_test_for_direct_match() {
     ];
     let index = TestIndex::new(&test_changes);
 
-    // Should find test by base name
     assert!(index.has_test_for(Path::new("src/parser.rs")));
     assert!(index.has_test_for(Path::new("src/lexer.rs")));
     assert!(!index.has_test_for(Path::new("src/codegen.rs")));
@@ -510,8 +457,8 @@ fn test_index_has_test_for_direct_match() {
 #[test]
 fn test_index_has_test_for_suffixed_names() {
     let test_changes = vec![
-        PathBuf::from("tests/parser_test.rs"), // _test suffix
-        PathBuf::from("tests/test_lexer.rs"),  // test_ prefix
+        PathBuf::from("tests/parser_test.rs"),
+        PathBuf::from("tests/test_lexer.rs"),
     ];
     let index = TestIndex::new(&test_changes);
 
@@ -522,7 +469,7 @@ fn test_index_has_test_for_suffixed_names() {
 #[test]
 fn test_index_has_inline_test() {
     let test_changes = vec![
-        PathBuf::from("src/parser.rs"), // Inline test in source file
+        PathBuf::from("src/parser.rs"),
         PathBuf::from("tests/lexer_tests.rs"),
     ];
     let index = TestIndex::new(&test_changes);
@@ -535,48 +482,54 @@ fn test_index_has_inline_test() {
 fn test_index_has_test_at_location() {
     let test_changes = vec![
         PathBuf::from("tests/parser_tests.rs"),
-        PathBuf::from("src/lexer_tests.rs"), // Sibling test
+        PathBuf::from("src/lexer_tests.rs"),
     ];
     let index = TestIndex::new(&test_changes);
 
-    // Should find test at expected location
     assert!(index.has_test_at_location(Path::new("src/parser.rs")));
     assert!(index.has_test_at_location(Path::new("src/lexer.rs")));
     assert!(!index.has_test_at_location(Path::new("src/codegen.rs")));
 }
 
 #[test]
-fn analyze_correlation_many_sources_uses_index() {
-    let root = Path::new("/project");
+fn test_index_handles_test_like_source_name() {
+    let test_changes = vec![PathBuf::from("tests/test_utils_tests.rs")];
+    let index = TestIndex::new(&test_changes);
 
-    // Create many source and test changes
-    let mut changes: Vec<FileChange> = (0..20)
-        .map(|i| {
-            make_change(
-                &format!("/project/src/module{}.rs", i),
-                ChangeType::Modified,
-            )
-        })
-        .collect();
+    assert!(
+        index.has_test_for(Path::new("src/test_utils.rs")),
+        "test_utils.rs should match test_utils_tests.rs"
+    );
+}
 
-    // Add matching tests for half of them
-    for i in 0..10 {
-        changes.push(make_change(
-            &format!("/project/tests/module{}_tests.rs", i),
-            ChangeType::Modified,
-        ));
-    }
+#[test]
+fn test_index_handles_source_with_test_suffix() {
+    let test_changes = vec![PathBuf::from("tests/parser_test_tests.rs")];
+    let index = TestIndex::new(&test_changes);
 
-    let config = CorrelationConfig::default();
-    let result = analyze_correlation(&changes, &config, root);
+    assert!(
+        index.has_test_for(Path::new("src/parser_test.rs")),
+        "parser_test.rs should match parser_test_tests.rs"
+    );
+}
 
-    // First 10 modules should have tests, last 10 should not
-    assert_eq!(result.with_tests.len(), 10);
-    assert_eq!(result.without_tests.len(), 10);
+#[test]
+fn test_index_handles_confusing_names() {
+    let test_changes = vec![
+        PathBuf::from("tests/helper_tests.rs"),
+        PathBuf::from("tests/utils_test.rs"),
+    ];
+    let index = TestIndex::new(&test_changes);
+
+    assert!(index.has_test_for(Path::new("src/helper.rs")));
+    assert!(index.has_test_for(Path::new("src/utils.rs")));
+
+    assert!(!index.has_test_for(Path::new("src/parser.rs")));
+    assert!(!index.has_test_for(Path::new("src/lexer.rs")));
 }
 
 // =============================================================================
-// ENHANCED DEFAULT PATTERN TESTS
+// DEFAULT PATTERN TESTS
 // =============================================================================
 
 #[test]
@@ -590,7 +543,6 @@ fn default_patterns_include_jest_conventions() {
     let config = CorrelationConfig::default();
     let result = analyze_correlation(&changes, &config, root);
 
-    // __tests__ pattern should match
     assert_eq!(result.with_tests.len(), 1);
     assert_eq!(result.without_tests.len(), 0);
 }
@@ -606,7 +558,6 @@ fn default_patterns_include_dot_test_suffix() {
     let config = CorrelationConfig::default();
     let result = analyze_correlation(&changes, &config, root);
 
-    // .test.ts pattern should match
     assert_eq!(result.with_tests.len(), 1);
     assert_eq!(result.without_tests.len(), 0);
 }
@@ -622,7 +573,6 @@ fn default_patterns_include_spec_directory() {
     let config = CorrelationConfig::default();
     let result = analyze_correlation(&changes, &config, root);
 
-    // spec/ directory pattern should match
     assert_eq!(result.with_tests.len(), 1);
     assert_eq!(result.without_tests.len(), 0);
 }
@@ -638,28 +588,23 @@ fn default_patterns_include_test_prefix() {
     let config = CorrelationConfig::default();
     let result = analyze_correlation(&changes, &config, root);
 
-    // test_ prefix pattern should match
     assert_eq!(result.with_tests.len(), 1);
     assert_eq!(result.without_tests.len(), 0);
 }
 
 // =============================================================================
-// TEST-ONLY FILTER CONSISTENCY TESTS
+// TEST-ONLY FILTER TESTS
 // =============================================================================
 
 #[test]
 fn test_only_filter_single_source_matches_multi_source() {
-    // Verify same test files are identified as test-only
-    // in both single-source and multi-source paths
     let root = Path::new("/project");
 
-    // Single source case
     let single_changes = vec![
         make_change("/project/src/parser.rs", ChangeType::Modified),
         make_change("/project/tests/other_tests.rs", ChangeType::Modified),
     ];
 
-    // Multi source case (add another source)
     let multi_changes = vec![
         make_change("/project/src/parser.rs", ChangeType::Modified),
         make_change("/project/src/lexer.rs", ChangeType::Modified),
@@ -670,7 +615,6 @@ fn test_only_filter_single_source_matches_multi_source() {
     let single_result = analyze_correlation(&single_changes, &config, root);
     let multi_result = analyze_correlation(&multi_changes, &config, root);
 
-    // Both should identify other_tests.rs as test-only
     assert_eq!(
         single_result.test_only.len(),
         1,
@@ -685,103 +629,41 @@ fn test_only_filter_single_source_matches_multi_source() {
 
 #[test]
 fn is_test_only_direct_match() {
-    use std::collections::HashSet;
     let mut sources = HashSet::new();
     sources.insert("parser".to_string());
-
-    // Test base matches source directly
     assert!(!is_test_only("parser", &sources));
 }
 
 #[test]
 fn is_test_only_with_suffix() {
-    use std::collections::HashSet;
     let mut sources = HashSet::new();
     sources.insert("parser".to_string());
-
-    // Test base is source + _test/_tests suffix
     assert!(!is_test_only("parser_test", &sources));
     assert!(!is_test_only("parser_tests", &sources));
 }
 
 #[test]
 fn is_test_only_with_prefix() {
-    use std::collections::HashSet;
     let mut sources = HashSet::new();
     sources.insert("parser".to_string());
-
-    // Test base is test_ + source prefix
     assert!(!is_test_only("test_parser", &sources));
 }
 
 #[test]
 fn is_test_only_no_match() {
-    use std::collections::HashSet;
     let mut sources = HashSet::new();
     sources.insert("parser".to_string());
-
-    // Test base doesn't match any source
     assert!(is_test_only("lexer", &sources));
     assert!(is_test_only("lexer_tests", &sources));
     assert!(is_test_only("test_lexer", &sources));
 }
 
 // =============================================================================
-// BIDIRECTIONAL MATCHING EDGE CASE TESTS
+// BIDIRECTIONAL MATCHING EDGE CASES
 // =============================================================================
-
-// Note: Files in src/ that match test patterns (like test_utils.rs matching
-// **/test_*.*) are classified as tests, not sources. This is expected behavior.
-// The tests below verify the TestIndex logic works correctly for edge cases.
-
-#[test]
-fn test_index_handles_test_like_source_name() {
-    // If a source file had base name "test_utils", it should match a test
-    // file with base name "test_utils" or "test_utils_test/tests"
-    let test_changes = vec![PathBuf::from("tests/test_utils_tests.rs")];
-    let index = TestIndex::new(&test_changes);
-
-    // Source "test_utils" should find the test "test_utils" (from test_utils_tests.rs)
-    assert!(
-        index.has_test_for(Path::new("src/test_utils.rs")),
-        "test_utils.rs should match test_utils_tests.rs"
-    );
-}
-
-#[test]
-fn test_index_handles_source_with_test_suffix() {
-    // Source file with _test suffix should match test with additional _tests suffix
-    let test_changes = vec![PathBuf::from("tests/parser_test_tests.rs")];
-    let index = TestIndex::new(&test_changes);
-
-    // Source "parser_test" should find the test "parser_test" (from parser_test_tests.rs)
-    assert!(
-        index.has_test_for(Path::new("src/parser_test.rs")),
-        "parser_test.rs should match parser_test_tests.rs"
-    );
-}
-
-#[test]
-fn test_index_handles_confusing_names() {
-    // Test various confusing naming patterns
-    let test_changes = vec![
-        PathBuf::from("tests/helper_tests.rs"), // test for "helper"
-        PathBuf::from("tests/utils_test.rs"),   // test for "utils"
-    ];
-    let index = TestIndex::new(&test_changes);
-
-    // These should match
-    assert!(index.has_test_for(Path::new("src/helper.rs")));
-    assert!(index.has_test_for(Path::new("src/utils.rs")));
-
-    // These should NOT match (no corresponding test)
-    assert!(!index.has_test_for(Path::new("src/parser.rs")));
-    assert!(!index.has_test_for(Path::new("src/lexer.rs")));
-}
 
 #[test]
 fn source_with_normal_name_correlates_correctly() {
-    // Normal source files (no test-like patterns in name) work correctly
     let root = Path::new("/project");
     let changes = vec![
         make_change("/project/src/parser.rs", ChangeType::Modified),
@@ -797,7 +679,6 @@ fn source_with_normal_name_correlates_correctly() {
 
 #[test]
 fn source_file_without_matching_test_detected() {
-    // Source files without matching tests are properly detected
     let root = Path::new("/project");
     let changes = vec![
         make_change("/project/src/parser.rs", ChangeType::Modified),
@@ -807,7 +688,6 @@ fn source_file_without_matching_test_detected() {
     let config = CorrelationConfig::default();
     let result = analyze_correlation(&changes, &config, root);
 
-    // parser.rs has no test, lexer_tests.rs is test-only
     assert_eq!(result.with_tests.len(), 0);
     assert_eq!(result.without_tests.len(), 1);
     assert_eq!(result.test_only.len(), 1);

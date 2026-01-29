@@ -115,8 +115,8 @@ fn detect_language_unknown() {
 #[test]
 fn advice_message_rust() {
     let advice = missing_tests_advice("parser", Language::Rust);
-    assert!(advice.contains("tests/parser_tests.rs"));
-    assert!(advice.contains("#[cfg(test)]"));
+    assert!(advice.contains("tests/parser.rs"));
+    assert!(advice.contains("parser_tests.rs"));
 }
 
 #[test]

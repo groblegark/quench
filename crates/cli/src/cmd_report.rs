@@ -86,7 +86,11 @@ pub fn run(_cli: &Cli, args: &ReportArgs) -> anyhow::Result<()> {
 /// 3. For HEAD only: fall back to .quench/latest.json cache
 ///
 /// Returns None if no baseline is found.
-fn load_baseline_for_ref(root: &Path, config: &Config, git_ref: &str) -> anyhow::Result<Option<Baseline>> {
+fn load_baseline_for_ref(
+    root: &Path,
+    config: &Config,
+    git_ref: &str,
+) -> anyhow::Result<Option<Baseline>> {
     // For HEAD, try latest.json cache first (fast path)
     if git_ref == "HEAD" {
         let latest_path = root.join(".quench/latest.json");
@@ -106,7 +110,10 @@ fn load_baseline_for_ref(root: &Path, config: &Config, git_ref: &str) -> anyhow:
         match Baseline::load_from_notes(root, git_ref) {
             Ok(baseline) => Ok(baseline),
             Err(e) => {
-                eprintln!("warning: failed to load baseline from git notes for {}: {}", git_ref, e);
+                eprintln!(
+                    "warning: failed to load baseline from git notes for {}: {}",
+                    git_ref, e
+                );
                 Ok(None)
             }
         }

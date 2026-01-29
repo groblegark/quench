@@ -39,7 +39,9 @@ pub(crate) use ratchet::RatchetPackageConfig;
 pub(crate) use ruby::{RubyConfig, RubyPolicyConfig, RubySuppressConfig};
 pub(crate) use shell::{ShellConfig, ShellPolicyConfig, ShellSuppressConfig};
 pub(crate) use suppress::{SuppressConfig, SuppressLevel, SuppressScopeConfig};
-pub(crate) use test_config::{TestSuiteConfig, TestsCommitConfig, TestsConfig};
+#[cfg(test)]
+pub(crate) use test_config::TestsCommitConfig;
+pub(crate) use test_config::{TestSuiteConfig, TestsConfig};
 
 pub(crate) use crate::checks::agents::config::{
     AgentsConfig, ContentRule, RequiredSection, SectionsConfig, deserialize_optional_usize,

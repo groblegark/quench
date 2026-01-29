@@ -846,10 +846,7 @@ threshold = 100
 
     // Config baseline = ".quench/baseline.json" should use file baseline, not notes
     // Use --no-git since CLAUDE.md doesn't have Commits section
-    cli()
-        .pwd(temp.path())
-        .args(&["--no-git"])
-        .passes();
+    cli().pwd(temp.path()).args(&["--no-git"]).passes();
 }
 
 /// Spec: docs/specs/04-ratcheting.md#baseline-storage
