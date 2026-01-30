@@ -400,6 +400,7 @@ impl LanguageDefaults for RustDefaults {
             "**/benches/**".to_string(),
             "**/*_test.rs".to_string(),
             "**/*_tests.rs".to_string(),
+            "**/*_tests/**".to_string(),
         ]
     }
 

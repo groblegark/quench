@@ -198,7 +198,7 @@ Configuration:
   Config: quench.toml
   Language(s): Generic
   project.source:
-  project.tests: **/tests/**, **/test/**, **/spec/**, **/__tests__/**, **/*_test.*, **/*_tests.*, **/*.test.*, **/*.spec.*, **/test_*.*
+  project.tests: **/tests/**, **/test/**, **/spec/**, **/__tests__/**, **/*_tests/**, **/*_test.*, **/*_tests.*, **/*.test.*, **/*.spec.*, **/test_*.*
   project.exclude:
   check.tests.commit.exclude: **/generated/**
 

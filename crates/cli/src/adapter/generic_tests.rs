@@ -11,6 +11,9 @@ use yare::parameterized;
     test_dir = { "test/bar.py", FileKind::Test },
     nested_tests = { "crate/tests/unit.rs", FileKind::Test },
 
+    // Test directory suffix patterns
+    suffix_tests_dir = { "crate/lexer_tests/scan.rs", FileKind::Test },
+
     // Test file patterns
     suffix_test = { "src/foo_test.rs", FileKind::Test },
     suffix_tests = { "src/bar_tests.rs", FileKind::Test },

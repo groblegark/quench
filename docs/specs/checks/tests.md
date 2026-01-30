@@ -102,6 +102,7 @@ For Rust, changes to `#[cfg(test)]` blocks in the same file **satisfy the test r
 | `test/**/*` | Test directory (singular) |
 | `spec/**/*` | Spec directory (RSpec/Ruby convention) |
 | `**/__tests__/**` | Jest convention |
+| `**/*_tests/**` | Underscore suffix directory |
 | `**/*_test.*` | Underscore suffix |
 | `**/*_tests.*` | Underscore suffix (plural) |
 | `**/*.test.*` | Dot suffix (Jest/Vitest) |

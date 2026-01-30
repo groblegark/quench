@@ -45,7 +45,8 @@ use crate::check::Violation;
 /// v32: Added cursor rule reconciliation (.mdc ↔ CLAUDE.md).
 /// v33: Standardized exclude patterns across all language adapters (Go, JS, Shell).
 /// v34: Removed reconcile_cursor/reconcile_direction fields; cursor reconciliation now uses sync config.
-pub(crate) const CACHE_VERSION: u32 = 34;
+/// v35: Added **/*_tests/** to default test patterns (generic, Rust, JavaScript adapters).
+pub(crate) const CACHE_VERSION: u32 = 35;
 
 /// Cache file name within .quench directory.
 pub const CACHE_FILE_NAME: &str = "cache.bin";

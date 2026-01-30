@@ -86,6 +86,7 @@ impl JavaScriptAdapter {
                 "**/*_tests.*".to_string(),
                 "**/test_*.*".to_string(),
                 "**/__tests__/**".to_string(),
+                "**/*_tests/**".to_string(),
                 "**/test/**".to_string(),
                 "**/tests/**".to_string(),
             ]),

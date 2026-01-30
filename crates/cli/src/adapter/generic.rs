@@ -44,6 +44,7 @@ impl GenericAdapter {
             "**/test/**".to_string(),
             "**/spec/**".to_string(),
             "**/__tests__/**".to_string(),
+            "**/*_tests/**".to_string(),
             // Suffix patterns (underscore)
             "**/*_test.*".to_string(),
             "**/*_tests.*".to_string(),

@@ -78,6 +78,7 @@ impl LanguageDefaults for JavaScriptDefaults {
             "**/tests/**".to_string(),
             "**/test/**".to_string(),
             "**/__tests__/**".to_string(),
+            "**/*_tests/**".to_string(),
             "**/*_test.*".to_string(),
             "**/*_tests.*".to_string(),
             "**/*.test.*".to_string(),
