@@ -377,15 +377,11 @@ fn check_output_format_exact() {
     let expected = "\
 cloc: FAIL
   src/oversized.rs: file_too_large (lines: 15 vs 10)
-    Can the code be made more concise?
+    First, look for repetitive patterns that could be extracted into helper functions, or refactor to be more unit testable and concise.
 
-    Look for repetitive patterns that could be extracted into helper functions
-    or consider refactoring to be more unit testable.
+    Then split into sibling modules or submodules in a folder by semantic concern (target 2\u{2013}3 lines each).
 
-    If not, split large source files into sibling modules or submodules in a folder,
-
-    Avoid picking and removing individual lines to satisfy the linter,
-    prefer properly refactoring out testable code blocks.
+    Avoid removing individual lines to satisfy the linter; prefer extracting testable code blocks.
 
 PASS: escapes, agents, docs, tests, git, license
 FAIL: cloc

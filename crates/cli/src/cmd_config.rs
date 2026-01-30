@@ -120,9 +120,18 @@ pub fn run(args: &ConfigArgs) -> Result<ExitCode> {
             }
             println!();
             println!("{}", color::header("Available features:"));
-            println!("  Checks:    {}", color::literal("agents, build, cloc, docs, escapes, git, license, tests"));
-            println!("  Languages: {}", color::literal("golang (go), javascript (js/ts), python (py), ruby (rb),"));
-            println!("             {}", color::literal("rust (rs), shell (sh/bash)"));
+            println!(
+                "  Checks:    {}",
+                color::literal("agents, build, cloc, docs, escapes, git, license, tests")
+            );
+            println!(
+                "  Languages: {}",
+                color::literal("golang (go), javascript (js/ts), python (py), ruby (rb),")
+            );
+            println!(
+                "             {}",
+                color::literal("rust (rs), shell (sh/bash)")
+            );
             return Ok(ExitCode::Success);
         }
     };
