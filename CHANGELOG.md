@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0]
+
+### Added
+
+#### Commands
+- `quench cloc` command for counting lines of code with canned advice and target file size ranges
+- `quench config` command for viewing configuration guides with colorized output and TypeScript/ts aliases
+
+#### Adapters
+- **Python language adapter**: Full Python support including language detection, test runner auto-detection, escape/suppress patterns, `lint_changes=standalone` policy enforcement, coverage collection, landing items, and package manager detection
+- Python language profile support in `quench init`
+
+#### Test Runners
+- Bun coverage collection via LCOV reporter
+- BATS coverage collection via kcov and llvm-cov
+- Vitest coverage collection
+- Jest/Vitest coverage behavioral specs
+- Test execution CI-only by default for all languages
+- Auto-detect and run all test suites in multi-language projects
+
+#### Configuration
+- JavaScript package manager detection from lock files
+- Shell completions auto-install during `quench init`
+- Verbose diagnostic output in CI mode
+- Standardized exclude patterns across all language adapters
+
+#### Agents
+- Cursor rule reconciliation (`.mdc` ↔ `CLAUDE.md`) with consolidated sync config
+
+### Changed
+- Renamed `ignore` → `exclude` throughout codebase
+- Consolidated cursor reconciliation with sync config
+
 ## [0.3.0]
 
 ### Added
@@ -92,7 +125,8 @@ Initial public release with core linting functionality.
 
 Internal preview release.
 
-[Unreleased]: https://github.com/alfredjeanlab/quench/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/alfredjeanlab/quench/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/alfredjeanlab/quench/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/alfredjeanlab/quench/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/alfredjeanlab/quench/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/alfredjeanlab/quench/releases/tag/v0.1.0
