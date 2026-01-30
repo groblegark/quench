@@ -284,6 +284,7 @@ fn auto_detected_suites_show_detection_source() {
     // Create a Cargo project without explicit test suite config
     // so auto-detection kicks in
     let temp = Project::empty();
+    temp.config("[check.tests]\nauto = true");
     temp.file(
         "CLAUDE.md",
         "# Test\n\n## Directory Structure\n\nMinimal.\n\n## Landing the Plane\n\n- Done\n",

@@ -6,6 +6,17 @@ Test suites are configured via `[[check.tests.suite]]` and provide:
 - **Test time**: Timing metrics (total, avg, max)
 - **Coverage**: Code coverage collection (via `targets` field)
 
+## Auto-Discovery
+
+When no `[[check.tests.suite]]` is configured and `auto = true`, quench auto-discovers test runners in CI mode by detecting project files (e.g., `Cargo.toml`, `package.json`, `go.mod`, `pyproject.toml`).
+
+```toml
+[check.tests]
+auto = true  # enable auto-discovery (default: false)
+```
+
+Auto-discovery is off by default. Users must opt in explicitly.
+
 ## Runner Independence
 
 Runners are independent of the code being tested. Any runner can test any project:

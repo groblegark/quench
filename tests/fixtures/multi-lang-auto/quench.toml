@@ -1,7 +1,4 @@
 version = 1
 
-[project]
-name = "js-simple"
-
 [check.tests]
 auto = true

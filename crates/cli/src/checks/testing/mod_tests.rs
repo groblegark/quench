@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use crate::config::TestsCommitConfig;
+use crate::config::{TestsCommitConfig, TestsConfig};
 
 use super::correlation::missing_tests_advice;
 use super::patterns::{Language, detect_language};
@@ -28,6 +28,12 @@ fn tests_check_description() {
 fn tests_check_default_enabled() {
     let check = TestsCheck;
     assert!(check.default_enabled());
+}
+
+#[test]
+fn tests_config_auto_defaults_to_false() {
+    let config = TestsConfig::default();
+    assert!(!config.auto);
 }
 
 #[test]

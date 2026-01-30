@@ -59,8 +59,8 @@ impl Check for TestsCheck {
             return self.run_test_suites(ctx);
         }
 
-        // Auto-detect test runners in CI mode only
-        if ctx.ci_mode {
+        // Auto-detect test runners in CI mode when auto-discovery is enabled
+        if ctx.ci_mode && ctx.config.check.tests.auto {
             // Collect all auto-detected suites
             let mut auto_detected_suites = Vec::new();
 

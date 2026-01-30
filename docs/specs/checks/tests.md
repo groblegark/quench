@@ -271,6 +271,7 @@ tests: WARN
 ```toml
 [check.tests]
 check = "error"
+auto = true  # auto-discover test runners in CI mode (default: false)
 
 # Commit checking (source changes need test changes)
 [check.tests.commit]

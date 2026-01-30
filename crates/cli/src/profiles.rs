@@ -489,6 +489,7 @@ check = "error"
 # See: `quench config tests`
 [check.tests]
 check = "off"
+auto = false         # auto discover test suites
 
 # Validate SPDX license headers and copyright
 # See: `quench config license`

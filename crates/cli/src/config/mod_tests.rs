@@ -825,6 +825,27 @@ skip_merge = false
 // Test suite configuration tests
 
 #[test]
+fn tests_auto_defaults_to_false() {
+    let path = PathBuf::from("quench.toml");
+    let content = "version = 1\n";
+    let config = parse(content, &path).unwrap();
+    assert!(!config.check.tests.auto);
+}
+
+#[test]
+fn tests_auto_parses_true() {
+    let path = PathBuf::from("quench.toml");
+    let content = r#"
+version = 1
+
+[check.tests]
+auto = true
+"#;
+    let config = parse(content, &path).unwrap();
+    assert!(config.check.tests.auto);
+}
+
+#[test]
 fn test_suite_config_parses_basic() {
     let path = PathBuf::from("quench.toml");
     let content = r#"

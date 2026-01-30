@@ -16,6 +16,10 @@ pub struct TestsConfig {
     /// Check level: "error" | "warn" | "off"
     pub check: Option<String>,
 
+    /// Auto-discover test runners when no suites are configured.
+    #[serde(default)]
+    pub auto: bool,
+
     /// Commit message validation settings.
     #[serde(default)]
     pub commit: TestsCommitConfig,

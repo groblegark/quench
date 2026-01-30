@@ -17,6 +17,7 @@ use crate::prelude::*;
 #[test]
 fn auto_detects_vitest_from_config_file() {
     let temp = Project::empty();
+    temp.config("[check.tests]\nauto = true");
     temp.file("package.json", r#"{"name": "test"}"#);
     temp.file("vitest.config.ts", "export default {}");
 
@@ -51,6 +52,7 @@ fn auto_detects_vitest_from_config_file() {
 #[test]
 fn auto_detects_jest_from_config_file() {
     let temp = Project::empty();
+    temp.config("[check.tests]\nauto = true");
     temp.file("package.json", r#"{"name": "test"}"#);
     temp.file("jest.config.js", "module.exports = {}");
 
@@ -83,6 +85,7 @@ fn auto_detects_jest_from_config_file() {
 #[test]
 fn auto_detects_vitest_from_dev_dependencies() {
     let temp = Project::empty();
+    temp.config("[check.tests]\nauto = true");
     temp.file(
         "package.json",
         r#"{"name": "test", "devDependencies": {"vitest": "^2.0.0"}}"#,
@@ -119,6 +122,7 @@ fn auto_detects_vitest_from_dev_dependencies() {
 #[test]
 fn auto_detects_jest_from_dev_dependencies() {
     let temp = Project::empty();
+    temp.config("[check.tests]\nauto = true");
     temp.file(
         "package.json",
         r#"{"name": "test", "devDependencies": {"jest": "^29.0.0"}}"#,
@@ -153,6 +157,7 @@ fn auto_detects_jest_from_dev_dependencies() {
 #[test]
 fn auto_detects_vitest_from_test_script() {
     let temp = Project::empty();
+    temp.config("[check.tests]\nauto = true");
     temp.file(
         "package.json",
         r#"{"name": "test", "scripts": {"test": "vitest run"}}"#,
@@ -260,6 +265,7 @@ fn no_auto_detection_when_no_runner_found() {
 #[test]
 fn config_file_priority_over_dependencies() {
     let temp = Project::empty();
+    temp.config("[check.tests]\nauto = true");
     temp.file(
         "package.json",
         r#"{"name": "test", "devDependencies": {"jest": "^29.0.0"}}"#,
