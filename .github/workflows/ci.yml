@@ -65,6 +65,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      # bun: Required for tests/specs/checks/tests/coverage.rs bun_runner_* tests
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 'latest'
       - run: cargo test --all
 
   build:
