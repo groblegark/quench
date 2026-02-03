@@ -19,7 +19,8 @@ mod cmd_config;
 mod cmd_report;
 
 fn init_logging() {
-    let filter = EnvFilter::try_from_env("QUENCH_LOG").unwrap_or_else(|_| EnvFilter::new("off"));
+    let filter = EnvFilter::try_from_env(quench::env::quench_log_var())
+        .unwrap_or_else(|_| EnvFilter::new("off"));
 
     fmt()
         .with_env_filter(filter)

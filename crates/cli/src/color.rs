@@ -40,12 +40,12 @@ pub fn should_colorize() -> bool {
     static SHOULD_COLORIZE: OnceLock<bool> = OnceLock::new();
     *SHOULD_COLORIZE.get_or_init(|| {
         // NO_COLOR=1 disables colors
-        if std::env::var("NO_COLOR").is_ok_and(|v| v == "1") {
+        if crate::env::no_color() {
             return false;
         }
 
         // COLOR=1 forces colors even without TTY
-        if std::env::var("COLOR").is_ok_and(|v| v == "1") {
+        if crate::env::force_color() {
             return true;
         }
 
@@ -400,29 +400,21 @@ fn find_toml_comment(line: &str) -> Option<usize> {
 /// similar convention for forcing color output.
 pub fn resolve_color() -> ColorChoice {
     // NO_COLOR spec: any value (including empty) disables color
-    if std::env::var_os("NO_COLOR").is_some() {
+    if crate::env::no_color_set() {
         return ColorChoice::Never;
     }
     // COLOR=1 forces color (non-standard but common)
-    if std::env::var_os("COLOR").is_some() {
+    if crate::env::force_color_set() {
         return ColorChoice::Always;
     }
     // Auto-detect
     if !std::io::stdout().is_terminal() {
         return ColorChoice::Never;
     }
-    if is_agent_environment() {
+    if crate::env::is_non_interactive() {
         return ColorChoice::Never;
     }
     ColorChoice::Auto
-}
-
-/// Check if running in an AI agent environment.
-fn is_agent_environment() -> bool {
-    std::env::var_os("CLAUDE_CODE").is_some()
-        || std::env::var_os("CODEX").is_some()
-        || std::env::var_os("CURSOR").is_some()
-        || std::env::var_os("CI").is_some()
 }
 
 /// Color scheme for output per spec.

@@ -33,7 +33,7 @@ use quench::walker::{FileWalker, WalkerConfig};
 
 /// Check if debug files mode is enabled via QUENCH_DEBUG_FILES env var.
 fn debug_files() -> bool {
-    std::env::var("QUENCH_DEBUG_FILES").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+    quench::env::quench_debug_files()
 }
 
 /// Run the check command.
@@ -186,9 +186,7 @@ fn validate_flags(args: &CheckArgs) -> Option<ExitCode> {
 }
 
 fn setup_verbose(args: &CheckArgs) -> VerboseLogger {
-    let verbose_enabled = args.ci
-        || args.verbose
-        || std::env::var("QUENCH_DEBUG").is_ok_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+    let verbose_enabled = args.ci || args.verbose || quench::env::quench_debug();
     VerboseLogger::new(verbose_enabled)
 }
 

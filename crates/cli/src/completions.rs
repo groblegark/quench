@@ -22,21 +22,17 @@ const QUENCH_COMPLETION_MARKER: &str = "# quench-shell-completion";
 
 /// Get the user's home directory.
 fn home_dir() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(PathBuf::from)
+    crate::env::home()
 }
 
 /// Get the local data directory (XDG_DATA_HOME or ~/.local/share).
 fn data_local_dir() -> Option<PathBuf> {
-    std::env::var_os("XDG_DATA_HOME")
-        .map(PathBuf::from)
-        .or_else(|| home_dir().map(|h| h.join(".local/share")))
+    crate::env::xdg_data_home().or_else(|| home_dir().map(|h| h.join(".local/share")))
 }
 
 /// Get the config directory (XDG_CONFIG_HOME or ~/.config).
 fn config_dir() -> Option<PathBuf> {
-    std::env::var_os("XDG_CONFIG_HOME")
-        .map(PathBuf::from)
-        .or_else(|| home_dir().map(|h| h.join(".config")))
+    crate::env::xdg_config_home().or_else(|| home_dir().map(|h| h.join(".config")))
 }
 
 /// Supported shells for completion installation.

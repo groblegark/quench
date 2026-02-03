@@ -13,6 +13,7 @@ pub mod color;
 pub mod completions;
 pub mod config;
 pub mod discovery;
+pub mod env;
 pub mod error;
 pub mod file_reader;
 pub mod file_size;
