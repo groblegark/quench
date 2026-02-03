@@ -16,7 +16,7 @@ command "fix" {
 
 queue "bugs" {
   type = "external"
-  list = "wok list -t bug -s todo --unassigned -o json"
+  list = "wok list -t bug -s todo --unassigned -p qn -o json"
   take = "wok start ${item.id}"
 }
 
@@ -57,10 +57,11 @@ pipeline "fix" {
 
   step "submit" {
     run = <<-SHELL
+      _title=$(printf '%s' "${local.title}" | tr '\n' ' ' | cut -c1-80)
       git add -A
-      git diff --cached --quiet || git commit -m "${local.title}"
+      git diff --cached --quiet || git commit -m "$_title"
       git -C "${local.repo}" push origin "${local.branch}"
-      oj queue push merges --var branch="${local.branch}" --var title="${local.title}"
+      oj queue push merges --var branch="${local.branch}" --var title="$_title"
     SHELL
     on_done = { step = "done" }
   }
@@ -72,12 +73,19 @@ pipeline "fix" {
 
   step "cancel" {
     run     = "cd ${invoke.dir} && wok close ${var.bug.id} --reason 'Fix pipeline cancelled'"
-    on_done = { step = "cleanup" }
+    on_done = { step = "abandon" }
   }
 
   step "reopen" {
     run     = "cd ${invoke.dir} && wok reopen ${var.bug.id} --reason 'Fix pipeline failed'"
-    on_done = { step = "cleanup" }
+    on_done = { step = "abandon" }
+  }
+
+  step "abandon" {
+    run = <<-SHELL
+      git -C "${local.repo}" worktree remove --force "${workspace.root}" 2>/dev/null || true
+      git -C "${local.repo}" branch -D "${local.branch}" 2>/dev/null || true
+    SHELL
   }
 
   step "cleanup" {

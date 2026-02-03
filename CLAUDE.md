@@ -66,9 +66,8 @@ Before committing changes:
 - [ ] Unit tests in sibling `_tests.rs` files
 - [ ] Bump `CACHE_VERSION` in `crates/cli/src/cache.rs` if check logic changed
 - [ ] Run `make check` which will
-  - `cargo fmt --all -- --check`
-  - `cargo clippy --all-targets --all-features -- -D warnings`
-  - `cargo test --all`
+  - `cargo fmt --all`
+  - `cargo clippy --all -- -D warnings`
   - `cargo build --all`
-  - `cargo audit`
-  - `cargo deny check`
+  - `cargo test --all`
+  - `cargo run -- check`

@@ -28,6 +28,9 @@ pipeline "release" {
     tag_version = "$(git -C ${invoke.dir} tag --sort=-v:refname | grep '^v' | head -1 | sed 's/^v//' || echo '0.0.0')"
   }
 
+  on_cancel = { step = "cleanup" }
+  on_fail   = { step = "cleanup" }
+
   notify {
     on_start = "Release: starting"
     on_done  = "Release: published"

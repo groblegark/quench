@@ -1,7 +1,20 @@
-.PHONY: check build test install clean bench bench-ci bench-baseline bench-check license
+.PHONY: check ci build test install clean bench bench-ci bench-baseline bench-check license
 
-# Run all CI checks
+# Quick checks
+#
+# Excluded:
+#   SKIP `cargo audit`
+#   SKIP `cargo deny`
+#
 check:
+	cargo fmt --all
+	cargo clippy --all -- -D warnings
+	cargo build --all
+	cargo test --all
+	cargo run -- check
+
+# Full pre-release checks
+ci:
 	cargo fmt --all
 	cargo clippy --all-targets --all-features -- -D warnings
 	cargo build --all

@@ -24,6 +24,9 @@ pipeline "build" {
     title  = "feat(${var.name}): ${var.instructions}"
   }
 
+  on_cancel = { step = "abandon" }
+  on_fail   = { step = "abandon" }
+
   notify {
     on_start = "Building: ${var.name}"
     on_done  = "Build landed: ${var.name}"
@@ -57,6 +60,13 @@ pipeline "build" {
       oj queue push merges --var branch="${local.branch}" --var title="${local.title}"
     SHELL
     on_done = { step = "cleanup" }
+  }
+
+  step "abandon" {
+    run = <<-SHELL
+      git -C "${local.repo}" worktree remove --force "${workspace.root}" 2>/dev/null || true
+      git -C "${local.repo}" branch -D "${local.branch}" 2>/dev/null || true
+    SHELL
   }
 
   step "cleanup" {
