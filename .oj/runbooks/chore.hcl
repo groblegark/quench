@@ -46,12 +46,7 @@ pipeline "chore" {
   }
 
   step "init" {
-    run = <<-SHELL
-      git -C "${local.repo}" worktree add -b "${local.branch}" "${workspace.root}" HEAD
-      mkdir -p .cargo
-      echo "[build]" > .cargo/config.toml
-      echo "target-dir = \"${local.repo}/target\"" >> .cargo/config.toml
-    SHELL
+    run = "git -C \"${local.repo}\" worktree add -b \"${local.branch}\" \"${workspace.root}\" HEAD"
     on_done = { step = "work" }
   }
 

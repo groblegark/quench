@@ -33,9 +33,6 @@ pipeline "build" {
   step "init" {
     run = <<-SHELL
       git -C "${local.repo}" worktree add -b "${local.branch}" "${workspace.root}" HEAD
-      mkdir -p .cargo
-      echo "[build]" > .cargo/config.toml
-      echo "target-dir = \"${local.repo}/target\"" >> .cargo/config.toml
       mkdir -p plans
     SHELL
     on_done = { step = "plan" }

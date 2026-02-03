@@ -44,9 +44,6 @@ pipeline "release" {
 
       # Create worktree from main
       git -C "${local.repo}" worktree add -b "release-${workspace.nonce}" "${workspace.root}" HEAD
-      mkdir -p .cargo
-      echo "[build]" > .cargo/config.toml
-      echo "target-dir = \"${local.repo}/target\"" >> .cargo/config.toml
     SHELL
     on_done = { step = "prep" }
   }
