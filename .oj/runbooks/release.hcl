@@ -10,14 +10,14 @@
 
 command "release" {
   args = "[--bump <level>]"
-  run  = { pipeline = "release" }
+  run  = { job = "release" }
 
   defaults = {
     bump = "patch"
   }
 }
 
-pipeline "release" {
+job "release" {
   name      = "release"
   vars      = ["bump"]
   workspace = "ephemeral"

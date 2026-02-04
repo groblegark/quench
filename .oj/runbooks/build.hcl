@@ -1,19 +1,25 @@
 # Plan and implement a feature, then submit to the merge queue.
 #
+# Prereq: configure sccache in .cargo/config.toml so worktrees get fast
+# builds without sharing a target-dir (which causes cache poisoning):
+#
+#   [build]
+#   rustc-wrapper = "sccache"
+#
 # Examples:
 #   oj run build new-check "Add a cyclomatic complexity check"
 #   oj run build ruby-adapter "Implement Ruby language adapter"
 
 command "build" {
   args = "<name> <instructions> [--base <branch>]"
-  run  = { pipeline = "build" }
+  run  = { job = "build" }
 
   defaults = {
     base = "main"
   }
 }
 
-pipeline "build" {
+job "build" {
   name      = "${var.name}"
   vars      = ["name", "instructions", "base"]
   on_fail   = { step = "reopen" }
@@ -25,7 +31,7 @@ pipeline "build" {
   }
 
   locals {
-    title  = "$(printf '%s' \"feat(${var.name}): ${var.instructions}\" | tr '\\n' ' ' | cut -c1-80)"
+    title  = "$(printf 'feat(${var.name}): %.72s' \"${var.instructions}\")"
     issue  = "$(cd ${invoke.dir} && wok new feature \"${var.instructions}\" -o id)"
   }
 
@@ -47,7 +53,7 @@ pipeline "build" {
     on_done = { step = "submit" }
   }
 
-  # TODO: hook into merge pipeline to mark issue done instead
+  # TODO: hook into merge job to mark issue done instead
   step "submit" {
     run = <<-SHELL
       git add -A
@@ -60,11 +66,11 @@ pipeline "build" {
   }
 
   step "cancel" {
-    run = "cd ${invoke.dir} && wok close ${local.issue} --reason 'Build pipeline cancelled'"
+    run = "cd ${invoke.dir} && wok close ${local.issue} --reason 'Build job cancelled'"
   }
 
   step "reopen" {
-    run = "cd ${invoke.dir} && wok reopen ${local.issue} --reason 'Build pipeline failed'"
+    run = "cd ${invoke.dir} && wok reopen ${local.issue} --reason 'Build job failed'"
   }
 }
 
