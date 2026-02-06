@@ -63,7 +63,8 @@ When `[rust].tests` is not configured, patterns fall back to `[project].tests`, 
 - Files in `tests/` directory
 
 **Inline test code** (within source files):
-- Lines inside `#[cfg(test)]` blocks handling is configurable
+- Lines inside `#[cfg(test)] mod` blocks are counted as test LOC
+- Non-module `#[cfg(test)]` items (helpers, fixtures, macros) remain source LOC
 - See [CFG Test Split Modes](#cfg-test-split-modes) below
 
 ```rust
@@ -153,13 +154,13 @@ cfg_test_split = "count"  # count | require | off (default: "count")
 
 | Mode | Behavior |
 |------|----------|
-| `"count"` | Split `#[cfg(test)]` blocks into test LOC (default) |
+| `"count"` | Split `#[cfg(test)] mod` blocks into test LOC (default) |
 | `"require"` | Fail if source files contain inline `#[cfg(test)]` blocks; require separate `_tests.rs` files |
 | `"off"` | Count all lines as source LOC, don't parse for `#[cfg(test)]` |
 
 ### Mode: "count" (Default)
 
-Lines inside `#[cfg(test)]` blocks are counted as test LOC:
+Lines inside `#[cfg(test)] mod` blocks are counted as test LOC. Non-module `#[cfg(test)]` items (helpers, fixtures, macros) remain as source LOC:
 
 ```rust
 pub fn add(a: i32, b: i32) -> i32 {  // ← source LOC
@@ -206,23 +207,17 @@ mod tests {
 
 Different violation codes are used based on the item type following `#[cfg(test)]`:
 
+Only inline `#[cfg(test)] mod` blocks are flagged. Non-module `#[cfg(test)]` items (helpers, fixtures, macros) are allowed inline.
+
 | Code | Item Types | Advice |
 |------|------------|--------|
 | `inline_cfg_test` | `mod` | Move tests to a sibling _tests.rs file. |
-| `cfg_test_helper` | `fn`, `impl` | Move test helper to the _tests.rs file, or use #[doc(hidden)] if needed in both. |
-| `cfg_test_item` | `struct`, `enum`, `trait` | Move test-only type to the _tests.rs file. |
 
-Example violations:
+Example violation:
 
 ```
 src/parser.rs:150: inline_cfg_test
   Move tests to a sibling _tests.rs file.
-
-src/state.rs:42: cfg_test_helper
-  Move test helper to the _tests.rs file, or use #[doc(hidden)] if needed in both.
-
-src/fixtures.rs:10: cfg_test_item
-  Move test-only type to the _tests.rs file.
 ```
 
 This pairs with the sibling `_tests.rs` convention documented in the project's CLAUDE.md.

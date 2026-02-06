@@ -763,3 +763,65 @@ pub(in crate::module) fn test_helper() {
     assert_eq!(info.blocks.len(), 1);
     assert_eq!(info.blocks[0].item_kind, CfgTestItemKind::Fn);
 }
+
+#[test]
+fn item_kind_macro_invocation() {
+    let content = r#"
+#[cfg(test)]
+thread_local! {
+    static MOCK: std::cell::Cell<Option<bool>> = const { std::cell::Cell::new(None) };
+}
+"#;
+    let info = CfgTestInfo::parse(content);
+    assert_eq!(info.blocks.len(), 1);
+    assert_eq!(info.blocks[0].item_kind, CfgTestItemKind::Macro);
+}
+
+#[test]
+fn item_kind_lazy_static_macro() {
+    let content = r#"
+#[cfg(test)]
+lazy_static! {
+    static ref DB: Mutex<MockDb> = Mutex::new(MockDb::new());
+}
+"#;
+    let info = CfgTestInfo::parse(content);
+    assert_eq!(info.blocks.len(), 1);
+    assert_eq!(info.blocks[0].item_kind, CfgTestItemKind::Macro);
+}
+
+#[test]
+fn non_mod_items_not_in_test_ranges() {
+    // Only `mod` blocks contribute to test_ranges; other item kinds
+    // (helpers, fixtures, macros) are test infrastructure, not tests.
+    let content = r#"
+fn source() {}
+
+#[cfg(test)]
+mod tests {
+    fn test() {}
+}
+
+#[cfg(test)]
+fn helper() {
+}
+
+#[cfg(test)]
+thread_local! {
+    static MOCK: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+#[cfg(test)]
+struct Fixture {
+    x: i32,
+}
+"#;
+    let info = CfgTestInfo::parse(content);
+    assert_eq!(info.blocks.len(), 4);
+    // Only the mod block is in test_ranges
+    assert_eq!(info.test_ranges.len(), 1);
+    assert!(info.is_test_line(3)); // #[cfg(test)] mod tests
+    assert!(!info.is_test_line(9)); // #[cfg(test)] fn helper - NOT test
+    assert!(!info.is_test_line(13)); // #[cfg(test)] thread_local! - NOT test
+    assert!(!info.is_test_line(18)); // #[cfg(test)] struct Fixture - NOT test
+}

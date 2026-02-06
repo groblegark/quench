@@ -48,7 +48,8 @@ use crate::check::Violation;
 /// v35: Added **/*_tests/** to default test patterns (generic, Rust, JavaScript adapters).
 /// v36: Python suppress comments now detected above @decorator lines.
 /// v37: JavaScript suppress config no longer inherits Rust-specific lint patterns.
-pub(crate) const CACHE_VERSION: u32 = 37;
+/// v38: Only #[cfg(test)] mod blocks count as test LOC; non-module items stay as source.
+pub(crate) const CACHE_VERSION: u32 = 38;
 
 /// Cache file name within .quench directory.
 pub const CACHE_FILE_NAME: &str = "cache.bin";

@@ -28,7 +28,9 @@ pub enum CfgTestItemKind {
     Const,
     /// `static FOO: ...` - test-only static
     Static,
-    /// Unknown or macro-generated item
+    /// Macro invocation (e.g., `thread_local!`, `lazy_static!`)
+    Macro,
+    /// Unknown item kind
     #[default]
     Unknown,
 }
@@ -185,12 +187,17 @@ impl CfgTestInfo {
                 if brace_depth == 0 && delta < 0 {
                     // Block ended (we saw a closing brace that brought us to 0)
                     let range = block_start..line_idx + 1;
+                    // Only count `mod` blocks as test LOC; non-module items
+                    // (helpers, fixtures, macros) are test infrastructure, not tests.
+                    let is_test_block = pending_item_kind == CfgTestItemKind::Mod;
                     info.blocks.push(CfgTestBlock {
                         attr_line: block_start,
                         range: range.clone(),
                         item_kind: pending_item_kind,
                     });
-                    info.test_ranges.push(range);
+                    if is_test_block {
+                        info.test_ranges.push(range);
+                    }
                     in_cfg_test = false;
                     pending_item_kind = CfgTestItemKind::Unknown;
                 }
@@ -339,6 +346,8 @@ fn detect_item_kind(line: &str) -> CfgTestItemKind {
         CfgTestItemKind::Const
     } else if after_mods.starts_with("static ") {
         CfgTestItemKind::Static
+    } else if is_macro_invocation(after_mods) {
+        CfgTestItemKind::Macro
     } else {
         CfgTestItemKind::Unknown
     }
@@ -355,6 +364,17 @@ fn skip_visibility(s: &str) -> &str {
         return rest;
     }
     s
+}
+
+/// Check if a line looks like a macro invocation (e.g., `thread_local! {`, `lazy_static! {`).
+fn is_macro_invocation(s: &str) -> bool {
+    // Look for `identifier!` pattern
+    if let Some(bang_pos) = s.find('!') {
+        let before_bang = &s[..bang_pos];
+        !before_bang.is_empty() && before_bang.chars().all(|c| c.is_alphanumeric() || c == '_')
+    } else {
+        false
+    }
 }
 
 /// Skip function modifiers (async, unsafe, const, extern) from the start of a line.

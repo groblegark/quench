@@ -94,8 +94,8 @@ mod tests {
 }
 ```
 
-When `rust.cfg_test_split = "count"` (default), lines inside `#[cfg(test)]`
-blocks are counted as test LOC even in source files. See [langs/rust.md#cfg-test-split-modes](../langs/rust.md#cfg-test-split-modes) for other modes.
+When `rust.cfg_test_split = "count"` (default), lines inside `#[cfg(test)] mod`
+blocks are counted as test LOC even in source files. Non-module `#[cfg(test)]` items (helpers, fixtures, macros) remain as source LOC. See [langs/rust.md#cfg-test-split-modes](../langs/rust.md#cfg-test-split-modes) for other modes.
 
 ## Output
 

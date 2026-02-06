@@ -161,6 +161,9 @@ impl Check for ClocCheck {
                                         let cfg_info = CfgTestInfo::parse(content);
                                         let is_error = rust_check_level == CheckLevel::Error;
                                         for block in &cfg_info.blocks {
+                                            if block.item_kind != CfgTestItemKind::Mod {
+                                                continue;
+                                            }
                                             violation_infos.push((
                                                 create_inline_cfg_test_violation(
                                                     ctx, &file.path, block,
@@ -501,12 +504,7 @@ fn try_create_token_violation(
     )
 }
 
-/// Create a violation for inline #[cfg(test)] block.
-///
-/// Uses different violation codes and advice based on item kind:
-/// - `inline_cfg_test` for mod (test module)
-/// - `cfg_test_helper` for fn/impl (test helpers)
-/// - `cfg_test_item` for struct/enum/type/trait/const/static (test-only types)
+/// Create a violation for an inline `#[cfg(test)] mod` block.
 fn create_inline_cfg_test_violation(
     ctx: &CheckContext,
     file_path: &Path,
@@ -514,26 +512,12 @@ fn create_inline_cfg_test_violation(
 ) -> Violation {
     let display_path = file_path.strip_prefix(ctx.root).unwrap_or(file_path);
     let line = block.attr_line as u32 + 1;
-
-    let (code, advice) = match block.item_kind {
-        CfgTestItemKind::Mod => ("inline_cfg_test", "Move tests to a sibling _tests.rs file."),
-        CfgTestItemKind::Fn | CfgTestItemKind::Impl => (
-            "cfg_test_helper",
-            "Move test helper to the _tests.rs file, or use #[doc(hidden)] if needed in both.",
-        ),
-        CfgTestItemKind::Struct
-        | CfgTestItemKind::Enum
-        | CfgTestItemKind::Type
-        | CfgTestItemKind::Trait
-        | CfgTestItemKind::Const
-        | CfgTestItemKind::Static => (
-            "cfg_test_item",
-            "Move test-only type to the _tests.rs file.",
-        ),
-        CfgTestItemKind::Unknown => ("inline_cfg_test", "Move tests to a sibling _tests.rs file."),
-    };
-
-    Violation::file(display_path, line, code, advice)
+    Violation::file(
+        display_path,
+        line,
+        "inline_cfg_test",
+        "Move tests to a sibling _tests.rs file.",
+    )
 }
 
 /// Check if a file is a source code file (for LOC counting).
